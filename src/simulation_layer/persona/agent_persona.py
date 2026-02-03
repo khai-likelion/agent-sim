@@ -11,7 +11,7 @@ from typing import List, Optional, Any
 class AgentPersona:
     """
     A consumer agent's persona.
-    11 attributes capturing demographics, preferences, and sensitivities.
+    Extended attributes capturing demographics, preferences, and sensitivities.
     Plus optional location tracking for street network simulation.
     """
 
@@ -27,6 +27,11 @@ class AgentPersona:
     price_sensitivity: float  # 0~1
     trend_sensitivity: float  # 0~1
     quality_preference: float  # 0~1
+
+    # New demographic attributes from census data
+    residence_type: Optional[str] = None  # '다세대', '단독주택', '아파트', '연립주택', '영업용 건물 내 주택'
+    household_type: Optional[str] = None  # '1인가구', '2세대가구', '3세대가구', '4세대가구'
+    census_area_code: Optional[str] = None  # TOT_OA_CD (집계구역 코드)
 
     # Street network location (set during simulation)
     location: Optional[Any] = field(default=None, repr=False)
