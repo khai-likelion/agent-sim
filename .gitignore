@@ -12,6 +12,10 @@ build/
 data/output/*.csv
 data/output/*.html
 data/output/*.json
+data/output/*.png
+
+# Cache
+cache/
 
 # Raw data files (large files)
 data/raw/*.csv
