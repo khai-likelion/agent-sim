@@ -1,17 +1,22 @@
 """
 Simulation engine for the Mangwon-dong commercial district.
 Orchestrates the time loop and agent Perceive -> Decide -> React cycle.
+
+Supports two modes:
+1. StreetNetwork mode (primary): Agents move along actual street edges
+2. Legacy H3 mode: Agents teleport to random locations in H3 grid
 """
 
 import random
 from dataclasses import asdict
 from datetime import datetime, timedelta
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import pandas as pd
 
 from config import get_settings
 from src.data_layer.spatial_index import Environment
+from src.data_layer.street_network import StreetNetwork, AgentLocation
 from src.data_layer.population_stats import PopulationStatistics
 from src.simulation_layer.persona.agent_persona import AgentPersona
 from src.simulation_layer.persona.cognitive_modules.decide import DecideModule
@@ -37,16 +42,25 @@ class SimulationEngine:
 
     def __init__(
         self,
-        environment: Environment,
+        environment: Union[Environment, StreetNetwork],
         stats: PopulationStatistics,
         agents: List[AgentPersona],
         decide_module: Optional[DecideModule] = None,
     ):
-        self.environment = environment
         self.stats = stats
         self.agents = agents
         self.decide_module = decide_module or DecideModule()
         self.events: List[SimulationEvent] = []
+
+        # Determine mode based on environment type
+        if isinstance(environment, StreetNetwork):
+            self.street_network = environment
+            self.environment = None
+            self.use_street_network = True
+        else:
+            self.street_network = None
+            self.environment = environment
+            self.use_street_network = False
 
     def _get_time_slot(self, hour: int) -> str:
         for slot_name, (start, end) in self.TIME_SLOTS.items():
@@ -62,10 +76,36 @@ class SimulationEngine:
         return random.random() < activity_prob
 
     def _get_random_start_location(self) -> tuple:
+        """Get random start location (legacy H3 mode)."""
         settings = get_settings()
         lat = random.uniform(settings.area.lat_min, settings.area.lat_max)
         lng = random.uniform(settings.area.lng_min, settings.area.lng_max)
         return lat, lng
+
+    def _initialize_agent_locations(self) -> None:
+        """Initialize all agents with street network locations."""
+        if not self.use_street_network:
+            return
+
+        settings = get_settings()
+        for agent in self.agents:
+            # Random start within area bounds
+            lat = random.uniform(settings.area.lat_min, settings.area.lat_max)
+            lng = random.uniform(settings.area.lng_min, settings.area.lng_max)
+            agent.location = self.street_network.initialize_agent_location(lat, lng)
+
+    def _move_agent_on_network(self, agent: AgentPersona, steps: int) -> AgentLocation:
+        """Move agent along street network for given number of steps."""
+        if agent.location is None:
+            settings = get_settings()
+            lat = random.uniform(settings.area.lat_min, settings.area.lat_max)
+            lng = random.uniform(settings.area.lng_min, settings.area.lng_max)
+            agent.location = self.street_network.initialize_agent_location(lat, lng)
+
+        settings = get_settings()
+        total_distance = steps * settings.simulation.agent_speed_mps * settings.simulation.movement_dt
+        agent.location = self.street_network.move_agent(agent.location, total_distance)
+        return agent.location
 
     def simulate_timestep(
         self,
@@ -107,8 +147,19 @@ class SimulationEngine:
                 continue
 
             # 2. Perceive: location + visible stores
-            lat, lng = self._get_random_start_location()
-            visible_stores = self.environment.get_visible_stores(lat, lng)
+            if self.use_street_network:
+                # Move agent along street network
+                location = self._move_agent_on_network(
+                    agent, settings.simulation.steps_per_timeslot
+                )
+                lat, lng = location.lat, location.lng
+                visible_stores = self.street_network.get_nearby_stores(
+                    location, k_ring=settings.simulation.k_ring
+                )
+            else:
+                # Legacy H3 mode
+                lat, lng = self._get_random_start_location()
+                visible_stores = self.environment.get_visible_stores(lat, lng)
 
             # 3. Information: report reception (probabilistic)
             report = None
@@ -164,12 +215,18 @@ class SimulationEngine:
             time_intervals_per_day or settings.simulation.time_slots_per_day
         )
 
+        mode = "StreetNetwork" if self.use_street_network else "H3 Grid"
         print(f"Simulation start: {start_date.strftime('%Y-%m-%d')} ~ {num_days} days")
+        print(f"  Mode: {mode}")
         print(f"  Agents: {len(self.agents)}")
         print(f"  Time intervals/day: {time_intervals_per_day}")
         if reports:
             print(f"  Business reports: {len(reports)}")
         print()
+
+        # Initialize agent locations on street network
+        if self.use_street_network:
+            self._initialize_agent_locations()
 
         current_time = start_date
         all_events = []

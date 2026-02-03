@@ -20,14 +20,27 @@ class AreaSettings(BaseSettings):
     lng_min: float = Field(default=126.900, description="경도 하한")
     lng_max: float = Field(default=126.915, description="경도 상한")
 
+    # Street network center point (for OSMnx graph loading)
+    center_lat: float = Field(default=37.5559, description="도로 네트워크 중심 위도")
+    center_lng: float = Field(default=126.9106, description="도로 네트워크 중심 경도")
+
     model_config = {"env_prefix": "AREA_"}
 
 
 class SimulationSettings(BaseSettings):
     """Simulation engine parameters."""
 
-    h3_resolution: int = Field(default=10, description="H3 격자 해상도")
-    k_ring: int = Field(default=1, description="H3 인접 격자 탐색 범위")
+    # Legacy H3 settings (kept for backward compatibility)
+    h3_resolution: int = Field(default=10, description="H3 격자 해상도 (deprecated)")
+    k_ring: int = Field(default=1, description="인접 탐색 범위 (graph hops)")
+
+    # Street network settings
+    network_radius_m: float = Field(default=2000.0, description="도로 네트워크 로딩 반경 (미터)")
+    agent_speed_mps: float = Field(default=1.0, description="에이전트 이동 속도 (m/s)")
+    movement_dt: float = Field(default=1.0, description="이동 시뮬레이션 시간 단위 (초)")
+    steps_per_timeslot: int = Field(default=300, description="시간대별 이동 스텝 수")
+
+    # Agent settings
     agent_count: int = Field(default=20, description="생성할 에이전트 수")
     time_slots_per_day: int = Field(default=6, description="일일 시뮬레이션 횟수")
     simulation_days: int = Field(default=7, description="시뮬레이션 기간 (일)")
