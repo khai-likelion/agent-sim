@@ -10,7 +10,13 @@ build/
 
 # Output data (regeneratable)
 data/output/*.csv
-data/output/agents.json
+data/output/*.html
+data/output/*.json
+
+# Raw data files (large files)
+data/raw/*.csv
+data/raw/*.json
+!data/raw/.gitkeep
 
 # IDE
 .vscode/
