@@ -1,0 +1,5 @@
+=== 현재 위치 주변 매장 정보 ===
+좌표: ({latitude:.6f}, {longitude:.6f})
+발견된 매장 수: {store_count}개
+
+{store_details}
