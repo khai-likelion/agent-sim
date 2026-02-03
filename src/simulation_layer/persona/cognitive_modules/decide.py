@@ -2,12 +2,16 @@
 Decide module: Evaluates stores and decides whether/where to visit.
 Extracts _evaluate_store_with_persona() and _decide_visit() from SimulationEngine.
 
+Supports two input formats:
+1. DataFrame (legacy H3 mode)
+2. List[Dict] (StreetNetwork mode)
+
 Current: rule-based scoring.
 Future: LLM-driven decision with memory/reflection context.
 """
 
 import random
-from typing import Optional
+from typing import Optional, Union, List, Dict, Any
 
 import pandas as pd
 
@@ -20,11 +24,12 @@ from src.simulation_layer.models import BusinessReport
 class DecideModule(CognitiveModule):
     """
     Scores visible stores against agent persona and decides on visit.
+    Supports both DataFrame (H3) and List[Dict] (StreetNetwork) inputs.
     """
 
     def process(
         self,
-        visible_stores: pd.DataFrame,
+        visible_stores: Union[pd.DataFrame, List[Dict[str, Any]]],
         agent: AgentPersona,
         report: Optional[BusinessReport] = None,
     ) -> dict:
@@ -35,9 +40,22 @@ class DecideModule(CognitiveModule):
         """
         return self._decide_visit(visible_stores, agent, report)
 
+    def _get_store_field(
+        self,
+        store: Union[pd.Series, Dict[str, Any]],
+        field: str,
+        alt_field: str = None,
+        default: str = "Unknown"
+    ) -> str:
+        """Get field from store (works with both Series and dict)."""
+        if isinstance(store, dict):
+            return store.get(field, store.get(alt_field, default) if alt_field else default)
+        else:
+            return store.get(field, default)
+
     def _evaluate_store_with_persona(
         self,
-        store: pd.Series,
+        store: Union[pd.Series, Dict[str, Any]],
         agent: AgentPersona,
         report: Optional[BusinessReport] = None,
     ) -> float:
@@ -47,14 +65,16 @@ class DecideModule(CognitiveModule):
         score = 0.5  # base score
 
         # 1. Category preference check
-        store_category = store["카테고리"]
+        store_category = self._get_store_field(store, "카테고리", "category", "")
+        store_name = self._get_store_field(store, "장소명", "store_name", "")
+
         for pref in agent.store_preferences:
             if pref in store_category:
                 score += 0.3
                 break
 
         # 2. Report bonus
-        if report and report.store_name == store["장소명"]:
+        if report and report.store_name == store_name:
             if agent.age_group in report.target_age_groups:
                 score += 0.2
 
@@ -72,14 +92,23 @@ class DecideModule(CognitiveModule):
 
     def _decide_visit(
         self,
-        visible_stores: pd.DataFrame,
+        visible_stores: Union[pd.DataFrame, List[Dict[str, Any]]],
         agent: AgentPersona,
         report: Optional[BusinessReport] = None,
     ) -> dict:
         """
         Decide which store to visit (if any).
+        Handles both DataFrame and List[Dict] inputs.
         """
-        if visible_stores.empty:
+        # Check if empty
+        if isinstance(visible_stores, pd.DataFrame):
+            is_empty = visible_stores.empty
+            store_iter = visible_stores.iterrows()
+        else:
+            is_empty = len(visible_stores) == 0
+            store_iter = enumerate(visible_stores)
+
+        if is_empty:
             return {
                 "decision": "ignore",
                 "decision_reason": "주변에 매장이 없음",
@@ -91,7 +120,7 @@ class DecideModule(CognitiveModule):
         threshold = settings.simulation.visit_threshold
 
         scores = []
-        for idx, store in visible_stores.iterrows():
+        for idx, store in store_iter:
             score = self._evaluate_store_with_persona(store, agent, report)
             scores.append((score, store))
 
@@ -99,8 +128,8 @@ class DecideModule(CognitiveModule):
         best_score, best_store = scores[0]
 
         if best_score > threshold:
-            visited_store = best_store["장소명"]
-            visited_category = best_store["카테고리"]
+            visited_store = self._get_store_field(best_store, "장소명", "store_name")
+            visited_category = self._get_store_field(best_store, "카테고리", "category")
 
             if report and report.store_name == visited_store:
                 reason = f"리포트 '{report.description}'에 반응하여 방문 결정"
