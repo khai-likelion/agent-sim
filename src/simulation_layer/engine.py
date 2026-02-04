@@ -170,7 +170,9 @@ class SimulationEngine:
 
             # 4. Decide: visit decision via cognitive module
             decision_result = self.decide_module.process(
-                visible_stores, agent, report
+                visible_stores, agent, report,
+                time_slot=time_slot,
+                memory_context="",  # TODO: integrate with EventMemory
             )
 
             # 5. Log event
