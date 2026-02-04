@@ -25,6 +25,7 @@ from src.simulation_layer.scenario.mangwon_scenario import (
     create_default_reports,
     get_default_start_date,
 )
+from src.simulation_layer.persona.cognitive_modules.decide import DecideModule
 
 
 def create_street_network_environment(stores_df):
@@ -59,16 +60,30 @@ def main():
         action="store_true",
         help="Use legacy H3 grid mode instead of street network",
     )
+    parser.add_argument(
+        "--use-llm",
+        action="store_true",
+        help="Use LLM for behavior decisions (slower but more realistic)",
+    )
+    parser.add_argument(
+        "--llm-delay",
+        type=float,
+        default=2.5,
+        help="Delay between LLM calls in seconds (default: 2.5 for Groq free tier)",
+    )
     args = parser.parse_args()
 
     settings = get_settings()
     use_street_network = not args.h3_legacy
+    use_llm = args.use_llm
 
     print("=" * 80)
     print("Mangwon-dong Agent Simulation")
     print("=" * 80)
     mode_str = "StreetNetwork (OSMnx)" if use_street_network else "H3 Grid (Legacy)"
-    print(f"Mode: {mode_str}")
+    decision_mode = "LLM (Groq)" if use_llm else "Rule-based"
+    print(f"Spatial Mode: {mode_str}")
+    print(f"Decision Mode: {decision_mode}")
     print()
 
     # 1. Load and index stores
@@ -101,7 +116,11 @@ def main():
     # 4. Run simulation
     print("[4/5] Running simulation...")
     reports = create_default_reports()
-    engine = SimulationEngine(env, stats, agents)
+
+    # Create decide module with LLM or rule-based mode
+    decide_module = DecideModule(use_llm=use_llm, rate_limit_delay=args.llm_delay)
+
+    engine = SimulationEngine(env, stats, agents, decide_module=decide_module)
     results_df = engine.run_simulation(
         start_date=get_default_start_date(),
         reports=reports,

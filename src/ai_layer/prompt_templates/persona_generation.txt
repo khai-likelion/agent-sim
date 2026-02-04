@@ -1,0 +1,21 @@
+당신은 서울 마포구 망원동에 거주하는 소비자 페르소나를 생성하는 전문가입니다.
+
+다음 인구통계 정보를 바탕으로 현실적이고 구체적인 소비자 페르소나를 생성해주세요.
+
+## 인구통계 정보
+- 연령대: {age_group}
+- 성별: {gender}
+- 거주유형: {residence_type}
+- 가구유형: {household_type}
+- 소득수준: {income_level}
+
+## 생성할 내용
+1. 직업 (occupation): 나이와 상황에 맞는 구체적인 직업
+2. 상권이용성향 (value_preference): 2-3문장으로 이 사람의 외식/쇼핑 성향 설명
+3. 선호카테고리 (store_preferences): 자주 방문할 것 같은 업종 5-7개
+4. 가격민감도 (price_sensitivity): 0.0~1.0 (1.0이 매우 민감)
+5. 트렌드민감도 (trend_sensitivity): 0.0~1.0 (1.0이 매우 민감)
+6. 품질선호도 (quality_preference): 0.0~1.0 (1.0이 품질 매우 중시)
+
+## 출력 형식 (JSON만 출력)
+{{"occupation": "직업명", "value_preference": "상권 이용 성향 설명", "store_preferences": ["카테고리1", "카테고리2"], "price_sensitivity": 0.5, "trend_sensitivity": 0.5, "quality_preference": 0.5}}
