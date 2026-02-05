@@ -20,6 +20,7 @@ from src.data_layer.street_network import StreetNetwork, AgentLocation
 from src.data_layer.population_stats import PopulationStatistics
 from src.simulation_layer.persona.agent_persona import AgentPersona
 from src.simulation_layer.persona.cognitive_modules.decide import DecideModule
+from src.simulation_layer.persona.cognitive_modules.chained_decide import ChainedDecideModule
 from src.simulation_layer.models import BusinessReport, SimulationEvent
 
 
@@ -31,6 +32,15 @@ class SimulationEngine:
 
     WEEKDAY_KOR = ["월", "화", "수", "목", "금", "토", "일"]
 
+    # 4-turn system: morning, lunch, dinner, night
+    TIME_SLOTS_4TURN = {
+        "아침": (6, 10),
+        "점심": (11, 14),
+        "저녁": (17, 21),
+        "야간": (21, 24),
+    }
+
+    # Legacy 6-slot system
     TIME_SLOTS = {
         "00-06": (0, 6),
         "06-11": (6, 11),
@@ -62,11 +72,26 @@ class SimulationEngine:
             self.environment = environment
             self.use_street_network = False
 
-    def _get_time_slot(self, hour: int) -> str:
-        for slot_name, (start, end) in self.TIME_SLOTS.items():
-            if start <= hour < end:
-                return slot_name
-        return "00-06"
+    def _get_time_slot(self, hour: int, use_4turn: bool = False) -> str:
+        """Get time slot name for given hour."""
+        if use_4turn:
+            for slot_name, (start, end) in self.TIME_SLOTS_4TURN.items():
+                if start <= hour < end:
+                    return slot_name
+            # Map off-hours to closest slot
+            if hour < 6:
+                return "야간"
+            elif hour < 11:
+                return "아침"
+            elif hour < 17:
+                return "점심"
+            else:
+                return "저녁"
+        else:
+            for slot_name, (start, end) in self.TIME_SLOTS.items():
+                if start <= hour < end:
+                    return slot_name
+            return "00-06"
 
     def _should_agent_be_active(self, weekday: str, time_slot: str) -> bool:
         weekday_weight = self.stats.get_weekday_weight(weekday)
@@ -115,7 +140,10 @@ class SimulationEngine:
         """Run simulation for a single time step across all agents."""
         settings = get_settings()
         weekday = self.WEEKDAY_KOR[current_time.weekday()]
-        time_slot = self._get_time_slot(current_time.hour)
+
+        # Use 4-turn system for ChainedDecideModule
+        use_4turn = isinstance(self.decide_module, ChainedDecideModule)
+        time_slot = self._get_time_slot(current_time.hour, use_4turn=use_4turn)
         timestamp = current_time.strftime("%Y-%m-%d %H:%M")
 
         step_events = []
@@ -172,6 +200,7 @@ class SimulationEngine:
             decision_result = self.decide_module.process(
                 visible_stores, agent, report,
                 time_slot=time_slot,
+                weekday=weekday,
                 memory_context="",  # TODO: integrate with EventMemory
             )
 
@@ -240,6 +269,10 @@ class SimulationEngine:
                 f"{current_time.strftime('%Y-%m-%d')} "
                 f"({self.WEEKDAY_KOR[current_time.weekday()]})"
             )
+
+            # Reset daily agent states for ChainedDecideModule
+            if isinstance(self.decide_module, ChainedDecideModule):
+                self.decide_module.reset_daily_states()
 
             for interval in range(time_intervals_per_day):
                 events = self.simulate_timestep(current_time, reports)

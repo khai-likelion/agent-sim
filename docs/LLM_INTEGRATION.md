@@ -114,7 +114,7 @@
    ├─ Groq API 호출
    ├─ JSON 파싱
    ├─ 캐시 저장
-   └─ Rate limit 대기 (2.5초)
+   └─ Rate limit 대기 (4.0초)
 
 6. AgentPersona 객체 생성
    └─ agents.json 저장
@@ -149,7 +149,7 @@
    ├─ 프롬프트 빌드 (decision.txt)
    ├─ Groq API 호출
    ├─ JSON 파싱
-   └─ Rate limit 대기 (2.5초)
+   └─ Rate limit 대기 (4.0초)
 
 4. 출력
    └─ {decision, decision_reason, visited_store, visited_category}
@@ -254,7 +254,7 @@
 
 - **API Endpoint:** `https://api.groq.com/openai/v1/chat/completions`
 - **Free Tier 제한:** 30 requests/minute
-- **권장 딜레이:** 2.5초 (안전 마진)
+- **권장 딜레이:** 4.0초 (안전 마진, 15 req/min)
 - **API Key 발급:** https://console.groq.com
 
 ### 5.3 대체 모델 옵션
@@ -297,11 +297,11 @@ python scripts/run_simulation.py --use-llm
 ### 6.3 LLM 딜레이 조절
 
 ```bash
-# 딜레이 2.0초로 설정 (더 빠름, rate limit 주의)
-python scripts/run_simulation.py --use-llm --llm-delay 2.0
-
-# 딜레이 3.0초로 설정 (더 안전)
+# 딜레이 3.0초로 설정 (더 빠름, rate limit 주의)
 python scripts/run_simulation.py --use-llm --llm-delay 3.0
+
+# 더 안전한 설정 (기본값)
+python scripts/run_simulation.py --use-llm --llm-delay 4.0
 ```
 
 ### 6.4 CLI 옵션
@@ -309,7 +309,7 @@ python scripts/run_simulation.py --use-llm --llm-delay 3.0
 | 옵션 | 설명 | 기본값 |
 |------|------|--------|
 | `--use-llm` | LLM 기반 행동 결정 활성화 | False |
-| `--llm-delay` | LLM 호출 간 대기 시간 (초) | 2.5 |
+| `--llm-delay` | LLM 호출 간 대기 시간 (초) | 4.0 |
 | `--h3-legacy` | H3 그리드 모드 (deprecated) | False |
 
 ---
@@ -361,7 +361,7 @@ from src.simulation_layer.persona.census_agent_generator import CensusBasedAgent
 generator = CensusBasedAgentGenerator(
     target_agents=100,
     use_llm=True,
-    rate_limit_delay=2.5
+    rate_limit_delay=4.0
 )
 agents = generator.generate_agents()
 
@@ -379,7 +379,7 @@ agents = generator.generate_agents()
 from src.simulation_layer.persona.cognitive_modules.decide import DecideModule
 
 # LLM 모드
-decide = DecideModule(use_llm=True, rate_limit_delay=2.5)
+decide = DecideModule(use_llm=True, rate_limit_delay=4.0)
 
 # 규칙 기반 모드
 decide = DecideModule(use_llm=False)
@@ -449,9 +449,9 @@ LLM_API_KEY=gsk_your_actual_key_here
 httpx.HTTPStatusError: 429 Too Many Requests
 ```
 
-**해결:** `--llm-delay` 값 증가
+**해결:** `--llm-delay` 값 증가 (기본값 4.0초)
 ```bash
-python scripts/run_simulation.py --use-llm --llm-delay 3.0
+python scripts/run_simulation.py --use-llm --llm-delay 5.0
 ```
 
 ### 10.3 모델 없음 오류

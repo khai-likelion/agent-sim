@@ -1,5 +1,5 @@
 """
-LLM client wrapper. Supports Groq (free), OpenAI, and Anthropic providers.
+LLM client wrapper. Supports SambaNova, Groq, OpenAI, and Anthropic providers.
 """
 
 import json
@@ -46,6 +46,77 @@ class GroqClient(LLMClient):
         if not self.api_key or self.api_key == "your-groq-api-key-here":
             raise ValueError(
                 "Groq API key not set. Get free key at https://console.groq.com"
+            )
+
+    def _build_messages(self, prompt: str, system_prompt: Optional[str] = None) -> list:
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+        return messages
+
+    async def generate(
+        self, prompt: str, system_prompt: Optional[str] = None
+    ) -> str:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(
+                self.BASE_URL,
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": self.model,
+                    "messages": self._build_messages(prompt, system_prompt),
+                    "temperature": self.temperature,
+                    "max_tokens": self.max_tokens,
+                },
+            )
+            response.raise_for_status()
+            data = response.json()
+            return data["choices"][0]["message"]["content"]
+
+    def generate_sync(
+        self, prompt: str, system_prompt: Optional[str] = None
+    ) -> str:
+        with httpx.Client(timeout=60.0) as client:
+            response = client.post(
+                self.BASE_URL,
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": self.model,
+                    "messages": self._build_messages(prompt, system_prompt),
+                    "temperature": self.temperature,
+                    "max_tokens": self.max_tokens,
+                },
+            )
+            response.raise_for_status()
+            data = response.json()
+            return data["choices"][0]["message"]["content"]
+
+
+class SambaNovaClient(LLMClient):
+    """
+    SambaNova Cloud API client - FREE with generous limits.
+    Models: Meta-Llama-3.1-70B-Instruct, Meta-Llama-3.1-8B-Instruct
+    Rate limits: Much more generous than Groq free tier.
+    """
+
+    BASE_URL = "https://api.sambanova.ai/v1/chat/completions"
+
+    def __init__(self):
+        settings = get_settings()
+        self.model = settings.llm.model_name
+        self.api_key = settings.llm.api_key
+        self.temperature = settings.llm.temperature
+        self.max_tokens = settings.llm.max_tokens
+
+        if not self.api_key:
+            raise ValueError(
+                "SambaNova API key not set. Get free key at https://cloud.sambanova.ai"
             )
 
     def _build_messages(self, prompt: str, system_prompt: Optional[str] = None) -> list:
@@ -160,6 +231,126 @@ class OpenAIClient(LLMClient):
             return data["choices"][0]["message"]["content"]
 
 
+class HuggingFaceClient(LLMClient):
+    """
+    Hugging Face Inference API client using huggingface_hub.
+    Models: Qwen/Qwen2.5-7B-Instruct, meta-llama/Llama-3.1-8B-Instruct, etc.
+    """
+
+    def __init__(self):
+        from huggingface_hub import InferenceClient
+
+        settings = get_settings()
+        self.model = settings.llm.model_name
+        self.api_key = settings.llm.api_key
+        self.temperature = settings.llm.temperature
+        self.max_tokens = settings.llm.max_tokens
+
+        if not self.api_key:
+            raise ValueError(
+                "Hugging Face API key not set. Get free key at https://huggingface.co/settings/tokens"
+            )
+
+        self._client = InferenceClient(token=self.api_key)
+
+    def _build_messages(self, prompt: str, system_prompt: Optional[str] = None) -> list:
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+        return messages
+
+    async def generate(
+        self, prompt: str, system_prompt: Optional[str] = None
+    ) -> str:
+        # huggingface_hub InferenceClient is sync, run in thread for async
+        import asyncio
+        return await asyncio.to_thread(self.generate_sync, prompt, system_prompt)
+
+    def generate_sync(
+        self, prompt: str, system_prompt: Optional[str] = None
+    ) -> str:
+        response = self._client.chat.completions.create(
+            model=self.model,
+            messages=self._build_messages(prompt, system_prompt),
+            temperature=self.temperature,
+            max_tokens=self.max_tokens,
+        )
+        return response.choices[0].message.content
+
+
+class DeepSeekClient(LLMClient):
+    """
+    DeepSeek API client - OpenAI compatible, generous free tier.
+    Models: deepseek-chat (DeepSeek-V3), deepseek-reasoner (DeepSeek-R1)
+    Free tier: $5 credit for new users, very affordable pricing after.
+    Rate limits: Much more generous than other providers.
+    """
+
+    BASE_URL = "https://api.deepseek.com/chat/completions"
+
+    def __init__(self):
+        settings = get_settings()
+        self.model = settings.llm.model_name
+        self.api_key = settings.llm.api_key
+        self.temperature = settings.llm.temperature
+        self.max_tokens = settings.llm.max_tokens
+
+        if not self.api_key:
+            raise ValueError(
+                "DeepSeek API key not set. Get key at https://platform.deepseek.com/api_keys"
+            )
+
+    def _build_messages(self, prompt: str, system_prompt: Optional[str] = None) -> list:
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+        return messages
+
+    async def generate(
+        self, prompt: str, system_prompt: Optional[str] = None
+    ) -> str:
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            response = await client.post(
+                self.BASE_URL,
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": self.model,
+                    "messages": self._build_messages(prompt, system_prompt),
+                    "temperature": self.temperature,
+                    "max_tokens": self.max_tokens,
+                },
+            )
+            response.raise_for_status()
+            data = response.json()
+            return data["choices"][0]["message"]["content"]
+
+    def generate_sync(
+        self, prompt: str, system_prompt: Optional[str] = None
+    ) -> str:
+        with httpx.Client(timeout=120.0) as client:
+            response = client.post(
+                self.BASE_URL,
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": self.model,
+                    "messages": self._build_messages(prompt, system_prompt),
+                    "temperature": self.temperature,
+                    "max_tokens": self.max_tokens,
+                },
+            )
+            response.raise_for_status()
+            data = response.json()
+            return data["choices"][0]["message"]["content"]
+
+
 class AnthropicClient(LLMClient):
     """Anthropic Claude API client."""
 
@@ -228,10 +419,16 @@ def create_llm_client() -> LLMClient:
     settings = get_settings()
     provider = settings.llm.provider.lower()
 
-    if provider == "groq":
+    if provider == "sambanova":
+        return SambaNovaClient()
+    elif provider == "groq":
         return GroqClient()
     elif provider == "openai":
         return OpenAIClient()
     elif provider == "anthropic":
         return AnthropicClient()
-    raise ValueError(f"Unknown LLM provider: {provider}. Use 'groq', 'openai', or 'anthropic'")
+    elif provider == "huggingface":
+        return HuggingFaceClient()
+    elif provider == "deepseek":
+        return DeepSeekClient()
+    raise ValueError(f"Unknown LLM provider: {provider}. Use 'sambanova', 'groq', 'openai', 'anthropic', 'huggingface', or 'deepseek'")
