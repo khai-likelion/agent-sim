@@ -24,11 +24,11 @@ class DecideModule(CognitiveModule):
     Supports both rule-based and LLM-driven decision modes.
     """
 
-    def __init__(self, use_llm: bool = False, rate_limit_delay: float = 2.5):
+    def __init__(self, use_llm: bool = False, rate_limit_delay: float = 4.0):
         """
         Args:
             use_llm: If True, use LLM for decisions. If False, use rule-based.
-            rate_limit_delay: Seconds to wait between LLM calls (Groq free: 30/min)
+            rate_limit_delay: Seconds to wait between LLM calls (Groq free: 30/min → 15/min safe)
         """
         self.use_llm = use_llm
         self.rate_limit_delay = rate_limit_delay
@@ -53,6 +53,7 @@ class DecideModule(CognitiveModule):
         agent: AgentPersona,
         report: Optional[BusinessReport] = None,
         time_slot: str = "",
+        weekday: str = "",
         memory_context: str = "",
     ) -> dict:
         """

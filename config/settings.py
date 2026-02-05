@@ -93,14 +93,14 @@ class PathSettings(BaseSettings):
 
 
 class LLMSettings(BaseSettings):
-    """LLM API configuration. Default: Groq (free + fast)."""
+    """LLM API configuration. Default: DeepSeek with DeepSeek-V3."""
 
     provider: str = Field(
-        default="groq", description="LLM provider: groq | openai | anthropic"
+        default="deepseek", description="LLM provider: deepseek | sambanova | huggingface | groq | openai | anthropic"
     )
     model_name: str = Field(
-        default="llama-3.3-70b-versatile",
-        description="Model name. Groq: llama-3.3-70b-versatile, llama-3.1-8b-instant"
+        default="deepseek-chat",
+        description="Model name. DeepSeek: deepseek-chat (V3), deepseek-reasoner (R1). SambaNova: Meta-Llama-3.3-70B-Instruct"
     )
     api_key: str = Field(default="", description="API key (load from .env)")
     temperature: float = Field(default=0.7)
