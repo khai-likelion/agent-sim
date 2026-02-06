@@ -233,9 +233,14 @@ class SimulationEngine:
         num_days: int | None = None,
         time_intervals_per_day: int | None = None,
         reports: Optional[List[BusinessReport]] = None,
+        save_callback=None,
     ) -> pd.DataFrame:
         """
         Run the full simulation.
+        
+        Args:
+            save_callback: Optional callback function to save results after each timestep.
+                          Called with (DataFrame) after each hour interval.
 
         Returns:
             DataFrame of all simulation events.
@@ -286,6 +291,11 @@ class SimulationEngine:
                 )
 
                 current_time += timedelta(hours=hour_interval)
+                
+                # Save intermediate results after each timestep
+                if save_callback:
+                    df = pd.DataFrame([asdict(event) for event in all_events])
+                    save_callback(df)
 
         print(f"\nSimulation complete: {len(all_events)} total events")
 

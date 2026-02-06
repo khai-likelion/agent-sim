@@ -14,3 +14,10 @@ shapely>=2.0.0
 pyproj>=3.6.0
 folium>=0.15.0
 geopandas>=0.14.0
+
+# LLM clients
+huggingface_hub>=0.20.0
+
+# Dashboard visualization
+streamlit>=1.30.0
+plotly>=5.18.0

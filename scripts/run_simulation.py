@@ -70,8 +70,8 @@ def main():
     parser.add_argument(
         "--llm-delay",
         type=float,
-        default=4.0,
-        help="Delay between LLM calls in seconds (default: 4.0 for Groq free tier safe margin)",
+        default=0.5,
+        help="Delay between LLM calls in seconds (default: 0.5 for OpenAI, use 4.0 for Groq free)",
     )
     parser.add_argument(
         "--archetype",
@@ -179,9 +179,20 @@ def main():
         decide_module = DecideModule(use_llm=use_llm, rate_limit_delay=args.llm_delay)
 
     engine = SimulationEngine(env, stats, agents, decide_module=decide_module)
+    
+    # Define save callback for real-time CSV updates
+    def save_intermediate_results(df):
+        """Save results after each timestep for real-time monitoring."""
+        df.to_csv(
+            settings.paths.simulation_result_csv,
+            index=False,
+            encoding="utf-8-sig",
+        )
+    
     results_df = engine.run_simulation(
         start_date=get_default_start_date(),
         reports=reports,
+        save_callback=save_intermediate_results,
     )
     print()
 

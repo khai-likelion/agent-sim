@@ -23,6 +23,7 @@ from src.simulation_layer.persona.agent_persona import AgentPersona
 from src.simulation_layer.persona.agent_state import AgentState
 from src.simulation_layer.models import BusinessReport
 from src.ai_layer.llm_client import create_llm_client, LLMClient
+from src.data_layer.store_reviews import get_store_review_loader, StoreReviewLoader
 
 
 class ChainedDecideModule(CognitiveModule):
@@ -50,6 +51,13 @@ class ChainedDecideModule(CognitiveModule):
         self._prompt_cache: Dict[str, str] = {}
         self._agent_states: Dict[int, AgentState] = {}
         self._response_cache: Dict[str, Dict[str, Any]] = {}  # Cache for similar contexts
+        self._review_loader: Optional[StoreReviewLoader] = None
+
+    def _get_review_loader(self) -> StoreReviewLoader:
+        """Get store review loader (lazy init)."""
+        if self._review_loader is None:
+            self._review_loader = get_store_review_loader()
+        return self._review_loader
 
     def _get_llm_client(self) -> LLMClient:
         if self.llm_client is None:
@@ -456,14 +464,17 @@ class ChainedDecideModule(CognitiveModule):
         report: Optional[BusinessReport],
         timeslot_result: Dict[str, Any],
     ) -> Dict[str, Any]:
-        """Step 3: Select specific store from available options."""
+        """Step 3: Select specific store from available options with review data."""
         archetype = self._get_archetype_info(agent)
         template = self._load_prompt("store_selection.txt")
 
-        # Filter stores by category
-        store_list = self._filter_and_format_stores(visible_stores, category)
-        if not store_list:
-            store_list = self._format_all_stores(visible_stores)
+        # Get store names for review lookup
+        store_names = self._extract_store_names(visible_stores, category)
+
+        # Format stores with review information
+        store_list_with_reviews = self._format_stores_with_reviews(visible_stores, category, store_names)
+        if not store_list_with_reviews or store_list_with_reviews == "해당 카테고리 매장 없음":
+            store_list_with_reviews = self._format_all_stores_with_reviews(visible_stores)
 
         recent = ", ".join(state.recent_visits[-3:]) if state.recent_visits else "없음"
         report_info = self._format_report_info(report) if report else "없음"
@@ -478,7 +489,7 @@ class ChainedDecideModule(CognitiveModule):
             companion=state.companion or "혼자",
             budget_willing=timeslot_result.get("budget_willing", "보통"),
             time_pressure=state.time_pressure,
-            store_list=store_list,
+            store_list_with_reviews=store_list_with_reviews,
             recent_visits=recent,
             report_info=report_info,
         )
@@ -492,43 +503,155 @@ class ChainedDecideModule(CognitiveModule):
             except Exception as e:
                 print(f"Step 3 LLM error: {e}")
 
-        # Fallback: pick random matching store
-        return self._fallback_store_selection(visible_stores, category, archetype["lifestyle"])
+        # Fallback: pick store based on reviews + archetype
+        return self._fallback_store_selection_with_reviews(visible_stores, category, archetype)
 
-    def _filter_and_format_stores(
-        self, stores: Union[pd.DataFrame, List[Dict]], category: str
+    def _extract_store_names(self, stores: Union[pd.DataFrame, List[Dict]], category: str) -> List[str]:
+        """Extract store names from visible stores."""
+        names = []
+        if isinstance(stores, pd.DataFrame):
+            for _, store in stores.iterrows():
+                cat = store.get("카테고리", store.get("category", ""))
+                if category.lower() in cat.lower():
+                    name = store.get("장소명", store.get("store_name", ""))
+                    if name:
+                        names.append(name)
+        else:
+            for store in stores:
+                cat = store.get("카테고리", store.get("category", ""))
+                if category.lower() in cat.lower():
+                    name = store.get("장소명", store.get("store_name", ""))
+                    if name:
+                        names.append(name)
+        return names[:15]
+
+    def _format_stores_with_reviews(
+        self, stores: Union[pd.DataFrame, List[Dict]], category: str, store_names: List[str]
     ) -> str:
-        """Filter stores by category and format for prompt."""
+        """Format stores with review information for prompt."""
+        review_loader = self._get_review_loader()
         lines = []
+
+        for name in store_names:
+            review = review_loader.get_by_name(name)
+            if review:
+                lines.append(review.get_brief_summary())
+            else:
+                lines.append(f"[{name}] 리뷰 정보 없음")
+
+        return "\n".join(lines) if lines else "해당 카테고리 매장 없음"
+
+    def _format_all_stores_with_reviews(self, stores: Union[pd.DataFrame, List[Dict]]) -> str:
+        """Format all stores with review information."""
+        review_loader = self._get_review_loader()
+        lines = []
+        names_seen = set()
+
+        if isinstance(stores, pd.DataFrame):
+            for _, store in stores.head(15).iterrows():
+                name = store.get("장소명", store.get("store_name", "Unknown"))
+                if name in names_seen:
+                    continue
+                names_seen.add(name)
+                review = review_loader.get_by_name(name)
+                if review:
+                    lines.append(review.get_brief_summary())
+                else:
+                    cat = store.get("카테고리", store.get("category", "Unknown"))
+                    lines.append(f"[{name}] ({cat}) 리뷰 정보 없음")
+        else:
+            for store in stores[:15]:
+                name = store.get("장소명", store.get("store_name", "Unknown"))
+                if name in names_seen:
+                    continue
+                names_seen.add(name)
+                review = review_loader.get_by_name(name)
+                if review:
+                    lines.append(review.get_brief_summary())
+                else:
+                    cat = store.get("카테고리", store.get("category", "Unknown"))
+                    lines.append(f"[{name}] ({cat}) 리뷰 정보 없음")
+
+        return "\n".join(lines)
+
+    def _fallback_store_selection_with_reviews(
+        self, stores: Union[pd.DataFrame, List[Dict]], category: str, archetype: Dict
+    ) -> Dict[str, Any]:
+        """Fallback store selection using reviews and archetype preferences."""
+        review_loader = self._get_review_loader()
+        taste = archetype.get("taste", "편안한맛")
+        lifestyle = archetype.get("lifestyle", "단조로운패턴")
+
+        candidates = []
         if isinstance(stores, pd.DataFrame):
             for _, store in stores.iterrows():
                 cat = store.get("카테고리", store.get("category", ""))
                 if category.lower() in cat.lower():
                     name = store.get("장소명", store.get("store_name", "Unknown"))
-                    lines.append(f"- {name} ({cat})")
+                    review = review_loader.get_by_name(name)
+                    score = self._calculate_preference_score(review, taste)
+                    candidates.append((store, name, score, review))
         else:
             for store in stores:
                 cat = store.get("카테고리", store.get("category", ""))
                 if category.lower() in cat.lower():
                     name = store.get("장소명", store.get("store_name", "Unknown"))
-                    lines.append(f"- {name} ({cat})")
+                    review = review_loader.get_by_name(name)
+                    score = self._calculate_preference_score(review, taste)
+                    candidates.append((store, name, score, review))
 
-        return "\n".join(lines[:15]) if lines else "해당 카테고리 매장 없음"
+        if not candidates:
+            # Use any store
+            if isinstance(stores, pd.DataFrame):
+                candidates = [(row, row.get("장소명", "Unknown"), 0.5, None) for _, row in stores.iterrows()]
+            else:
+                candidates = [(s, s.get("장소명", "Unknown"), 0.5, None) for s in stores]
 
-    def _format_all_stores(self, stores: Union[pd.DataFrame, List[Dict]]) -> str:
-        """Format all stores for prompt."""
-        lines = []
-        if isinstance(stores, pd.DataFrame):
-            for _, store in stores.head(15).iterrows():
-                name = store.get("장소명", store.get("store_name", "Unknown"))
-                cat = store.get("카테고리", store.get("category", "Unknown"))
-                lines.append(f"- {name} ({cat})")
-        else:
-            for store in stores[:15]:
-                name = store.get("장소명", store.get("store_name", "Unknown"))
-                cat = store.get("카테고리", store.get("category", "Unknown"))
-                lines.append(f"- {name} ({cat})")
-        return "\n".join(lines)
+        if candidates:
+            # Sort by score and pick based on lifestyle
+            candidates.sort(key=lambda x: x[2], reverse=True)
+
+            if lifestyle == "변화추구":
+                # Pick from top-rated stores
+                selected = candidates[0] if candidates else None
+            else:
+                # 단조로운패턴: pick randomly from top half
+                top_half = candidates[:max(1, len(candidates)//2)]
+                selected = random.choice(top_half) if top_half else None
+
+            if selected:
+                store, name, score, review = selected
+                reason = "리뷰 기반 선택"
+                if review:
+                    reason = f"맛:{review.taste_score:.1f}, {review.sentiment_label}"
+                return {"store_name": name, "reason": reason, "influenced_by_report": False}
+
+        return {"store_name": None, "reason": "매장 없음", "influenced_by_report": False}
+
+    def _calculate_preference_score(self, review, taste: str) -> float:
+        """Calculate preference score based on review and taste preference."""
+        if review is None:
+            return 0.5  # Neutral score for unknown stores
+
+        # Base score from overall sentiment
+        score = review.overall_score
+
+        # Adjust based on taste preference
+        if taste == "자극선호":
+            # Prioritize taste over price
+            score = review.taste_score * 0.6 + review.overall_score * 0.4
+        elif taste == "담백건강":
+            # Prioritize cleanliness
+            score = review.cleanliness_score * 0.4 + review.taste_score * 0.4 + review.overall_score * 0.2
+        elif taste == "미식탐구":
+            # Prioritize taste highly
+            score = review.taste_score * 0.7 + review.overall_score * 0.3
+        elif taste == "편안한맛":
+            # Prioritize service and overall satisfaction
+            score = review.service_score * 0.3 + review.taste_score * 0.4 + review.overall_score * 0.3
+
+        return score
+
 
     def _format_report_info(self, report: BusinessReport) -> str:
         """Format report for prompt."""
@@ -536,36 +659,6 @@ class ChainedDecideModule(CognitiveModule):
 - 내용: {report.description}
 - 타겟: {', '.join(report.target_age_groups)}
 - 어필: {report.appeal_factor} (강도: {report.appeal_strength})"""
-
-    def _fallback_store_selection(
-        self, stores: Union[pd.DataFrame, List[Dict]], category: str, lifestyle: str
-    ) -> Dict[str, Any]:
-        """Fallback store selection."""
-        candidates = []
-        if isinstance(stores, pd.DataFrame):
-            for _, store in stores.iterrows():
-                cat = store.get("카테고리", store.get("category", ""))
-                if category.lower() in cat.lower():
-                    candidates.append(store)
-        else:
-            for store in stores:
-                cat = store.get("카테고리", store.get("category", ""))
-                if category.lower() in cat.lower():
-                    candidates.append(store)
-
-        if not candidates:
-            # Use any store
-            if isinstance(stores, pd.DataFrame):
-                candidates = [row for _, row in stores.iterrows()]
-            else:
-                candidates = stores
-
-        if candidates:
-            selected = random.choice(candidates)
-            name = selected.get("장소명", selected.get("store_name", "Unknown"))
-            return {"store_name": name, "reason": "선택", "influenced_by_report": False}
-
-        return {"store_name": None, "reason": "매장 없음", "influenced_by_report": False}
 
     # ==================== Main Process ====================
 
