@@ -1,0 +1,1435 @@
+[
+  {
+    "id": 0,
+    "segment": {
+      "code": "R1_OnePerson",
+      "name": "1인 가구 거주민",
+      "description": "혼자 사는 직장인 또는 학생. 혼밥 선호, 가까운 거리, 루틴 중시",
+      "characteristics": [
+        "집 근처 단골집 선호",
+        "혼밥 가능한 곳 필수",
+        "간편하고 빠른 식사",
+        "가성비 중요"
+      ]
+    },
+    "location": {
+      "home": {
+        "x": 126.90752358539878,
+        "y": 37.55080007946879
+      },
+      "work": null
+    },
+    "preferences": {
+      "spicy_pref": 0.663,
+      "stimulation_pref": 0.102,
+      "novelty_seeking": 0.108,
+      "visual_importance": 0.557,
+      "comfort_importance": 0.443,
+      "solo_pref": 0.996
+    },
+    "constraints": {
+      "hygiene_threshold": 0.55
+    },
+    "habits": {
+      "repeat_tolerance": 0.926,
+      "memory_decay": 0.68,
+      "review_propensity": 0.499,
+      "influence_sensitivity": 0.784
+    },
+    "timeblock_presence": {
+      "breakfast": 0.15,
+      "lunch": 0.25,
+      "dinner": 0.55,
+      "late_night": 0.3
+    },
+    "time_pressure_profile": {
+      "lunch": 0.45,
+      "dinner": 0.25
+    }
+  },
+  {
+    "id": 1,
+    "segment": {
+      "code": "R2_TwoPeople",
+      "name": "2인 가구",
+      "description": "부부 또는 커플 동거. 적당한 외식 빈도, 분위기 있는 곳 선호",
+      "characteristics": [
+        "주말 외식 빈도 높음",
+        "비주얼/분위기 중시",
+        "편안한 공간 선호",
+        "다양한 메뉴 탐색"
+      ]
+    },
+    "location": {
+      "home": {
+        "x": 126.90975225597904,
+        "y": 37.560702823581956
+      },
+      "work": null
+    },
+    "preferences": {
+      "spicy_pref": 0.67,
+      "stimulation_pref": 0.708,
+      "novelty_seeking": 0.492,
+      "visual_importance": 0.416,
+      "comfort_importance": 0.463,
+      "solo_pref": 0.716
+    },
+    "constraints": {
+      "hygiene_threshold": 0.393
+    },
+    "habits": {
+      "repeat_tolerance": 0.724,
+      "memory_decay": 0.435,
+      "review_propensity": 0.598,
+      "influence_sensitivity": 0.56
+    },
+    "timeblock_presence": {
+      "breakfast": 0.1,
+      "lunch": 0.2,
+      "dinner": 0.55,
+      "late_night": 0.2
+    },
+    "time_pressure_profile": {
+      "lunch": 0.4,
+      "dinner": 0.2
+    }
+  },
+  {
+    "id": 2,
+    "segment": {
+      "code": "R3_FamilyFour",
+      "name": "4인 가족",
+      "description": "부모+자녀 2명. 위생과 편안함 최우선, 새로운 시도 회피",
+      "characteristics": [
+        "위생 기준 매우 엄격",
+        "편안하고 넓은 공간 필수",
+        "아이들 먹기 좋은 메뉴",
+        "검증된 식당 선호"
+      ]
+    },
+    "location": {
+      "home": {
+        "x": 126.89624482405674,
+        "y": 37.549489102465685
+      },
+      "work": null
+    },
+    "preferences": {
+      "spicy_pref": 0.382,
+      "stimulation_pref": 0.377,
+      "novelty_seeking": 0.119,
+      "visual_importance": 0.577,
+      "comfort_importance": 0.868,
+      "solo_pref": 0.763
+    },
+    "constraints": {
+      "hygiene_threshold": 0.993
+    },
+    "habits": {
+      "repeat_tolerance": 0.629,
+      "memory_decay": 0.679,
+      "review_propensity": 0.851,
+      "influence_sensitivity": 0.878
+    },
+    "timeblock_presence": {
+      "breakfast": 0.05,
+      "lunch": 0.4,
+      "dinner": 0.65,
+      "late_night": 0.05
+    },
+    "time_pressure_profile": {
+      "dinner": 0.2
+    }
+  },
+  {
+    "id": 3,
+    "segment": {
+      "code": "R4_CommuterResident",
+      "name": "출퇴근 거주민",
+      "description": "망원 거주, 타지역 출퇴근. 저녁/주말에 망원 외식 즐김",
+      "characteristics": [
+        "저녁 외식 빈도 높음",
+        "주말 브런치/맛집 탐방",
+        "트렌디한 곳 선호",
+        "리뷰 많이 참고"
+      ]
+    },
+    "location": {
+      "home": {
+        "x": 126.90663920201584,
+        "y": 37.55441878703828
+      },
+      "work": {
+        "x": 126.90591599421248,
+        "y": 37.55173478036213
+      }
+    },
+    "preferences": {
+      "spicy_pref": 0.45,
+      "stimulation_pref": 0.257,
+      "novelty_seeking": 0.651,
+      "visual_importance": 0.638,
+      "comfort_importance": 0.269,
+      "solo_pref": 0.533
+    },
+    "constraints": {
+      "hygiene_threshold": 0.683
+    },
+    "habits": {
+      "repeat_tolerance": 0.633,
+      "memory_decay": 0.344,
+      "review_propensity": 0.197,
+      "influence_sensitivity": 0.569
+    },
+    "timeblock_presence": {
+      "breakfast": 0.1,
+      "lunch": 0.05,
+      "dinner": 0.65,
+      "late_night": 0.4
+    },
+    "time_pressure_profile": {
+      "dinner": 0.35
+    }
+  },
+  {
+    "id": 4,
+    "segment": {
+      "code": "F1_DateCouple",
+      "name": "데이트 커플",
+      "description": "망원을 찾는 커플. 분위기와 비주얼 최우선",
+      "characteristics": [
+        "인스타그래머블 필수",
+        "분위기 좋은 곳",
+        "거리는 덜 중요",
+        "리뷰/SNS 참고 많이"
+      ]
+    },
+    "location": {
+      "home": {
+        "x": 126.91039698987431,
+        "y": 37.55988895967714
+      },
+      "work": null
+    },
+    "preferences": {
+      "spicy_pref": 0.811,
+      "stimulation_pref": 0.326,
+      "novelty_seeking": 0.787,
+      "visual_importance": 0.762,
+      "comfort_importance": 0.868,
+      "solo_pref": 0.075
+    },
+    "constraints": {
+      "hygiene_threshold": 0.749
+    },
+    "habits": {
+      "repeat_tolerance": 0.039,
+      "memory_decay": 0.511,
+      "review_propensity": 0.469,
+      "influence_sensitivity": 0.469
+    },
+    "timeblock_presence": {
+      "breakfast": 0.05,
+      "lunch": 0.3,
+      "dinner": 0.7,
+      "late_night": 0.25
+    },
+    "time_pressure_profile": {
+      "dinner": 0.2
+    }
+  },
+  {
+    "id": 5,
+    "segment": {
+      "code": "F2_SocialGroup",
+      "name": "친구 모임",
+      "description": "친구들끼리 만남. 트렌디하고 공유 가능한 음식",
+      "characteristics": [
+        "인원수 많음 (3-5명)",
+        "공유 메뉴 선호",
+        "사진 찍기 좋은 곳",
+        "핫플 탐방"
+      ]
+    },
+    "location": {
+      "home": {
+        "x": 126.90633015348781,
+        "y": 37.56163620603484
+      },
+      "work": null
+    },
+    "preferences": {
+      "spicy_pref": 0.403,
+      "stimulation_pref": 0.623,
+      "novelty_seeking": 0.705,
+      "visual_importance": 0.853,
+      "comfort_importance": 0.414,
+      "solo_pref": 0.428
+    },
+    "constraints": {
+      "hygiene_threshold": 0.564
+    },
+    "habits": {
+      "repeat_tolerance": 0.39,
+      "memory_decay": 0.158,
+      "review_propensity": 0.484,
+      "influence_sensitivity": 0.374
+    },
+    "timeblock_presence": {
+      "breakfast": 0.03,
+      "lunch": 0.25,
+      "dinner": 0.65,
+      "late_night": 0.5
+    },
+    "time_pressure_profile": {
+      "dinner": 0.25
+    }
+  },
+  {
+    "id": 6,
+    "segment": {
+      "code": "F3_IncomingWorker",
+      "name": "외부 출근자",
+      "description": "타지역 거주, 망원 직장. 점심시간 효율 중시",
+      "characteristics": [
+        "점심시간 빠른 회전",
+        "회사 근처 단골집",
+        "반복 방문 OK",
+        "간편 식사"
+      ]
+    },
+    "location": {
+      "home": {
+        "x": 126.90833754671127,
+        "y": 37.55170353768558
+      },
+      "work": {
+        "x": 126.90784375392042,
+        "y": 37.551205586995856
+      }
+    },
+    "preferences": {
+      "spicy_pref": 0.558,
+      "stimulation_pref": 0.642,
+      "novelty_seeking": 0.202,
+      "visual_importance": 0.438,
+      "comfort_importance": 0.567,
+      "solo_pref": 0.776
+    },
+    "constraints": {
+      "hygiene_threshold": 0.386
+    },
+    "habits": {
+      "repeat_tolerance": 0.957,
+      "memory_decay": 0.533,
+      "review_propensity": 0.146,
+      "influence_sensitivity": 0.125
+    },
+    "timeblock_presence": {
+      "breakfast": 0.2,
+      "lunch": 0.85,
+      "dinner": 0.15,
+      "late_night": 0.05
+    },
+    "time_pressure_profile": {
+      "lunch": 0.8
+    }
+  },
+  {
+    "id": 7,
+    "segment": {
+      "code": "F4_SoloVisitor",
+      "name": "솔로 탐방객",
+      "description": "혼자 망원 탐방. 숨은 맛집 찾기",
+      "characteristics": [
+        "혼밥 거부감 없음",
+        "새로운 곳 도전",
+        "리뷰 적극 작성",
+        "마니아적 성향"
+      ]
+    },
+    "location": {
+      "home": {
+        "x": 126.91039225150654,
+        "y": 37.55575037044507
+      },
+      "work": null
+    },
+    "preferences": {
+      "spicy_pref": 0.469,
+      "stimulation_pref": 0.665,
+      "novelty_seeking": 0.974,
+      "visual_importance": 0.671,
+      "comfort_importance": 0.584,
+      "solo_pref": 0.981
+    },
+    "constraints": {
+      "hygiene_threshold": 0.691
+    },
+    "habits": {
+      "repeat_tolerance": 0.251,
+      "memory_decay": 0.876,
+      "review_propensity": 0.822,
+      "influence_sensitivity": 0.15
+    },
+    "timeblock_presence": {
+      "breakfast": 0.05,
+      "lunch": 0.35,
+      "dinner": 0.6,
+      "late_night": 0.25
+    },
+    "time_pressure_profile": {}
+  },
+  {
+    "id": 8,
+    "segment": {
+      "code": "R1_OnePerson",
+      "name": "1인 가구 거주민",
+      "description": "혼자 사는 직장인 또는 학생. 혼밥 선호, 가까운 거리, 루틴 중시",
+      "characteristics": [
+        "집 근처 단골집 선호",
+        "혼밥 가능한 곳 필수",
+        "간편하고 빠른 식사",
+        "가성비 중요"
+      ]
+    },
+    "location": {
+      "home": {
+        "x": 126.90507568818228,
+        "y": 37.552595352277976
+      },
+      "work": null
+    },
+    "preferences": {
+      "spicy_pref": 0.367,
+      "stimulation_pref": 0.606,
+      "novelty_seeking": 0.237,
+      "visual_importance": 0.591,
+      "comfort_importance": 0.682,
+      "solo_pref": 0.971
+    },
+    "constraints": {
+      "hygiene_threshold": 0.153
+    },
+    "habits": {
+      "repeat_tolerance": 0.914,
+      "memory_decay": 0.792,
+      "review_propensity": 0.208,
+      "influence_sensitivity": 0.613
+    },
+    "timeblock_presence": {
+      "breakfast": 0.15,
+      "lunch": 0.25,
+      "dinner": 0.55,
+      "late_night": 0.3
+    },
+    "time_pressure_profile": {
+      "lunch": 0.45,
+      "dinner": 0.25
+    }
+  },
+  {
+    "id": 9,
+    "segment": {
+      "code": "R2_TwoPeople",
+      "name": "2인 가구",
+      "description": "부부 또는 커플 동거. 적당한 외식 빈도, 분위기 있는 곳 선호",
+      "characteristics": [
+        "주말 외식 빈도 높음",
+        "비주얼/분위기 중시",
+        "편안한 공간 선호",
+        "다양한 메뉴 탐색"
+      ]
+    },
+    "location": {
+      "home": {
+        "x": 126.91211270669338,
+        "y": 37.555227352589654
+      },
+      "work": null
+    },
+    "preferences": {
+      "spicy_pref": 0.339,
+      "stimulation_pref": 0.524,
+      "novelty_seeking": 0.437,
+      "visual_importance": 0.588,
+      "comfort_importance": 0.433,
+      "solo_pref": 0.536
+    },
+    "constraints": {
+      "hygiene_threshold": 0.452
+    },
+    "habits": {
+      "repeat_tolerance": 0.569,
+      "memory_decay": 0.029,
+      "review_propensity": 0.566,
+      "influence_sensitivity": 0.433
+    },
+    "timeblock_presence": {
+      "breakfast": 0.1,
+      "lunch": 0.2,
+      "dinner": 0.55,
+      "late_night": 0.2
+    },
+    "time_pressure_profile": {
+      "lunch": 0.4,
+      "dinner": 0.2
+    }
+  },
+  {
+    "id": 10,
+    "segment": {
+      "code": "R3_FamilyFour",
+      "name": "4인 가족",
+      "description": "부모+자녀 2명. 위생과 편안함 최우선, 새로운 시도 회피",
+      "characteristics": [
+        "위생 기준 매우 엄격",
+        "편안하고 넓은 공간 필수",
+        "아이들 먹기 좋은 메뉴",
+        "검증된 식당 선호"
+      ]
+    },
+    "location": {
+      "home": {
+        "x": 126.90385836088919,
+        "y": 37.554239332247555
+      },
+      "work": null
+    },
+    "preferences": {
+      "spicy_pref": 0.368,
+      "stimulation_pref": 0.128,
+      "novelty_seeking": 0.457,
+      "visual_importance": 0.734,
+      "comfort_importance": 0.887,
+      "solo_pref": 0.776
+    },
+    "constraints": {
+      "hygiene_threshold": 0.895
+    },
+    "habits": {
+      "repeat_tolerance": 0.939,
+      "memory_decay": 0.896,
+      "review_propensity": 0.303,
+      "influence_sensitivity": 0.735
+    },
+    "timeblock_presence": {
+      "breakfast": 0.05,
+      "lunch": 0.4,
+      "dinner": 0.65,
+      "late_night": 0.05
+    },
+    "time_pressure_profile": {
+      "dinner": 0.2
+    }
+  },
+  {
+    "id": 11,
+    "segment": {
+      "code": "R4_CommuterResident",
+      "name": "출퇴근 거주민",
+      "description": "망원 거주, 타지역 출퇴근. 저녁/주말에 망원 외식 즐김",
+      "characteristics": [
+        "저녁 외식 빈도 높음",
+        "주말 브런치/맛집 탐방",
+        "트렌디한 곳 선호",
+        "리뷰 많이 참고"
+      ]
+    },
+    "location": {
+      "home": {
+        "x": 126.90866154592777,
+        "y": 37.55782722032182
+      },
+      "work": {
+        "x": 126.90806366305799,
+        "y": 37.558154105015035
+      }
+    },
+    "preferences": {
+      "spicy_pref": 0.154,
+      "stimulation_pref": 0.511,
+      "novelty_seeking": 0.462,
+      "visual_importance": 0.629,
+      "comfort_importance": 0.388,
+      "solo_pref": 0.478
+    },
+    "constraints": {
+      "hygiene_threshold": 0.379
+    },
+    "habits": {
+      "repeat_tolerance": 0.592,
+      "memory_decay": 0.659,
+      "review_propensity": 0.465,
+      "influence_sensitivity": 0.665
+    },
+    "timeblock_presence": {
+      "breakfast": 0.1,
+      "lunch": 0.05,
+      "dinner": 0.65,
+      "late_night": 0.4
+    },
+    "time_pressure_profile": {
+      "dinner": 0.35
+    }
+  },
+  {
+    "id": 12,
+    "segment": {
+      "code": "F1_DateCouple",
+      "name": "데이트 커플",
+      "description": "망원을 찾는 커플. 분위기와 비주얼 최우선",
+      "characteristics": [
+        "인스타그래머블 필수",
+        "분위기 좋은 곳",
+        "거리는 덜 중요",
+        "리뷰/SNS 참고 많이"
+      ]
+    },
+    "location": {
+      "home": {
+        "x": 126.91670823800436,
+        "y": 37.55396792491808
+      },
+      "work": null
+    },
+    "preferences": {
+      "spicy_pref": 0.698,
+      "stimulation_pref": 0.105,
+      "novelty_seeking": 0.795,
+      "visual_importance": 0.891,
+      "comfort_importance": 0.947,
+      "solo_pref": 0.015
+    },
+    "constraints": {
+      "hygiene_threshold": 0.906
+    },
+    "habits": {
+      "repeat_tolerance": 0.295,
+      "memory_decay": 0.167,
+      "review_propensity": 0.834,
+      "influence_sensitivity": 0.951
+    },
+    "timeblock_presence": {
+      "breakfast": 0.05,
+      "lunch": 0.3,
+      "dinner": 0.7,
+      "late_night": 0.25
+    },
+    "time_pressure_profile": {
+      "dinner": 0.2
+    }
+  },
+  {
+    "id": 13,
+    "segment": {
+      "code": "F2_SocialGroup",
+      "name": "친구 모임",
+      "description": "친구들끼리 만남. 트렌디하고 공유 가능한 음식",
+      "characteristics": [
+        "인원수 많음 (3-5명)",
+        "공유 메뉴 선호",
+        "사진 찍기 좋은 곳",
+        "핫플 탐방"
+      ]
+    },
+    "location": {
+      "home": {
+        "x": 126.90343878635464,
+        "y": 37.55193113635876
+      },
+      "work": null
+    },
+    "preferences": {
+      "spicy_pref": 0.132,
+      "stimulation_pref": 0.664,
+      "novelty_seeking": 0.552,
+      "visual_importance": 0.988,
+      "comfort_importance": 0.267,
+      "solo_pref": 0.355
+    },
+    "constraints": {
+      "hygiene_threshold": 0.474
+    },
+    "habits": {
+      "repeat_tolerance": 0.34,
+      "memory_decay": 0.712,
+      "review_propensity": 0.528,
+      "influence_sensitivity": 0.535
+    },
+    "timeblock_presence": {
+      "breakfast": 0.03,
+      "lunch": 0.25,
+      "dinner": 0.65,
+      "late_night": 0.5
+    },
+    "time_pressure_profile": {
+      "dinner": 0.25
+    }
+  },
+  {
+    "id": 14,
+    "segment": {
+      "code": "F3_IncomingWorker",
+      "name": "외부 출근자",
+      "description": "타지역 거주, 망원 직장. 점심시간 효율 중시",
+      "characteristics": [
+        "점심시간 빠른 회전",
+        "회사 근처 단골집",
+        "반복 방문 OK",
+        "간편 식사"
+      ]
+    },
+    "location": {
+      "home": {
+        "x": 126.90907989711289,
+        "y": 37.5616448614636
+      },
+      "work": {
+        "x": 126.90543026271173,
+        "y": 37.551799217615184
+      }
+    },
+    "preferences": {
+      "spicy_pref": 0.317,
+      "stimulation_pref": 0.771,
+      "novelty_seeking": 0.306,
+      "visual_importance": 0.365,
+      "comfort_importance": 0.566,
+      "solo_pref": 0.768
+    },
+    "constraints": {
+      "hygiene_threshold": 0.343
+    },
+    "habits": {
+      "repeat_tolerance": 0.679,
+      "memory_decay": 0.357,
+      "review_propensity": 0.032,
+      "influence_sensitivity": 0.284
+    },
+    "timeblock_presence": {
+      "breakfast": 0.2,
+      "lunch": 0.85,
+      "dinner": 0.15,
+      "late_night": 0.05
+    },
+    "time_pressure_profile": {
+      "lunch": 0.8
+    }
+  },
+  {
+    "id": 15,
+    "segment": {
+      "code": "F4_SoloVisitor",
+      "name": "솔로 탐방객",
+      "description": "혼자 망원 탐방. 숨은 맛집 찾기",
+      "characteristics": [
+        "혼밥 거부감 없음",
+        "새로운 곳 도전",
+        "리뷰 적극 작성",
+        "마니아적 성향"
+      ]
+    },
+    "location": {
+      "home": {
+        "x": 126.90187759392155,
+        "y": 37.55925296393912
+      },
+      "work": null
+    },
+    "preferences": {
+      "spicy_pref": 0.868,
+      "stimulation_pref": 0.236,
+      "novelty_seeking": 0.89,
+      "visual_importance": 0.603,
+      "comfort_importance": 0.252,
+      "solo_pref": 0.808
+    },
+    "constraints": {
+      "hygiene_threshold": 0.62
+    },
+    "habits": {
+      "repeat_tolerance": 0.225,
+      "memory_decay": 0.567,
+      "review_propensity": 0.655,
+      "influence_sensitivity": 0.858
+    },
+    "timeblock_presence": {
+      "breakfast": 0.05,
+      "lunch": 0.35,
+      "dinner": 0.6,
+      "late_night": 0.25
+    },
+    "time_pressure_profile": {}
+  },
+  {
+    "id": 16,
+    "segment": {
+      "code": "R1_OnePerson",
+      "name": "1인 가구 거주민",
+      "description": "혼자 사는 직장인 또는 학생. 혼밥 선호, 가까운 거리, 루틴 중시",
+      "characteristics": [
+        "집 근처 단골집 선호",
+        "혼밥 가능한 곳 필수",
+        "간편하고 빠른 식사",
+        "가성비 중요"
+      ]
+    },
+    "location": {
+      "home": {
+        "x": 126.90971627085602,
+        "y": 37.558715771341525
+      },
+      "work": null
+    },
+    "preferences": {
+      "spicy_pref": 0.108,
+      "stimulation_pref": 0.319,
+      "novelty_seeking": 0.31,
+      "visual_importance": 0.461,
+      "comfort_importance": 0.849,
+      "solo_pref": 0.939
+    },
+    "constraints": {
+      "hygiene_threshold": 0.441
+    },
+    "habits": {
+      "repeat_tolerance": 0.666,
+      "memory_decay": 0.212,
+      "review_propensity": 0.441,
+      "influence_sensitivity": 0.138
+    },
+    "timeblock_presence": {
+      "breakfast": 0.15,
+      "lunch": 0.25,
+      "dinner": 0.55,
+      "late_night": 0.3
+    },
+    "time_pressure_profile": {
+      "lunch": 0.45,
+      "dinner": 0.25
+    }
+  },
+  {
+    "id": 17,
+    "segment": {
+      "code": "R2_TwoPeople",
+      "name": "2인 가구",
+      "description": "부부 또는 커플 동거. 적당한 외식 빈도, 분위기 있는 곳 선호",
+      "characteristics": [
+        "주말 외식 빈도 높음",
+        "비주얼/분위기 중시",
+        "편안한 공간 선호",
+        "다양한 메뉴 탐색"
+      ]
+    },
+    "location": {
+      "home": {
+        "x": 126.90267245146356,
+        "y": 37.55716080661533
+      },
+      "work": null
+    },
+    "preferences": {
+      "spicy_pref": 0.179,
+      "stimulation_pref": 0.258,
+      "novelty_seeking": 0.515,
+      "visual_importance": 0.844,
+      "comfort_importance": 0.682,
+      "solo_pref": 0.764
+    },
+    "constraints": {
+      "hygiene_threshold": 0.822
+    },
+    "habits": {
+      "repeat_tolerance": 0.336,
+      "memory_decay": 0.664,
+      "review_propensity": 0.318,
+      "influence_sensitivity": 0.101
+    },
+    "timeblock_presence": {
+      "breakfast": 0.1,
+      "lunch": 0.2,
+      "dinner": 0.55,
+      "late_night": 0.2
+    },
+    "time_pressure_profile": {
+      "lunch": 0.4,
+      "dinner": 0.2
+    }
+  },
+  {
+    "id": 18,
+    "segment": {
+      "code": "R3_FamilyFour",
+      "name": "4인 가족",
+      "description": "부모+자녀 2명. 위생과 편안함 최우선, 새로운 시도 회피",
+      "characteristics": [
+        "위생 기준 매우 엄격",
+        "편안하고 넓은 공간 필수",
+        "아이들 먹기 좋은 메뉴",
+        "검증된 식당 선호"
+      ]
+    },
+    "location": {
+      "home": {
+        "x": 126.90658342904571,
+        "y": 37.55709344298364
+      },
+      "work": null
+    },
+    "preferences": {
+      "spicy_pref": 0.256,
+      "stimulation_pref": 0.608,
+      "novelty_seeking": 0.262,
+      "visual_importance": 0.531,
+      "comfort_importance": 0.811,
+      "solo_pref": 0.461
+    },
+    "constraints": {
+      "hygiene_threshold": 0.791
+    },
+    "habits": {
+      "repeat_tolerance": 0.47,
+      "memory_decay": 0.509,
+      "review_propensity": 0.462,
+      "influence_sensitivity": 0.665
+    },
+    "timeblock_presence": {
+      "breakfast": 0.05,
+      "lunch": 0.4,
+      "dinner": 0.65,
+      "late_night": 0.05
+    },
+    "time_pressure_profile": {
+      "dinner": 0.2
+    }
+  },
+  {
+    "id": 19,
+    "segment": {
+      "code": "R4_CommuterResident",
+      "name": "출퇴근 거주민",
+      "description": "망원 거주, 타지역 출퇴근. 저녁/주말에 망원 외식 즐김",
+      "characteristics": [
+        "저녁 외식 빈도 높음",
+        "주말 브런치/맛집 탐방",
+        "트렌디한 곳 선호",
+        "리뷰 많이 참고"
+      ]
+    },
+    "location": {
+      "home": {
+        "x": 126.91035714388974,
+        "y": 37.55711797774387
+      },
+      "work": {
+        "x": 126.90939456781537,
+        "y": 37.55633789534744
+      }
+    },
+    "preferences": {
+      "spicy_pref": 0.37,
+      "stimulation_pref": 0.351,
+      "novelty_seeking": 0.7,
+      "visual_importance": 0.31,
+      "comfort_importance": 0.57,
+      "solo_pref": 0.197
+    },
+    "constraints": {
+      "hygiene_threshold": 0.92
+    },
+    "habits": {
+      "repeat_tolerance": 0.321,
+      "memory_decay": 0.388,
+      "review_propensity": 0.542,
+      "influence_sensitivity": 0.475
+    },
+    "timeblock_presence": {
+      "breakfast": 0.1,
+      "lunch": 0.05,
+      "dinner": 0.65,
+      "late_night": 0.4
+    },
+    "time_pressure_profile": {
+      "dinner": 0.35
+    }
+  },
+  {
+    "id": 20,
+    "segment": {
+      "code": "F1_DateCouple",
+      "name": "데이트 커플",
+      "description": "망원을 찾는 커플. 분위기와 비주얼 최우선",
+      "characteristics": [
+        "인스타그래머블 필수",
+        "분위기 좋은 곳",
+        "거리는 덜 중요",
+        "리뷰/SNS 참고 많이"
+      ]
+    },
+    "location": {
+      "home": {
+        "x": 126.90744559699345,
+        "y": 37.55915644112919
+      },
+      "work": null
+    },
+    "preferences": {
+      "spicy_pref": 0.899,
+      "stimulation_pref": 0.475,
+      "novelty_seeking": 0.764,
+      "visual_importance": 0.995,
+      "comfort_importance": 0.818,
+      "solo_pref": 0.021
+    },
+    "constraints": {
+      "hygiene_threshold": 0.654
+    },
+    "habits": {
+      "repeat_tolerance": 0.122,
+      "memory_decay": 0.857,
+      "review_propensity": 0.817,
+      "influence_sensitivity": 0.846
+    },
+    "timeblock_presence": {
+      "breakfast": 0.05,
+      "lunch": 0.3,
+      "dinner": 0.7,
+      "late_night": 0.25
+    },
+    "time_pressure_profile": {
+      "dinner": 0.2
+    }
+  },
+  {
+    "id": 21,
+    "segment": {
+      "code": "F2_SocialGroup",
+      "name": "친구 모임",
+      "description": "친구들끼리 만남. 트렌디하고 공유 가능한 음식",
+      "characteristics": [
+        "인원수 많음 (3-5명)",
+        "공유 메뉴 선호",
+        "사진 찍기 좋은 곳",
+        "핫플 탐방"
+      ]
+    },
+    "location": {
+      "home": {
+        "x": 126.89871422090073,
+        "y": 37.55440164391821
+      },
+      "work": null
+    },
+    "preferences": {
+      "spicy_pref": 0.722,
+      "stimulation_pref": 0.924,
+      "novelty_seeking": 0.711,
+      "visual_importance": 0.866,
+      "comfort_importance": 0.401,
+      "solo_pref": 0.152
+    },
+    "constraints": {
+      "hygiene_threshold": 0.572
+    },
+    "habits": {
+      "repeat_tolerance": 0.706,
+      "memory_decay": 0.546,
+      "review_propensity": 0.727,
+      "influence_sensitivity": 0.498
+    },
+    "timeblock_presence": {
+      "breakfast": 0.03,
+      "lunch": 0.25,
+      "dinner": 0.65,
+      "late_night": 0.5
+    },
+    "time_pressure_profile": {
+      "dinner": 0.25
+    }
+  },
+  {
+    "id": 22,
+    "segment": {
+      "code": "F3_IncomingWorker",
+      "name": "외부 출근자",
+      "description": "타지역 거주, 망원 직장. 점심시간 효율 중시",
+      "characteristics": [
+        "점심시간 빠른 회전",
+        "회사 근처 단골집",
+        "반복 방문 OK",
+        "간편 식사"
+      ]
+    },
+    "location": {
+      "home": {
+        "x": 126.90364813672855,
+        "y": 37.55280561075878
+      },
+      "work": {
+        "x": 126.90462428874388,
+        "y": 37.56347470655617
+      }
+    },
+    "preferences": {
+      "spicy_pref": 0.136,
+      "stimulation_pref": 0.353,
+      "novelty_seeking": 0.056,
+      "visual_importance": 0.205,
+      "comfort_importance": 0.496,
+      "solo_pref": 0.713
+    },
+    "constraints": {
+      "hygiene_threshold": 0.627
+    },
+    "habits": {
+      "repeat_tolerance": 0.975,
+      "memory_decay": 0.694,
+      "review_propensity": 0.517,
+      "influence_sensitivity": 0.072
+    },
+    "timeblock_presence": {
+      "breakfast": 0.2,
+      "lunch": 0.85,
+      "dinner": 0.15,
+      "late_night": 0.05
+    },
+    "time_pressure_profile": {
+      "lunch": 0.8
+    }
+  },
+  {
+    "id": 23,
+    "segment": {
+      "code": "F4_SoloVisitor",
+      "name": "솔로 탐방객",
+      "description": "혼자 망원 탐방. 숨은 맛집 찾기",
+      "characteristics": [
+        "혼밥 거부감 없음",
+        "새로운 곳 도전",
+        "리뷰 적극 작성",
+        "마니아적 성향"
+      ]
+    },
+    "location": {
+      "home": {
+        "x": 126.90167084442155,
+        "y": 37.560841391772954
+      },
+      "work": null
+    },
+    "preferences": {
+      "spicy_pref": 0.69,
+      "stimulation_pref": 0.896,
+      "novelty_seeking": 0.894,
+      "visual_importance": 0.784,
+      "comfort_importance": 0.734,
+      "solo_pref": 0.976
+    },
+    "constraints": {
+      "hygiene_threshold": 0.813
+    },
+    "habits": {
+      "repeat_tolerance": 0.076,
+      "memory_decay": 0.767,
+      "review_propensity": 0.561,
+      "influence_sensitivity": 0.688
+    },
+    "timeblock_presence": {
+      "breakfast": 0.05,
+      "lunch": 0.35,
+      "dinner": 0.6,
+      "late_night": 0.25
+    },
+    "time_pressure_profile": {}
+  },
+  {
+    "id": 24,
+    "segment": {
+      "code": "R1_OnePerson",
+      "name": "1인 가구 거주민",
+      "description": "혼자 사는 직장인 또는 학생. 혼밥 선호, 가까운 거리, 루틴 중시",
+      "characteristics": [
+        "집 근처 단골집 선호",
+        "혼밥 가능한 곳 필수",
+        "간편하고 빠른 식사",
+        "가성비 중요"
+      ]
+    },
+    "location": {
+      "home": {
+        "x": 126.89758565114192,
+        "y": 37.55432557485007
+      },
+      "work": null
+    },
+    "preferences": {
+      "spicy_pref": 0.403,
+      "stimulation_pref": 0.639,
+      "novelty_seeking": 0.151,
+      "visual_importance": 0.918,
+      "comfort_importance": 0.646,
+      "solo_pref": 0.647
+    },
+    "constraints": {
+      "hygiene_threshold": 0.411
+    },
+    "habits": {
+      "repeat_tolerance": 0.744,
+      "memory_decay": 0.592,
+      "review_propensity": 0.81,
+      "influence_sensitivity": 0.237
+    },
+    "timeblock_presence": {
+      "breakfast": 0.15,
+      "lunch": 0.25,
+      "dinner": 0.55,
+      "late_night": 0.3
+    },
+    "time_pressure_profile": {
+      "lunch": 0.45,
+      "dinner": 0.25
+    }
+  },
+  {
+    "id": 25,
+    "segment": {
+      "code": "R2_TwoPeople",
+      "name": "2인 가구",
+      "description": "부부 또는 커플 동거. 적당한 외식 빈도, 분위기 있는 곳 선호",
+      "characteristics": [
+        "주말 외식 빈도 높음",
+        "비주얼/분위기 중시",
+        "편안한 공간 선호",
+        "다양한 메뉴 탐색"
+      ]
+    },
+    "location": {
+      "home": {
+        "x": 126.90681376532554,
+        "y": 37.5589311116568
+      },
+      "work": null
+    },
+    "preferences": {
+      "spicy_pref": 0.663,
+      "stimulation_pref": 0.701,
+      "novelty_seeking": 0.259,
+      "visual_importance": 0.682,
+      "comfort_importance": 0.435,
+      "solo_pref": 0.432
+    },
+    "constraints": {
+      "hygiene_threshold": 0.762
+    },
+    "habits": {
+      "repeat_tolerance": 0.505,
+      "memory_decay": 0.152,
+      "review_propensity": 0.711,
+      "influence_sensitivity": 0.53
+    },
+    "timeblock_presence": {
+      "breakfast": 0.1,
+      "lunch": 0.2,
+      "dinner": 0.55,
+      "late_night": 0.2
+    },
+    "time_pressure_profile": {
+      "lunch": 0.4,
+      "dinner": 0.2
+    }
+  },
+  {
+    "id": 26,
+    "segment": {
+      "code": "R3_FamilyFour",
+      "name": "4인 가족",
+      "description": "부모+자녀 2명. 위생과 편안함 최우선, 새로운 시도 회피",
+      "characteristics": [
+        "위생 기준 매우 엄격",
+        "편안하고 넓은 공간 필수",
+        "아이들 먹기 좋은 메뉴",
+        "검증된 식당 선호"
+      ]
+    },
+    "location": {
+      "home": {
+        "x": 126.90955613289897,
+        "y": 37.559966736175994
+      },
+      "work": null
+    },
+    "preferences": {
+      "spicy_pref": 0.257,
+      "stimulation_pref": 0.094,
+      "novelty_seeking": 0.181,
+      "visual_importance": 0.653,
+      "comfort_importance": 0.708,
+      "solo_pref": 0.473
+    },
+    "constraints": {
+      "hygiene_threshold": 0.806
+    },
+    "habits": {
+      "repeat_tolerance": 0.459,
+      "memory_decay": 0.618,
+      "review_propensity": 0.229,
+      "influence_sensitivity": 0.676
+    },
+    "timeblock_presence": {
+      "breakfast": 0.05,
+      "lunch": 0.4,
+      "dinner": 0.65,
+      "late_night": 0.05
+    },
+    "time_pressure_profile": {
+      "dinner": 0.2
+    }
+  },
+  {
+    "id": 27,
+    "segment": {
+      "code": "R4_CommuterResident",
+      "name": "출퇴근 거주민",
+      "description": "망원 거주, 타지역 출퇴근. 저녁/주말에 망원 외식 즐김",
+      "characteristics": [
+        "저녁 외식 빈도 높음",
+        "주말 브런치/맛집 탐방",
+        "트렌디한 곳 선호",
+        "리뷰 많이 참고"
+      ]
+    },
+    "location": {
+      "home": {
+        "x": 126.90425637463876,
+        "y": 37.553688241036674
+      },
+      "work": {
+        "x": 126.91028987940629,
+        "y": 37.55504347837559
+      }
+    },
+    "preferences": {
+      "spicy_pref": 0.333,
+      "stimulation_pref": 0.643,
+      "novelty_seeking": 0.692,
+      "visual_importance": 0.337,
+      "comfort_importance": 0.781,
+      "solo_pref": 0.408
+    },
+    "constraints": {
+      "hygiene_threshold": 0.695
+    },
+    "habits": {
+      "repeat_tolerance": 0.138,
+      "memory_decay": 0.109,
+      "review_propensity": 0.464,
+      "influence_sensitivity": 0.629
+    },
+    "timeblock_presence": {
+      "breakfast": 0.1,
+      "lunch": 0.05,
+      "dinner": 0.65,
+      "late_night": 0.4
+    },
+    "time_pressure_profile": {
+      "dinner": 0.35
+    }
+  },
+  {
+    "id": 28,
+    "segment": {
+      "code": "F1_DateCouple",
+      "name": "데이트 커플",
+      "description": "망원을 찾는 커플. 분위기와 비주얼 최우선",
+      "characteristics": [
+        "인스타그래머블 필수",
+        "분위기 좋은 곳",
+        "거리는 덜 중요",
+        "리뷰/SNS 참고 많이"
+      ]
+    },
+    "location": {
+      "home": {
+        "x": 126.89962156838331,
+        "y": 37.55033356392998
+      },
+      "work": null
+    },
+    "preferences": {
+      "spicy_pref": 0.531,
+      "stimulation_pref": 0.527,
+      "novelty_seeking": 0.653,
+      "visual_importance": 0.896,
+      "comfort_importance": 0.783,
+      "solo_pref": 0.029
+    },
+    "constraints": {
+      "hygiene_threshold": 0.824
+    },
+    "habits": {
+      "repeat_tolerance": 0.174,
+      "memory_decay": 0.259,
+      "review_propensity": 0.627,
+      "influence_sensitivity": 0.883
+    },
+    "timeblock_presence": {
+      "breakfast": 0.05,
+      "lunch": 0.3,
+      "dinner": 0.7,
+      "late_night": 0.25
+    },
+    "time_pressure_profile": {
+      "dinner": 0.2
+    }
+  },
+  {
+    "id": 29,
+    "segment": {
+      "code": "F2_SocialGroup",
+      "name": "친구 모임",
+      "description": "친구들끼리 만남. 트렌디하고 공유 가능한 음식",
+      "characteristics": [
+        "인원수 많음 (3-5명)",
+        "공유 메뉴 선호",
+        "사진 찍기 좋은 곳",
+        "핫플 탐방"
+      ]
+    },
+    "location": {
+      "home": {
+        "x": 126.90140273857,
+        "y": 37.55848580372027
+      },
+      "work": null
+    },
+    "preferences": {
+      "spicy_pref": 0.21,
+      "stimulation_pref": 0.404,
+      "novelty_seeking": 0.866,
+      "visual_importance": 0.854,
+      "comfort_importance": 0.701,
+      "solo_pref": 0.701
+    },
+    "constraints": {
+      "hygiene_threshold": 0.503
+    },
+    "habits": {
+      "repeat_tolerance": 0.412,
+      "memory_decay": 0.458,
+      "review_propensity": 0.612,
+      "influence_sensitivity": 0.682
+    },
+    "timeblock_presence": {
+      "breakfast": 0.03,
+      "lunch": 0.25,
+      "dinner": 0.65,
+      "late_night": 0.5
+    },
+    "time_pressure_profile": {
+      "dinner": 0.25
+    }
+  }
+]

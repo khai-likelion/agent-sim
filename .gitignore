@@ -1,5 +1,7 @@
 # Environment
 .env
+**/.env
+*.env
 
 # Python
 __pycache__/
@@ -12,6 +14,11 @@ build/
 data/output/*.csv
 data/output/*.html
 data/output/*.json
+
+# Simulation logs and results
+장터국밥_simulation/*.log
+장터국밥_simulation/results/*.json
+장터국밥_simulation/temp_stores.csv
 
 # Raw data files (large files)
 data/raw/*.csv
