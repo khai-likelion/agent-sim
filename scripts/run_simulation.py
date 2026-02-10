@@ -9,6 +9,7 @@ Modes:
 
 import argparse
 import json
+import random
 import sys
 from pathlib import Path
 
@@ -28,6 +29,7 @@ from src.simulation_layer.scenario.mangwon_scenario import (
 )
 from src.simulation_layer.persona.cognitive_modules.decide import DecideModule
 from src.simulation_layer.persona.cognitive_modules.chained_decide import ChainedDecideModule
+from src.simulation_layer.spawn_points import SpawnPointSelector
 
 
 def create_street_network_environment(stores_df):
@@ -88,6 +90,22 @@ def main():
         action="store_true",
         help="Disable smart mode (use LLM for all steps, slower but more varied)",
     )
+    parser.add_argument(
+        "--no-reports",
+        action="store_true",
+        help="Run simulation without business reports",
+    )
+    parser.add_argument(
+        "--ab-test",
+        action="store_true",
+        help="Run A/B test: simulation with reports (A) + without reports (B), then compare",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="Random seed for reproducible simulation (default: 42)",
+    )
     args = parser.parse_args()
 
     settings = get_settings()
@@ -96,6 +114,9 @@ def main():
     use_archetype = args.archetype
     use_chained = args.chained
     use_smart = not args.no_smart  # Smart mode enabled by default
+    use_no_reports = args.no_reports
+    use_ab_test = args.ab_test
+    seed = args.seed
 
     print("=" * 80)
     print("Mangwon-dong Agent Simulation")
@@ -112,10 +133,14 @@ def main():
     print(f"Spatial Mode: {mode_str}")
     print(f"Decision Mode: {decision_mode}")
     print(f"Agent Mode: {agent_mode}")
+    if use_ab_test:
+        print(f"A/B Test Mode: ON (seed={seed})")
+    elif use_no_reports:
+        print(f"Reports: DISABLED")
     print()
 
     # 1. Load and index stores
-    print("[1/4] Loading store data...")
+    print("[1/5] Loading store data...")
     stores_df = load_and_index_stores()
     print()
 
@@ -160,26 +185,27 @@ def main():
     print(f"  {len(agents)} agents generated -> {agents_path}")
     print()
 
-    # 4. Run simulation
-    print("[4/5] Running simulation...")
     reports = create_default_reports()
 
-    # Create decide module based on mode
-    if use_chained:
-        decide_module = ChainedDecideModule(
-            use_llm=True,
-            rate_limit_delay=args.llm_delay,
-            smart_mode=use_smart,
-        )
-        if use_smart:
-            print("  Smart Mode: Step1 규칙기반 → Step2,3만 LLM (호출 66% 절약)")
-        else:
-            print("  Full LLM Mode: 모든 Step에서 LLM 사용")
-    else:
-        decide_module = DecideModule(use_llm=use_llm, rate_limit_delay=args.llm_delay)
+    # ============ A/B Test Mode ============
+    if use_ab_test:
+        _run_ab_test(args, settings, env, stats, agents, reports, use_chained, use_llm, use_smart, seed)
+        return
 
-    engine = SimulationEngine(env, stats, agents, decide_module=decide_module)
-    
+    # ============ Single Run Mode ============
+    print("[4/5] Running simulation...")
+    effective_reports = None if use_no_reports else reports
+
+    decide_module = _create_decide_module(args, use_chained, use_llm, use_smart)
+    spawn_selector = SpawnPointSelector() if use_archetype else None
+    if spawn_selector:
+        print("  Spawn Points: 통계 기반 POI 위치 사용")
+
+    if seed is not None:
+        random.seed(seed)
+
+    engine = SimulationEngine(env, stats, agents, decide_module=decide_module, spawn_selector=spawn_selector)
+
     # Define save callback for real-time CSV updates
     def save_intermediate_results(df):
         """Save results after each timestep for real-time monitoring."""
@@ -188,24 +214,49 @@ def main():
             index=False,
             encoding="utf-8-sig",
         )
-    
+
     results_df = engine.run_simulation(
         start_date=get_default_start_date(),
-        reports=reports,
+        reports=effective_reports,
         save_callback=save_intermediate_results,
     )
     print()
 
     # 5. Save results
     print("[5/5] Saving results...")
+    _save_results(settings, results_df, decide_module, use_chained)
+
+
+def _create_decide_module(args, use_chained, use_llm, use_smart):
+    """Create the appropriate decide module."""
+    if use_chained:
+        module = ChainedDecideModule(
+            use_llm=True,
+            rate_limit_delay=args.llm_delay,
+            smart_mode=use_smart,
+        )
+        if use_smart:
+            print("  Smart Mode: Step1 규칙기반 → Step2,3만 LLM (호출 66% 절약)")
+        else:
+            print("  Full LLM Mode: 모든 Step에서 LLM 사용")
+        return module
+    return DecideModule(use_llm=use_llm, rate_limit_delay=args.llm_delay)
+
+
+def _save_results(settings, results_df, decide_module, use_chained, suffix=""):
+    """Save simulation results to CSV and optional agent memories."""
     settings.paths.output_dir.mkdir(parents=True, exist_ok=True)
 
-    results_df.to_csv(
-        settings.paths.simulation_result_csv,
-        index=False,
-        encoding="utf-8-sig",
-    )
-    print(f"  Full log -> {settings.paths.simulation_result_csv}")
+    # Determine file paths (with optional suffix for A/B test)
+    if suffix:
+        result_csv = settings.paths.output_dir / f"simulation_result_{suffix}.csv"
+        visit_csv = settings.paths.output_dir / f"visit_log_{suffix}.csv"
+    else:
+        result_csv = settings.paths.simulation_result_csv
+        visit_csv = settings.paths.visit_log_csv
+
+    results_df.to_csv(result_csv, index=False, encoding="utf-8-sig")
+    print(f"  Full log -> {result_csv}")
 
     visit_stats = results_df[results_df["decision"] == "visit"][
         [
@@ -214,19 +265,26 @@ def main():
             "report_received", "decision_reason",
         ]
     ]
-    visit_stats.to_csv(
-        settings.paths.visit_log_csv,
-        index=False,
-        encoding="utf-8-sig",
-    )
-    print(f"  Visit log -> {settings.paths.visit_log_csv}")
+    visit_stats.to_csv(visit_csv, index=False, encoding="utf-8-sig")
+    print(f"  Visit log -> {visit_csv}")
 
-    print()
-    print("=" * 80)
-    print("Simulation complete!")
-    print("=" * 80)
+    # Save agent memories (if ChainedDecideModule with memory)
+    if use_chained and isinstance(decide_module, ChainedDecideModule):
+        mem_suffix = f"_{suffix}" if suffix else ""
+        memories_path = settings.paths.output_dir / f"agent_memories{mem_suffix}.json"
+        memories_data = {}
+        for agent_id, mem in decide_module.get_all_memories().items():
+            memories_data[str(agent_id)] = {
+                "memory": mem.to_dict(),
+                "reflection": decide_module.get_all_reflections().get(agent_id, None),
+            }
+            if memories_data[str(agent_id)]["reflection"]:
+                memories_data[str(agent_id)]["reflection"] = memories_data[str(agent_id)]["reflection"].to_dict()
+        with open(memories_path, "w", encoding="utf-8") as f:
+            json.dump(memories_data, f, ensure_ascii=False, indent=2)
+        print(f"  Agent memories -> {memories_path}")
 
-    # Quick summary
+    # Summary
     total = len(results_df)
     active = len(results_df[results_df["is_active"] == True])
     visits = len(results_df[results_df["decision"] == "visit"])
@@ -235,6 +293,87 @@ def main():
     print(f"  Visit events: {visits} ({visits/total*100:.1f}%)")
     if active > 0:
         print(f"  Conversion rate: {visits/active*100:.1f}%")
+
+    return results_df
+
+
+def _run_ab_test(args, settings, env, stats, agents, reports, use_chained, use_llm, use_smart, seed):
+    """Run A/B test: simulation A (with reports) + B (without reports), then compare."""
+    from src.simulation_layer.ab_comparison import ABComparator
+
+    use_archetype = args.archetype
+
+    # ============ Run A: With Reports ============
+    print("=" * 60)
+    print("[A/B Test] Run A: 리포트 有 (With Reports)")
+    print("=" * 60)
+
+    random.seed(seed)
+    decide_module_a = _create_decide_module(args, use_chained, use_llm, use_smart)
+    spawn_selector_a = SpawnPointSelector() if use_archetype else None
+
+    engine_a = SimulationEngine(env, stats, agents, decide_module=decide_module_a, spawn_selector=spawn_selector_a)
+    df_a = engine_a.run_simulation(
+        start_date=get_default_start_date(),
+        reports=reports,
+    )
+    print()
+    print("[A] Saving results...")
+    _save_results(settings, df_a, decide_module_a, use_chained, suffix="A")
+    print()
+
+    # ============ Run B: Without Reports ============
+    print("=" * 60)
+    print("[A/B Test] Run B: 리포트 無 (Without Reports)")
+    print("=" * 60)
+
+    random.seed(seed)
+    decide_module_b = _create_decide_module(args, use_chained, use_llm, use_smart)
+    spawn_selector_b = SpawnPointSelector() if use_archetype else None
+
+    engine_b = SimulationEngine(env, stats, agents, decide_module=decide_module_b, spawn_selector=spawn_selector_b)
+    df_b = engine_b.run_simulation(
+        start_date=get_default_start_date(),
+        reports=None,
+    )
+    print()
+    print("[B] Saving results...")
+    _save_results(settings, df_b, decide_module_b, use_chained, suffix="B")
+    print()
+
+    # ============ Compare ============
+    print("=" * 60)
+    print("[A/B Test] Comparing Results...")
+    print("=" * 60)
+
+    report_store_names = [r.store_name for r in reports]
+    comparator = ABComparator(report_store_names=report_store_names)
+    metrics = comparator.compute(df_a, df_b)
+
+    # Save comparison JSON
+    comparison_path = settings.paths.output_dir / "ab_comparison.json"
+    with open(comparison_path, "w", encoding="utf-8") as f:
+        json.dump(comparator.to_dict(metrics), f, ensure_ascii=False, indent=2)
+    print(f"  Comparison -> {comparison_path}")
+
+    # Save summary text
+    summary = comparator.generate_summary_text(metrics)
+    summary_path = settings.paths.output_dir / "ab_comparison_summary.md"
+    with open(summary_path, "w", encoding="utf-8") as f:
+        f.write(summary)
+    print(f"  Summary -> {summary_path}")
+
+    # Print summary
+    print()
+    print(summary)
+
+    # Also save A as the main simulation result for dashboard
+    df_a.to_csv(settings.paths.simulation_result_csv, index=False, encoding="utf-8-sig")
+
+    print()
+    print("=" * 80)
+    print("A/B Test Complete!")
+    print("=" * 80)
 
 
 if __name__ == "__main__":

@@ -38,3 +38,5 @@ class SimulationEvent:
     decision_reason: str
     visited_store: Optional[str]
     visited_category: Optional[str]
+    discovery_channel: Optional[str] = None  # 네이버검색, 카카오지도, 길거리발견, SNS추천, 지인추천
+    visit_purpose: Optional[str] = None  # 맛집탐방, 회식, 혼밥, 데이트, 간편식사, 카페/디저트

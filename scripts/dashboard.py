@@ -26,6 +26,9 @@ OUTPUT_DIR = PROJECT_ROOT / "data" / "output"
 SIMULATION_CSV = OUTPUT_DIR / "simulation_result.csv"
 VISIT_LOG_CSV = OUTPUT_DIR / "visit_log.csv"
 AGENTS_JSON = OUTPUT_DIR / "agents.json"
+AB_COMPARISON_JSON = OUTPUT_DIR / "ab_comparison.json"
+SIM_A_CSV = OUTPUT_DIR / "simulation_result_A.csv"
+SIM_B_CSV = OUTPUT_DIR / "simulation_result_B.csv"
 
 # Mangwon-dong bounds
 LAT_MIN, LAT_MAX = 37.550, 37.560
@@ -54,6 +57,32 @@ def load_agents():
             return json.load(f)
     except Exception:
         return None
+
+
+@st.cache_data(ttl=10)
+def load_ab_comparison():
+    """Load A/B comparison results."""
+    if not AB_COMPARISON_JSON.exists():
+        return None
+    try:
+        with open(AB_COMPARISON_JSON, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+@st.cache_data(ttl=10)
+def load_ab_dataframes():
+    """Load A/B simulation DataFrames."""
+    df_a, df_b = None, None
+    try:
+        if SIM_A_CSV.exists():
+            df_a = pd.read_csv(SIM_A_CSV, encoding="utf-8-sig")
+        if SIM_B_CSV.exists():
+            df_b = pd.read_csv(SIM_B_CSV, encoding="utf-8-sig")
+    except Exception:
+        pass
+    return df_a, df_b
 
 
 def main():
@@ -188,6 +217,54 @@ def main():
             )
             st.plotly_chart(fig, use_container_width=True)
 
+    # ============ Discovery Channel & Visit Purpose ============
+    all_visits = df[df["decision"] == "visit"]
+
+    has_discovery = "discovery_channel" in all_visits.columns and all_visits["discovery_channel"].notna().any()
+    has_purpose = "visit_purpose" in all_visits.columns and all_visits["visit_purpose"].notna().any()
+
+    if has_discovery or has_purpose:
+        st.header("🔍 발견 경로 & 방문 목적 분석")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            if has_discovery:
+                st.subheader("발견 경로별 방문 분포")
+                channel_counts = all_visits["discovery_channel"].dropna().value_counts()
+                fig = px.pie(
+                    values=channel_counts.values,
+                    names=channel_counts.index,
+                    height=350,
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+        with col2:
+            if has_purpose:
+                st.subheader("방문 목적별 분포")
+                purpose_counts = all_visits["visit_purpose"].dropna().value_counts()
+                fig = px.pie(
+                    values=purpose_counts.values,
+                    names=purpose_counts.index,
+                    height=350,
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+        # Cross-analysis: channel × purpose
+        if has_discovery and has_purpose:
+            st.subheader("발견 경로 × 방문 목적 히트맵")
+            cross = pd.crosstab(
+                all_visits["discovery_channel"].dropna(),
+                all_visits["visit_purpose"].dropna(),
+            )
+            if len(cross) > 0:
+                fig = px.imshow(
+                    cross,
+                    labels=dict(x="방문 목적", y="발견 경로", color="방문수"),
+                    height=400,
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
     # ============ Agent Archetype Analysis ============
     if agents and len(visits) > 0:
         st.header("👥 에이전트 프로필 분석")
@@ -222,12 +299,21 @@ def main():
                     income_counts = visits_with_arch["income_level"].value_counts()
                     st.bar_chart(income_counts)
 
+    # ============ A/B Comparison Section ============
+    ab_data = load_ab_comparison()
+    if ab_data:
+        _render_ab_comparison(ab_data)
+
     # ============ Recent Events Log ============
     st.header("📋 최근 방문 로그")
 
     recent_visits = visits.tail(20).sort_values("timestamp", ascending=False)
     if len(recent_visits) > 0:
         display_cols = ["timestamp", "agent_name", "time_slot", "visited_store", "visited_category", "decision_reason"]
+        if has_discovery:
+            display_cols.append("discovery_channel")
+        if has_purpose:
+            display_cols.append("visit_purpose")
         display_cols = [c for c in display_cols if c in recent_visits.columns]
         st.dataframe(recent_visits[display_cols], use_container_width=True)
     else:
@@ -245,6 +331,113 @@ def main():
 
     total_records = len(df)
     st.sidebar.write(f"레코드: {total_records:,}개")
+
+
+def _render_ab_comparison(ab_data: dict):
+    """Render A/B comparison section on the dashboard."""
+    st.header("📊 X-Report A/B 비교 분석")
+
+    # Main metrics row
+    col1, col2, col3 = st.columns(3)
+
+    conv_a = ab_data.get("conversion_rate_a", 0)
+    conv_b = ab_data.get("conversion_rate_b", 0)
+    conv_delta = ab_data.get("conversion_delta", 0)
+    pct_change = ab_data.get("conversion_pct_change", 0)
+
+    col1.metric(
+        "전환율 A (리포트 有)",
+        f"{conv_a:.2%}",
+        f"{ab_data.get('total_visits_a', 0)}회 방문",
+    )
+    col2.metric(
+        "전환율 B (리포트 無)",
+        f"{conv_b:.2%}",
+        f"{ab_data.get('total_visits_b', 0)}회 방문",
+    )
+    col3.metric(
+        "변화율",
+        f"{pct_change:+.1f}%",
+        f"전환율 차이: {conv_delta:+.4f}",
+    )
+
+    # Information diffusion
+    st.subheader("📡 정보 확산")
+    info_col1, info_col2 = st.columns(2)
+    info_col1.metric("리포트 수신율", f"{ab_data.get('report_reception_rate', 0):.1%}")
+    info_col2.metric("리포트 영향 전환율", f"{ab_data.get('report_influenced_rate', 0):.1%}")
+
+    # Report target store comparison
+    report_visits_a = ab_data.get("report_store_visits_a", {})
+    report_visits_b = ab_data.get("report_store_visits_b", {})
+
+    if report_visits_a:
+        st.subheader("🎯 리포트 대상 매장 방문수 비교")
+
+        store_names = list(report_visits_a.keys())
+        visits_a_vals = [report_visits_a.get(s, 0) for s in store_names]
+        visits_b_vals = [report_visits_b.get(s, 0) for s in store_names]
+
+        fig = go.Figure(data=[
+            go.Bar(name="A (리포트 有)", x=store_names, y=visits_a_vals, marker_color="#636EFA"),
+            go.Bar(name="B (리포트 無)", x=store_names, y=visits_b_vals, marker_color="#EF553B"),
+        ])
+        fig.update_layout(barmode="group", height=350)
+        st.plotly_chart(fig, use_container_width=True)
+
+    # Segment conversion comparison
+    seg_conv_a = ab_data.get("segment_conversion_a", {})
+    seg_conv_b = ab_data.get("segment_conversion_b", {})
+
+    if seg_conv_a:
+        st.subheader("👥 세그먼트별 전환율 비교")
+
+        segments = list(seg_conv_a.keys())
+        conv_a_vals = [seg_conv_a.get(s, 0) for s in segments]
+        conv_b_vals = [seg_conv_b.get(s, 0) for s in segments]
+
+        fig = go.Figure(data=[
+            go.Bar(name="A (리포트 有)", x=segments, y=conv_a_vals, marker_color="#636EFA"),
+            go.Bar(name="B (리포트 無)", x=segments, y=conv_b_vals, marker_color="#EF553B"),
+        ])
+        fig.update_layout(barmode="group", height=350, yaxis_title="전환율")
+        st.plotly_chart(fig, use_container_width=True)
+
+    # Category distribution comparison
+    cat_dist_a = ab_data.get("category_distribution_a", {})
+    cat_dist_b = ab_data.get("category_distribution_b", {})
+
+    if cat_dist_a or cat_dist_b:
+        st.subheader("📂 카테고리 분포 비교")
+
+        all_cats = sorted(set(list(cat_dist_a.keys()) + list(cat_dist_b.keys())))
+        cat_a_vals = [cat_dist_a.get(c, 0) for c in all_cats]
+        cat_b_vals = [cat_dist_b.get(c, 0) for c in all_cats]
+
+        fig = go.Figure(data=[
+            go.Bar(name="A (리포트 有)", x=all_cats, y=cat_a_vals, marker_color="#636EFA"),
+            go.Bar(name="B (리포트 無)", x=all_cats, y=cat_b_vals, marker_color="#EF553B"),
+        ])
+        fig.update_layout(barmode="group", height=400)
+        st.plotly_chart(fig, use_container_width=True)
+
+    # Discovery channel comparison (if available)
+    disc_a = ab_data.get("discovery_channel_a", {})
+    disc_b = ab_data.get("discovery_channel_b", {})
+
+    if disc_a or disc_b:
+        st.subheader("🔍 발견 경로 비교 (A vs B)")
+
+        all_channels = sorted(set(list(disc_a.keys()) + list(disc_b.keys())))
+        ch_a_vals = [disc_a.get(c, 0) for c in all_channels]
+        ch_b_vals = [disc_b.get(c, 0) for c in all_channels]
+
+        fig = go.Figure(data=[
+            go.Bar(name="A (리포트 有)", x=all_channels, y=ch_a_vals, marker_color="#636EFA"),
+            go.Bar(name="B (리포트 無)", x=all_channels, y=ch_b_vals, marker_color="#EF553B"),
+        ])
+        fig.update_layout(barmode="group", height=350)
+        st.plotly_chart(fig, use_container_width=True)
 
 
 if __name__ == "__main__":

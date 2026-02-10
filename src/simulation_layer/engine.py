@@ -22,6 +22,7 @@ from src.simulation_layer.persona.agent_persona import AgentPersona
 from src.simulation_layer.persona.cognitive_modules.decide import DecideModule
 from src.simulation_layer.persona.cognitive_modules.chained_decide import ChainedDecideModule
 from src.simulation_layer.models import BusinessReport, SimulationEvent
+from src.simulation_layer.spawn_points import SpawnPointSelector
 
 
 class SimulationEngine:
@@ -56,10 +57,12 @@ class SimulationEngine:
         stats: PopulationStatistics,
         agents: List[AgentPersona],
         decide_module: Optional[DecideModule] = None,
+        spawn_selector: Optional[SpawnPointSelector] = None,
     ):
         self.stats = stats
         self.agents = agents
         self.decide_module = decide_module or DecideModule()
+        self.spawn_selector = spawn_selector
         self.events: List[SimulationEvent] = []
 
         # Determine mode based on environment type
@@ -107,30 +110,57 @@ class SimulationEngine:
         lng = random.uniform(settings.area.lng_min, settings.area.lng_max)
         return lat, lng
 
+    def _get_agent_spawn_location(self, agent: AgentPersona) -> tuple:
+        """Get spawn location for an agent based on segment or random."""
+        if self.spawn_selector and hasattr(agent, '_archetype') and agent._archetype:
+            return self.spawn_selector.get_spawn_location(agent._archetype.segment)
+        settings = get_settings()
+        lat = random.uniform(settings.area.lat_min, settings.area.lat_max)
+        lng = random.uniform(settings.area.lng_min, settings.area.lng_max)
+        return lat, lng
+
     def _initialize_agent_locations(self) -> None:
         """Initialize all agents with street network locations."""
         if not self.use_street_network:
             return
 
-        settings = get_settings()
         for agent in self.agents:
-            # Random start within area bounds
-            lat = random.uniform(settings.area.lat_min, settings.area.lat_max)
-            lng = random.uniform(settings.area.lng_min, settings.area.lng_max)
+            lat, lng = self._get_agent_spawn_location(agent)
             agent.location = self.street_network.initialize_agent_location(lat, lng)
 
     def _move_agent_on_network(self, agent: AgentPersona, steps: int) -> AgentLocation:
         """Move agent along street network for given number of steps."""
         if agent.location is None:
-            settings = get_settings()
-            lat = random.uniform(settings.area.lat_min, settings.area.lat_max)
-            lng = random.uniform(settings.area.lng_min, settings.area.lng_max)
+            lat, lng = self._get_agent_spawn_location(agent)
             agent.location = self.street_network.initialize_agent_location(lat, lng)
 
         settings = get_settings()
         total_distance = steps * settings.simulation.agent_speed_mps * settings.simulation.movement_dt
         agent.location = self.street_network.move_agent(agent.location, total_distance)
         return agent.location
+
+    def _get_report_reception_prob(self, agent: AgentPersona, settings) -> float:
+        """Calculate agent-specific report reception probability.
+
+        Agents with 변화추구 lifestyle are more receptive to new information.
+        Agents with 단조로운패턴 lifestyle are less likely to notice reports.
+        trend_sensitivity further scales the probability.
+        """
+        base_prob = settings.simulation.report_reception_probability
+
+        # Lifestyle modifier
+        if hasattr(agent, '_archetype') and agent._archetype:
+            lifestyle = agent._archetype.lifestyle
+            if lifestyle == "변화추구":
+                base_prob *= 1.5
+            elif lifestyle == "단조로운패턴":
+                base_prob *= 0.7
+
+        # trend_sensitivity modifier (0~1 scale, center at 0.5)
+        trend_scale = 0.7 + agent.trend_sensitivity * 0.6  # range: 0.7 ~ 1.3
+        base_prob *= trend_scale
+
+        return min(0.9, base_prob)
 
     def simulate_timestep(
         self,
@@ -189,19 +219,22 @@ class SimulationEngine:
                 lat, lng = self._get_random_start_location()
                 visible_stores = self.environment.get_visible_stores(lat, lng)
 
-            # 3. Information: report reception (probabilistic)
+            # 3. Information: report reception (agent-specific probability)
             report = None
             report_received = None
-            if reports and random.random() < settings.simulation.report_reception_probability:
-                report = random.choice(reports)
-                report_received = f"{report.store_name}: {report.description}"
+            if reports:
+                reception_prob = self._get_report_reception_prob(agent, settings)
+                if random.random() < reception_prob:
+                    report = random.choice(reports)
+                    report_received = f"{report.store_name}: {report.description}"
 
             # 4. Decide: visit decision via cognitive module
             decision_result = self.decide_module.process(
                 visible_stores, agent, report,
                 time_slot=time_slot,
                 weekday=weekday,
-                memory_context="",  # TODO: integrate with EventMemory
+                memory_context="",
+                current_time=current_time,
             )
 
             # 5. Log event
@@ -222,6 +255,8 @@ class SimulationEngine:
                 decision_reason=decision_result["decision_reason"],
                 visited_store=decision_result["visited_store"],
                 visited_category=decision_result["visited_category"],
+                discovery_channel=decision_result.get("discovery_channel"),
+                visit_purpose=decision_result.get("visit_purpose"),
             )
             step_events.append(event)
 

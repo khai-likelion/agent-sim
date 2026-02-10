@@ -24,6 +24,13 @@ from src.simulation_layer.persona.agent_state import AgentState
 from src.simulation_layer.models import BusinessReport
 from src.ai_layer.llm_client import create_llm_client, LLMClient
 from src.data_layer.store_reviews import get_store_review_loader, StoreReviewLoader
+from src.simulation_layer.persona.memory_structures.event_memory import EventMemory
+from src.simulation_layer.persona.memory_structures.reflection import Reflection
+from src.simulation_layer.persona.discovery_context import (
+    assign_discovery_channel,
+    assign_visit_purpose,
+    build_discovery_context,
+)
 
 
 class ChainedDecideModule(CognitiveModule):
@@ -52,6 +59,10 @@ class ChainedDecideModule(CognitiveModule):
         self._agent_states: Dict[int, AgentState] = {}
         self._response_cache: Dict[str, Dict[str, Any]] = {}  # Cache for similar contexts
         self._review_loader: Optional[StoreReviewLoader] = None
+        # Memory Stream + Reflection
+        self._agent_memories: Dict[int, EventMemory] = {}
+        self._agent_reflections: Dict[int, Reflection] = {}
+        self._day_number: int = 0
 
     def _get_review_loader(self) -> StoreReviewLoader:
         """Get store review loader (lazy init)."""
@@ -75,6 +86,17 @@ class ChainedDecideModule(CognitiveModule):
         if agent.id not in self._agent_states:
             self._agent_states[agent.id] = AgentState(agent_id=agent.id)
         return self._agent_states[agent.id]
+
+    def _get_agent_memory(self, agent: AgentPersona) -> EventMemory:
+        if agent.id not in self._agent_memories:
+            self._agent_memories[agent.id] = EventMemory()
+        return self._agent_memories[agent.id]
+
+    def _get_agent_reflection(self, agent: AgentPersona) -> Reflection:
+        if agent.id not in self._agent_reflections:
+            memory = self._get_agent_memory(agent)
+            self._agent_reflections[agent.id] = Reflection(memory, use_llm=False)
+        return self._agent_reflections[agent.id]
 
     def _call_llm(self, prompt: str, max_retries: int = 3) -> str:
         """Call LLM with rate limiting and automatic retry on 429 errors."""
@@ -417,6 +439,8 @@ class ChainedDecideModule(CognitiveModule):
         state: AgentState,
         timeslot_result: Dict[str, Any],
         available_categories: List[str],
+        memory_context: str = "",
+        discovery_context: str = "",
     ) -> Dict[str, Any]:
         """Step 2: Select food category based on craving and preferences."""
         archetype = self._get_archetype_info(agent)
@@ -438,6 +462,8 @@ class ChainedDecideModule(CognitiveModule):
             craving=timeslot_result.get("craving", ""),
             recent_categories=recent_cats,
             available_categories=available_cats,
+            memory_context=memory_context or "기억 없음",
+            discovery_context=discovery_context or "",
         )
 
         if self.use_llm:
@@ -463,6 +489,8 @@ class ChainedDecideModule(CognitiveModule):
         visible_stores: Union[pd.DataFrame, List[Dict]],
         report: Optional[BusinessReport],
         timeslot_result: Dict[str, Any],
+        memory_context: str = "",
+        discovery_context: str = "",
     ) -> Dict[str, Any]:
         """Step 3: Select specific store from available options with review data."""
         archetype = self._get_archetype_info(agent)
@@ -492,6 +520,8 @@ class ChainedDecideModule(CognitiveModule):
             store_list_with_reviews=store_list_with_reviews,
             recent_visits=recent,
             report_info=report_info,
+            memory_context=memory_context or "기억 없음",
+            discovery_context=discovery_context or "",
         )
 
         if self.use_llm:
@@ -670,13 +700,20 @@ class ChainedDecideModule(CognitiveModule):
         time_slot: str = "",
         weekday: str = "",
         memory_context: str = "",
+        current_time=None,
     ) -> dict:
         """
         Main decision process with chained prompts.
         Returns standard decision dict.
         """
+        from datetime import datetime as dt
+        if current_time is None:
+            current_time = dt.now()
+
         state = self._get_agent_state(agent)
         state.update_for_timeslot(time_slot, weekday)
+        memory = self._get_agent_memory(agent)
+        reflection = self._get_agent_reflection(agent)
 
         # Step 1: Timeslot decision
         step1 = self._step1_timeslot_decision(agent, state, time_slot, weekday)
@@ -694,15 +731,35 @@ class ChainedDecideModule(CognitiveModule):
                 "decision_chain": {"step1": step1},
             }
 
+        # Build memory context for prompts
+        query_context = {
+            "category": step1.get("craving", ""),
+            "time_slot": time_slot,
+        }
+        relevant_memories = memory.retrieve_relevant(query_context, top_k=5, current_time=current_time)
+        mem_context = memory.format_for_prompt(relevant_memories)
+
+        # Build discovery context (channel × purpose)
+        archetype = self._get_archetype_info(agent)
+        channel = assign_discovery_channel(archetype["segment"], archetype["lifestyle"], time_slot)
+        purpose = assign_visit_purpose(archetype["segment"], state.companion or "혼자", time_slot)
+        discovery = build_discovery_context(channel, purpose)
+
         # Step 2: Category selection (for dine_in, takeout, cafe, drink, snack)
         available_categories = self._extract_categories(visible_stores)
-        step2 = self._step2_category_selection(agent, state, step1, available_categories)
+        step2 = self._step2_category_selection(
+            agent, state, step1, available_categories,
+            memory_context=mem_context,
+            discovery_context=discovery.context_text,
+        )
 
         category = step2.get("category", "")
 
         # Step 3: Store selection
         step3 = self._step3_store_selection(
-            agent, state, category, visible_stores, report, step1
+            agent, state, category, visible_stores, report, step1,
+            memory_context=mem_context,
+            discovery_context=discovery.context_text,
         )
 
         store_name = step3.get("store_name")
@@ -711,8 +768,27 @@ class ChainedDecideModule(CognitiveModule):
             # Find category for the store
             store_category = self._find_store_category(visible_stores, store_name) or category
 
-            # Record the meal
+            # Record the meal in state
             state.record_meal(time_slot, store_name, store_category)
+
+            # Record in memory stream
+            satisfaction = random.uniform(0.4, 0.9)
+            memory.add_visit(
+                timestamp=current_time,
+                store_name=store_name,
+                category=store_category,
+                satisfaction=satisfaction,
+                decision_reason=step3.get("reason", ""),
+                companion=state.companion,
+                day_number=self._day_number,
+            )
+
+            # Check reflection trigger
+            reflection.record_visit()
+            if reflection.should_reflect():
+                ref_text = reflection.generate_reflection(agent, current_time)
+                if ref_text:
+                    print(f"    [Reflection] {agent.name}: {ref_text[:80]}...")
 
             return {
                 "decision": "visit",
@@ -720,6 +796,8 @@ class ChainedDecideModule(CognitiveModule):
                 "visited_store": store_name,
                 "visited_category": store_category,
                 "influenced_by_report": step3.get("influenced_by_report", False),
+                "discovery_channel": discovery.channel,
+                "visit_purpose": discovery.purpose,
                 "decision_chain": {"step1": step1, "step2": step2, "step3": step3},
             }
         else:
@@ -763,6 +841,15 @@ class ChainedDecideModule(CognitiveModule):
         return None
 
     def reset_daily_states(self):
-        """Reset all agent states for a new day."""
+        """Reset daily agent states for a new day. Memory persists across days."""
+        self._day_number += 1
         for state in self._agent_states.values():
             state.reset_for_new_day()
+
+    def get_all_memories(self) -> Dict[int, EventMemory]:
+        """Get all agent memories for serialization."""
+        return self._agent_memories
+
+    def get_all_reflections(self) -> Dict[int, Reflection]:
+        """Get all agent reflections for serialization."""
+        return self._agent_reflections

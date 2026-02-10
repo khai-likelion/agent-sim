@@ -22,6 +22,12 @@
 ## 주변에서 이용 가능한 카테고리
 {available_categories}
 
+## 최근 방문 기억 (중요도순)
+{memory_context}
+
+## 발견 경로 & 방문 목적
+{discovery_context}
+
 ---
 
 미각성향별 추천:

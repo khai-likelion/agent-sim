@@ -55,6 +55,7 @@ class DecideModule(CognitiveModule):
         time_slot: str = "",
         weekday: str = "",
         memory_context: str = "",
+        current_time=None,
     ) -> dict:
         """
         Decide which store to visit.
