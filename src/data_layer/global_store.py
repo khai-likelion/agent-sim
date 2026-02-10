@@ -1,29 +1,56 @@
 """
-Global Store - 실시간 평점 업데이트 시스템.
+Global Store - 에이전트 평점 시스템.
 
-평점 체계:
-1. 기존 평점 (base_score): 리뷰 데이터 기반 원본 평점 (불변)
-2. 에이전트 평점 (agent_score): 시뮬레이션 중 에이전트가 남긴 평점들의 평균
+평점 체계 (0~5):
+- 0: 방문 없음/평가 없음 (기본값)
+- 1: 매우별로
+- 2: 별로
+- 3: 보통
+- 4: 좋음
+- 5: 매우좋음
 
-에이전트는 두 종류의 평점을 모두 보고 판단합니다.
+에이전트가 매장 인식 시 사용하는 필드:
+- store_id, store_name, category
+- market_analysis, revenue_analysis, customer_analysis
+- review_metrics.overall_sentiment.comparison
+- raw_data_context.trend_history
+- metadata, top_keywords, critical_feedback, rag_context
+- 에이전트 평점 (agent_ratings)
 """
 
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime
 import json
+import re
 from pathlib import Path
 import threading
 
 
+def parse_average_price(revenue_analysis: str) -> Optional[int]:
+    """revenue_analysis 텍스트에서 객단가 파싱"""
+    if not revenue_analysis:
+        return None
+    pattern = r'객단가는?\s*([\d,]+)원'
+    match = re.search(pattern, revenue_analysis)
+    if match:
+        price_str = match.group(1).replace(',', '')
+        try:
+            return int(price_str)
+        except ValueError:
+            return None
+    return None
+
+
 @dataclass
 class AgentRatingRecord:
-    """에이전트가 남긴 개별 평점 기록"""
+    """에이전트가 남긴 개별 평점 기록 (1~5점)"""
     agent_id: int
     agent_name: str
     visit_datetime: str
-    taste_rating: int  # 0: 별로, 1: 보통, 2: 좋음
-    value_rating: int  # 0: 별로, 1: 보통, 2: 좋음
+    taste_rating: int      # 1~5: 매우별로~매우좋음
+    value_rating: int      # 1~5: 매우별로~매우좋음
+    atmosphere_rating: int # 1~5: 매우별로~매우좋음
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -32,23 +59,26 @@ class AgentRatingRecord:
             "visit_datetime": self.visit_datetime,
             "taste_rating": self.taste_rating,
             "value_rating": self.value_rating,
+            "atmosphere_rating": self.atmosphere_rating,
         }
 
 
 @dataclass
 class StoreRating:
-    """개별 매장의 평점 정보"""
+    """
+    개별 매장의 평점 정보.
+
+    매장 인식 필드:
+    - store_id, store_name, category
+    - market_analysis, revenue_analysis, customer_analysis
+    - top_keywords, critical_feedback, rag_context
+    - 에이전트 평점 (agent_ratings)
+    """
     store_id: str
     store_name: str
     category: str
 
-    # === 기존 평점 (리뷰 데이터 기반, 불변) ===
-    base_taste_score: float = 0.5  # 0~1 스케일
-    base_value_score: float = 0.5  # 0~1 스케일
-    base_cleanliness_score: float = 0.5
-    base_service_score: float = 0.5
-
-    # === 에이전트 평점 (시뮬레이션 중 축적) ===
+    # === 에이전트 평점 (시뮬레이션 중 축적, 1~5점) ===
     agent_ratings: List[AgentRatingRecord] = field(default_factory=list)
 
     # 가격 정보
@@ -58,94 +88,57 @@ class StoreRating:
     address: Optional[str] = None
     coordinates: Optional[Tuple[float, float]] = None  # (lat, lng)
 
-    # === 개선 가능 필드 (AI가 수정 가능) ===
+    # === 매장 정보 필드 (LLM 인식용) ===
+    market_analysis: Optional[Dict[str, Any]] = None
     revenue_analysis: str = ""
+    customer_analysis: str = ""
     top_keywords: List[str] = field(default_factory=list)
+    critical_feedback: str = ""
     rag_context: str = ""
-    improvement_applied: Optional[Dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = None
 
-    # === 시뮬레이션 결과 (simulation_results) ===
-    simulation_results: Optional[Dict[str, float]] = None
+    # 리뷰 메트릭 (overall_sentiment.comparison 등)
+    review_metrics: Optional[Dict[str, Any]] = None
 
-    # === 기존 평점 접근자 (불변) ===
+    # 트렌드 히스토리
+    trend_history: Optional[List[Dict[str, Any]]] = None
+
+    # === 에이전트 평점 접근자 (0~5 스케일, 0은 미평가) ===
     @property
-    def base_overall_score(self) -> float:
-        """기존 리뷰 기반 종합 점수"""
-        return (self.base_taste_score + self.base_value_score) / 2
-
-    # === 에이전트 평점 접근자 ===
-    @property
-    def agent_taste_score(self) -> Optional[float]:
-        """에이전트들이 남긴 맛 평점 평균 (0~1 스케일, 없으면 None)"""
+    def agent_taste_score(self) -> float:
+        """에이전트들이 남긴 맛 평점 평균 (0이면 평가 없음)"""
         if not self.agent_ratings:
-            return None
+            return 0.0
         total = sum(r.taste_rating for r in self.agent_ratings)
-        return total / len(self.agent_ratings) / 2.0  # 0-2 -> 0-1 변환
+        return total / len(self.agent_ratings)
 
     @property
-    def agent_value_score(self) -> Optional[float]:
-        """에이전트들이 남긴 가성비 평점 평균 (0~1 스케일, 없으면 None)"""
+    def agent_value_score(self) -> float:
+        """에이전트들이 남긴 가성비 평점 평균 (0이면 평가 없음)"""
         if not self.agent_ratings:
-            return None
+            return 0.0
         total = sum(r.value_rating for r in self.agent_ratings)
-        return total / len(self.agent_ratings) / 2.0
+        return total / len(self.agent_ratings)
 
     @property
-    def agent_overall_score(self) -> Optional[float]:
-        """에이전트 평점 기반 종합 점수"""
-        taste = self.agent_taste_score
-        value = self.agent_value_score
-        if taste is None or value is None:
-            return None
-        return (taste + value) / 2
+    def agent_atmosphere_score(self) -> float:
+        """에이전트들이 남긴 분위기 평점 평균 (0이면 평가 없음)"""
+        if not self.agent_ratings:
+            return 0.0
+        total = sum(r.atmosphere_rating for r in self.agent_ratings)
+        return total / len(self.agent_ratings)
+
+    @property
+    def agent_overall_score(self) -> float:
+        """에이전트 평점 기반 종합 점수 (0이면 평가 없음)"""
+        if not self.agent_ratings:
+            return 0.0
+        return (self.agent_taste_score + self.agent_value_score + self.agent_atmosphere_score) / 3
 
     @property
     def agent_rating_count(self) -> int:
         """에이전트 평점 수"""
         return len(self.agent_ratings)
-
-    # === 시뮬레이션 결과 기반 점수 ===
-    @property
-    def sim_taste_score(self) -> Optional[float]:
-        """simulation_results 기반 맛 점수"""
-        if self.simulation_results and self.simulation_results.get('visit_count', 0) > 0:
-            return self.simulation_results.get('avg_taste')
-        return None
-
-    @property
-    def sim_value_score(self) -> Optional[float]:
-        """simulation_results 기반 가성비 점수"""
-        if self.simulation_results and self.simulation_results.get('visit_count', 0) > 0:
-            return self.simulation_results.get('avg_price_value')
-        return None
-
-    def get_effective_taste_score(self) -> float:
-        """
-        의사결정용 맛 점수 (simulation_results가 있으면 가중치 부여)
-        - 시뮬레이션 결과가 축적될수록 해당 값에 가중치를 더 줌
-        """
-        sim_score = self.sim_taste_score
-        if sim_score is not None:
-            visit_count = self.simulation_results.get('visit_count', 0)
-            # 방문 횟수에 따라 가중치 증가 (최대 70%)
-            sim_weight = min(0.7, visit_count * 0.1)
-            return self.base_taste_score * (1 - sim_weight) + sim_score * sim_weight
-        return self.base_taste_score
-
-    def get_effective_value_score(self) -> float:
-        """
-        의사결정용 가성비 점수 (simulation_results가 있으면 가중치 부여)
-        """
-        sim_score = self.sim_value_score
-        if sim_score is not None:
-            visit_count = self.simulation_results.get('visit_count', 0)
-            sim_weight = min(0.7, visit_count * 0.1)
-            return self.base_value_score * (1 - sim_weight) + sim_score * sim_weight
-        return self.base_value_score
-
-    def is_improved(self) -> bool:
-        """개선사항이 적용되었는지 확인"""
-        return self.improvement_applied is not None
 
     def add_agent_rating(
         self,
@@ -153,10 +146,11 @@ class StoreRating:
         agent_name: str,
         taste_rating: int,
         value_rating: int,
+        atmosphere_rating: int,
         visit_datetime: Optional[str] = None
     ):
         """
-        에이전트 평점 추가 (0: 별로, 1: 보통, 2: 좋음)
+        에이전트 평점 추가 (1~5점)
         """
         record = AgentRatingRecord(
             agent_id=agent_id,
@@ -164,83 +158,33 @@ class StoreRating:
             visit_datetime=visit_datetime or datetime.now().isoformat(),
             taste_rating=taste_rating,
             value_rating=value_rating,
+            atmosphere_rating=atmosphere_rating,
         )
         self.agent_ratings.append(record)
-
-    def get_base_score_text(self) -> str:
-        """기존 평점 텍스트"""
-        return f"맛:{self.base_taste_score:.2f}, 가성비:{self.base_value_score:.2f}"
 
     def get_agent_score_text(self) -> str:
         """에이전트 평점 텍스트"""
         if not self.agent_ratings:
             return "아직 평가 없음"
-        taste = self.agent_taste_score
-        value = self.agent_value_score
-        return f"맛:{taste:.2f}, 가성비:{value:.2f} ({self.agent_rating_count}건)"
-
-    def get_combined_info_for_prompt(self) -> str:
-        """LLM 프롬프트용 통합 정보 (두 종류 평점 모두 표시)"""
-        lines = [f"[{self.store_name}]"]
-        lines.append(f"  카테고리: {self.category}")
-        lines.append(f"  평균가격: {self.average_price:,}원")
-        lines.append(f"  기존리뷰 평점: {self.get_base_score_text()}")
-
-        # 개선된 키워드가 있으면 표시
-        if self.top_keywords:
-            keywords = self.top_keywords[:5] if isinstance(self.top_keywords, list) else self.top_keywords.split(',')[:5]
-            lines.append(f"  주요키워드: {', '.join(keywords)}")
-
-        # 개선 설명이 있으면 요약 표시
-        if self.rag_context and len(self.rag_context) > 50:
-            summary = self.rag_context[:100] + "..."
-            lines.append(f"  설명: {summary}")
-
-        # 시뮬레이션 결과가 있으면 표시
-        if self.simulation_results and self.simulation_results.get('visit_count', 0) > 0:
-            sim = self.simulation_results
-            lines.append(f"  시뮬레이션 평가: 맛 {sim.get('avg_taste', 0):.2f}, 가성비 {sim.get('avg_price_value', 0):.2f} ({sim.get('visit_count', 0)}건)")
-
-        if self.agent_ratings:
-            lines.append(f"  최근방문자 평점: {self.get_agent_score_text()}")
-
-            # 최근 3개 평가 코멘트
-            recent = self.agent_ratings[-3:]
-            rating_text = {0: "별로", 1: "보통", 2: "좋음"}
-            for r in recent:
-                lines.append(f"    - {r.agent_name}: 맛 {rating_text[r.taste_rating]}, 가성비 {rating_text[r.value_rating]}")
-        else:
-            lines.append("  최근방문자 평점: 아직 없음")
-
-        return "\n".join(lines)
+        return f"맛:{self.agent_taste_score:.1f}/5, 가성비:{self.agent_value_score:.1f}/5, 분위기:{self.agent_atmosphere_score:.1f}/5 ({self.agent_rating_count}건)"
 
     def to_dict(self) -> Dict[str, Any]:
-        result = {
+        return {
             "store_id": self.store_id,
             "store_name": self.store_name,
             "category": self.category,
-            # 기존 평점
-            "base_taste_score": self.base_taste_score,
-            "base_value_score": self.base_value_score,
-            "base_overall_score": self.base_overall_score,
             # 에이전트 평점
             "agent_taste_score": self.agent_taste_score,
             "agent_value_score": self.agent_value_score,
+            "agent_atmosphere_score": self.agent_atmosphere_score,
             "agent_overall_score": self.agent_overall_score,
             "agent_rating_count": self.agent_rating_count,
-            # 효과적 점수 (simulation_results 반영)
-            "effective_taste_score": self.get_effective_taste_score(),
-            "effective_value_score": self.get_effective_value_score(),
             # 기타
             "average_price": self.average_price,
             "agent_ratings": [r.to_dict() for r in self.agent_ratings],
-            # 개선 필드
             "top_keywords": self.top_keywords,
-            "is_improved": self.is_improved(),
+            "rag_context": self.rag_context[:200] if self.rag_context else "",
         }
-        if self.simulation_results:
-            result["simulation_results"] = self.simulation_results
-        return result
 
 
 class GlobalStore:
@@ -272,36 +216,16 @@ class GlobalStore:
         with cls._lock:
             cls._instance = None
 
-    def load_from_csv(self, csv_path: Path):
-        """CSV 파일에서 매장 데이터 로드"""
-        import pandas as pd
-
-        df = pd.read_csv(csv_path)
-        for _, row in df.iterrows():
-            store_id = str(row.get("store_id", row.get("id", "")))
-            if not store_id:
-                store_id = str(row.name)  # 인덱스 사용
-
-            store_name = row.get("장소명", row.get("store_name", "Unknown"))
-            category = row.get("카테고리", row.get("category", "기타"))
-
-            # 좌표
-            lat = row.get("y", row.get("lat", 0))
-            lng = row.get("x", row.get("lng", 0))
-
-            store = StoreRating(
-                store_id=store_id,
-                store_name=store_name,
-                category=category,
-                coordinates=(lat, lng) if lat and lng else None,
-                address=row.get("주소", row.get("address", "")),
-            )
-
-            self.stores[store_id] = store
-            self._store_name_to_id[store_name] = store_id
-
     def load_from_json_files(self, json_dir: Path):
-        """JSON 파일들에서 리뷰 데이터 로드하여 기본 평점 설정"""
+        """
+        JSON 파일들에서 매장 데이터 로드.
+
+        로드하는 필드:
+        - store_id, store_name, category, x, y, address
+        - market_analysis, revenue_analysis, customer_analysis
+        - review_metrics, top_keywords, critical_feedback, rag_context
+        - raw_data_context.trend_history, metadata
+        """
         if not json_dir.exists():
             return
 
@@ -316,48 +240,54 @@ class GlobalStore:
 
                 store_id = str(data.get("store_id", json_file.stem))
                 store_name = data.get("store_name", "Unknown")
+                category = data.get("category", "")
 
-                # 매장 찾기
+                # 좌표 추출
+                x = data.get("x")  # longitude
+                y = data.get("y")  # latitude
+                coordinates = (float(y), float(x)) if x and y else None
+
+                # 매장 찾기 또는 새로 생성
                 store = None
                 if store_id in self.stores:
                     store = self.stores[store_id]
                 elif store_name in self._store_name_to_id:
                     store = self.stores[self._store_name_to_id[store_name]]
+                else:
+                    store = StoreRating(
+                        store_id=store_id,
+                        store_name=store_name,
+                        category=category,
+                        coordinates=coordinates,
+                        address=data.get("address", ""),
+                    )
+                    self.stores[store_id] = store
+                    self._store_name_to_id[store_name] = store_id
 
-                if not store:
-                    continue
+                # === 매장 정보 필드 로드 ===
+                store.market_analysis = data.get("market_analysis")
+                store.revenue_analysis = data.get("revenue_analysis", "")
+                store.customer_analysis = data.get("customer_analysis", "")
+                store.review_metrics = data.get("review_metrics")
+                store.metadata = data.get("metadata")
 
-                # === 리뷰 점수 로드 (review_metrics 구조 지원) ===
-                review_metrics = data.get("review_metrics", {})
-                feature_scores = review_metrics.get("feature_scores", {})
-
-                # 기존 구조도 호환 (review_analysis)
-                if not feature_scores:
-                    analysis = data.get("review_analysis", {})
-                    feature_scores = analysis.get("feature_scores", {})
-
-                if "taste" in feature_scores:
-                    store.base_taste_score = feature_scores["taste"].get("score", 0.5)
-                if "price_value" in feature_scores:
-                    store.base_value_score = feature_scores["price_value"].get("score", 0.5)
-                if "cleanliness" in feature_scores:
-                    store.base_cleanliness_score = feature_scores["cleanliness"].get("score", 0.5)
-                if "service" in feature_scores:
-                    store.base_service_score = feature_scores["service"].get("score", 0.5)
-
-                # === 개선 가능 필드 로드 ===
-                if "revenue_analysis" in data:
-                    store.revenue_analysis = data["revenue_analysis"]
                 if "top_keywords" in data:
                     store.top_keywords = data["top_keywords"]
+                if "critical_feedback" in data:
+                    store.critical_feedback = data["critical_feedback"]
                 if "rag_context" in data:
                     store.rag_context = data["rag_context"]
-                if "improvement_applied" in data:
-                    store.improvement_applied = data["improvement_applied"]
 
-                # === simulation_results 로드 ===
-                if "simulation_results" in data:
-                    store.simulation_results = data["simulation_results"]
+                # raw_data_context에서 trend_history 추출
+                raw_data = data.get("raw_data_context", {})
+                if "trend_history" in raw_data:
+                    store.trend_history = raw_data["trend_history"]
+
+                # 객단가 파싱
+                if store.revenue_analysis:
+                    parsed_price = parse_average_price(store.revenue_analysis)
+                    if parsed_price:
+                        store.average_price = parsed_price
 
             except Exception as e:
                 print(f"JSON 로드 오류 ({json_file}): {e}")
@@ -373,6 +303,45 @@ class GlobalStore:
             return self.stores.get(store_id)
         return None
 
+    def get_stores_in_radius(
+        self,
+        center_lat: float,
+        center_lng: float,
+        radius_km: float = 3.0
+    ) -> List[StoreRating]:
+        """
+        특정 좌표 기준 반경 내 매장 조회.
+
+        Args:
+            center_lat: 중심 위도
+            center_lng: 중심 경도
+            radius_km: 반경 (km), 기본 3km
+
+        Returns:
+            반경 내 매장 목록
+        """
+        from math import radians, cos, sin, asin, sqrt
+
+        def haversine(lat1, lon1, lat2, lon2):
+            """두 좌표 간 거리 계산 (km)"""
+            R = 6371  # 지구 반경 (km)
+            lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
+            dlat = lat2 - lat1
+            dlon = lon2 - lon1
+            a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+            c = 2 * asin(sqrt(a))
+            return R * c
+
+        nearby = []
+        for store in self.stores.values():
+            if store.coordinates:
+                lat, lng = store.coordinates
+                distance = haversine(center_lat, center_lng, lat, lng)
+                if distance <= radius_km:
+                    nearby.append(store)
+
+        return nearby
+
     def add_agent_rating(
         self,
         store_name: str,
@@ -380,10 +349,11 @@ class GlobalStore:
         agent_name: str,
         taste_rating: int,
         value_rating: int,
+        atmosphere_rating: int,
         visit_datetime: Optional[str] = None
     ) -> bool:
         """
-        매장에 에이전트 평점 추가.
+        매장에 에이전트 평점 추가 (1~5점).
         Returns: 성공 여부
         """
         store = self.get_by_name(store_name)
@@ -393,6 +363,7 @@ class GlobalStore:
                 agent_name=agent_name,
                 taste_rating=taste_rating,
                 value_rating=value_rating,
+                atmosphere_rating=atmosphere_rating,
                 visit_datetime=visit_datetime,
             )
             return True
@@ -413,69 +384,41 @@ class GlobalStore:
             stores = [s for s in stores if category.lower() in s.category.lower()]
         return [s for s in stores if s.average_price <= max_budget]
 
-    def get_top_stores_by_base_rating(self, n: int = 10, category: Optional[str] = None) -> List[StoreRating]:
-        """기존 평점 기준 상위 매장"""
-        stores = list(self.stores.values())
-        if category:
-            stores = [s for s in stores if category.lower() in s.category.lower()]
-        stores.sort(key=lambda s: s.base_overall_score, reverse=True)
-        return stores[:n]
-
     def get_top_stores_by_agent_rating(self, n: int = 10, category: Optional[str] = None) -> List[StoreRating]:
         """에이전트 평점 기준 상위 매장 (평점 있는 매장만)"""
         stores = [s for s in self.stores.values() if s.agent_rating_count > 0]
         if category:
             stores = [s for s in stores if category.lower() in s.category.lower()]
-        stores.sort(key=lambda s: s.agent_overall_score or 0, reverse=True)
+        stores.sort(key=lambda s: s.agent_overall_score, reverse=True)
         return stores[:n]
-
-    def get_store_info_for_prompt(self, store_name: str) -> str:
-        """LLM 프롬프트용 매장 정보"""
-        store = self.get_by_name(store_name)
-        if not store:
-            return f"[{store_name}] 정보 없음"
-        return store.get_combined_info_for_prompt()
-
-    def get_stores_list_for_prompt(self, store_names: List[str]) -> str:
-        """여러 매장 정보를 프롬프트용으로 포맷"""
-        lines = []
-        for name in store_names:
-            store = self.get_by_name(name)
-            if store:
-                lines.append(store.get_combined_info_for_prompt())
-            else:
-                lines.append(f"[{name}] 정보 없음")
-        return "\n\n".join(lines)
 
     def get_statistics(self) -> Dict[str, Any]:
         """전체 통계"""
         total_agent_ratings = sum(s.agent_rating_count for s in self.stores.values())
         rated_stores = sum(1 for s in self.stores.values() if s.agent_rating_count > 0)
 
-        avg_base_taste = sum(s.base_taste_score for s in self.stores.values()) / max(1, len(self.stores))
-        avg_base_value = sum(s.base_value_score for s in self.stores.values()) / max(1, len(self.stores))
-
         # 에이전트 평점 평균 (평점 있는 매장만)
         rated_stores_list = [s for s in self.stores.values() if s.agent_rating_count > 0]
         if rated_stores_list:
-            avg_agent_taste = sum(s.agent_taste_score or 0 for s in rated_stores_list) / len(rated_stores_list)
-            avg_agent_value = sum(s.agent_value_score or 0 for s in rated_stores_list) / len(rated_stores_list)
+            avg_agent_taste = sum(s.agent_taste_score for s in rated_stores_list) / len(rated_stores_list)
+            avg_agent_value = sum(s.agent_value_score for s in rated_stores_list) / len(rated_stores_list)
+            avg_agent_atmosphere = sum(s.agent_atmosphere_score for s in rated_stores_list) / len(rated_stores_list)
         else:
-            avg_agent_taste = None
-            avg_agent_value = None
+            avg_agent_taste = 0.0
+            avg_agent_value = 0.0
+            avg_agent_atmosphere = 0.0
 
         return {
             "total_stores": len(self.stores),
             "stores_with_agent_ratings": rated_stores,
             "total_agent_ratings": total_agent_ratings,
-            "avg_base_taste_score": avg_base_taste,
-            "avg_base_value_score": avg_base_value,
             "avg_agent_taste_score": avg_agent_taste,
             "avg_agent_value_score": avg_agent_value,
+            "avg_agent_atmosphere_score": avg_agent_atmosphere,
         }
 
     def reset_agent_ratings(self):
-        """에이전트 평점만 초기화 (기존 평점은 유지)"""
+        """에이전트 평점 초기화"""
         for store in self.stores.values():
             store.agent_ratings = []
 
@@ -495,7 +438,6 @@ def get_global_store() -> GlobalStore:
 
 
 if __name__ == "__main__":
-    # 테스트
     from config import get_settings
 
     settings = get_settings()
@@ -504,13 +446,11 @@ if __name__ == "__main__":
     GlobalStore.reset_instance()
     store = get_global_store()
 
-    # CSV 로드
-    store.load_from_csv(settings.paths.stores_csv)
-    print(f"로드된 매장 수: {len(store.stores)}")
-
-    # JSON 리뷰 데이터 로드
+    # JSON 매장 데이터 로드
     json_dir = settings.paths.data_dir / "split_by_store_id"
     store.load_from_json_files(json_dir)
+
+    print(f"로드된 매장 수: {len(store.stores)}")
 
     # 통계 출력
     stats = store.get_statistics()
@@ -520,17 +460,12 @@ if __name__ == "__main__":
     test_store = list(store.stores.values())[0] if store.stores else None
     if test_store:
         print(f"\n=== 테스트 매장: {test_store.store_name} ===")
-        print(f"기존 평점: {test_store.get_base_score_text()}")
         print(f"에이전트 평점: {test_store.get_agent_score_text()}")
 
-        # 에이전트 평점 추가
-        store.add_agent_rating(test_store.store_name, 1, "김민준", 2, 1)  # 맛 좋음, 가성비 보통
-        store.add_agent_rating(test_store.store_name, 2, "이서연", 2, 2)  # 맛 좋음, 가성비 좋음
-        store.add_agent_rating(test_store.store_name, 3, "박지우", 1, 2)  # 맛 보통, 가성비 좋음
+        # 에이전트 평점 추가 (1~5점)
+        store.add_agent_rating(test_store.store_name, 1, "김민준", 4, 3, 4)  # 맛 좋음, 가성비 보통, 분위기 좋음
+        store.add_agent_rating(test_store.store_name, 2, "이서연", 5, 4, 5)  # 맛 매우좋음, 가성비 좋음, 분위기 매우좋음
+        store.add_agent_rating(test_store.store_name, 3, "박지우", 3, 5, 3)  # 맛 보통, 가성비 매우좋음, 분위기 보통
 
         print(f"\n=== 평점 추가 후 ===")
-        print(f"기존 평점: {test_store.get_base_score_text()} (불변)")
         print(f"에이전트 평점: {test_store.get_agent_score_text()}")
-
-        print(f"\n=== 프롬프트용 통합 정보 ===")
-        print(test_store.get_combined_info_for_prompt())

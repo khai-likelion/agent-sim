@@ -15,11 +15,15 @@ import argparse
 import json
 import sys
 import random
+import numpy as np
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import List, Dict, Any
 
 import pandas as pd
+
+# 기본 시드 (개선 전/후 비교 시 동일 에이전트 구성 보장)
+DEFAULT_SEED = 42
 
 # 프로젝트 루트 설정
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -32,20 +36,33 @@ from src.simulation_layer.persona.generative_agent import (
 )
 from src.data_layer.global_store import get_global_store, GlobalStore
 from src.simulation_layer.persona.cognitive_modules.action_algorithm import ActionAlgorithm
-from src.data_layer.street_network import StreetNetwork, StreetNetworkConfig
+from src.data_layer.street_network import StreetNetwork, StreetNetworkConfig, AgentLocation, reset_street_network
 
 
-# 시간대 정의 (4개)
-TIME_SLOTS = ["아침", "점심", "저녁", "야간"]
-TIME_SLOT_HOURS = {
-    "아침": (7, 10),
-    "점심": (11, 14),
-    "저녁": (17, 20),
-    "야간": (21, 24),
+# 시간대 정의 (4개) - 정확한 시간 기반
+TIME_SLOTS = {
+    "아침": 7,   # 07:00
+    "점심": 12,  # 12:00
+    "저녁": 18,  # 18:00
+    "야식": 22,  # 22:00
 }
 
 # 요일
 WEEKDAYS = ["월", "화", "수", "목", "금", "토", "일"]
+
+# 시뮬레이션 속도: 현실 24배 빠름 (1분 현실 = 24분 시뮬레이션)
+TIME_SPEED_MULTIPLIER = 24
+
+# 에이전트 걷는 속도 (m/s) - 평균 보행 속도 약 1.4 m/s (5 km/h)
+WALKING_SPEED_MS = 1.4
+
+# 매장 인식 반경 (km)
+STORE_RECOGNITION_RADIUS_KM = 3.0
+
+# OSM 네트워크 설정 (서울 강남역 주변 기준)
+DEFAULT_NETWORK_CENTER_LAT = 37.4980
+DEFAULT_NETWORK_CENTER_LNG = 127.0276
+DEFAULT_NETWORK_RADIUS_M = 3000.0
 
 
 def estimate_simulation(agent_count: int, days: int = 7, time_slots: int = 4) -> Dict[str, Any]:
@@ -147,55 +164,27 @@ def print_estimates(estimates: Dict[str, Any]):
     print("=" * 60)
 
 
-def load_environment(settings, improved: bool = False, target_store: str = None):
+def load_environment(settings, target_store: str = None):
     """환경 데이터 로드"""
     print("\n[1/4] 환경 데이터 로드 중...")
 
     # Global Store 초기화
     GlobalStore.reset_instance()
     global_store = get_global_store()
-    global_store.load_from_csv(settings.paths.stores_csv)
-    print(f"  매장 데이터 로드: {len(global_store.stores)}개")
 
-    # JSON 리뷰 데이터 로드
+    # JSON 매장 데이터 로드 (stores.csv 대신 JSON 파일 사용)
     json_dir = settings.paths.data_dir / "split_by_store_id"
     if json_dir.exists():
         global_store.load_from_json_files(json_dir)
-        print(f"  리뷰 데이터 로드 완료")
+        print(f"  매장 데이터 로드: {len(global_store.stores)}개")
 
-    # 타겟 매장 개선 버전 적용
-    if improved and target_store:
-        print(f"\n  ⭐ {target_store} 매장 개선 적용:")
-        for store_id, store in global_store.stores.items():
-            if store.store_name == target_store:
-                # 개선 전 정보 출력
-                print(f"    개선 전: 가격={store.average_price}원, 맛={store.base_taste_score}, 가성비={store.base_value_score}")
-
-                # 매장별 맞춤 개선 적용
-                if target_store == "아루감":
-                    # 아루감: 객단가 상승 + 프리미엄화
-                    store.average_price = 55000
-                    store.base_taste_score = 0.85
-                    store.base_value_score = 0.80
-                    improvement_desc = "프리미엄 세트메뉴, 빠른회전, 추가주문 트리거"
-                elif target_store == "류진":
-                    # 류진: TOP 1, 2, 3 통합 개선
-                    # TOP 1: 웨이팅 병목 제거 → 회전율 개선, 대기 이탈 감소
-                    # TOP 2: 객단가 세트 전략 → 2인 세트 도입, 객단가 +10%
-                    # TOP 3: 온라인 최적화 → 리뷰 키워드 유도, 평판 관리
-                    store.average_price = 11000  # 10,000 → 11,000 (세트 전략 객단가 +10%)
-                    store.base_taste_score = 0.85  # 0.5 → 0.85 (웨이팅 해소 + 맛 관리 + 리뷰 개선)
-                    store.base_value_score = 0.85  # 0.5 → 0.85 (빠른 서비스 + 세트 가성비)
-                    improvement_desc = "TOP1: 웨이팅 병목 제거 / TOP2: 2인 세트 도입(객단가+10%) / TOP3: 리뷰 키워드 유도"
-                else:
-                    # 기본 개선: 평점 소폭 상승
-                    store.base_taste_score = min(1.0, store.base_taste_score + 0.2)
-                    store.base_value_score = min(1.0, store.base_value_score + 0.2)
-                    improvement_desc = "서비스 품질 개선"
-
-                print(f"    개선 후: 가격={store.average_price}원, 맛={store.base_taste_score}, 가성비={store.base_value_score}")
-                print(f"    ({improvement_desc})")
-                break
+    # 타겟 매장 확인
+    if target_store:
+        target = global_store.get_by_name(target_store)
+        if target:
+            print(f"  ⭐ 타겟 매장: {target_store} (가격: {target.average_price}원)")
+        else:
+            print(f"  ⚠️ 타겟 매장 '{target_store}'를 찾을 수 없습니다.")
 
     return global_store
 
@@ -213,6 +202,53 @@ def generate_agents(agent_count: int) -> List[GenerativeAgent]:
     return agents
 
 
+def initialize_street_network(global_store: GlobalStore) -> StreetNetwork:
+    """OSM 거리 네트워크 초기화"""
+    print("\n  OSM 거리 네트워크 로드 중...")
+    reset_street_network()  # 기존 인스턴스 리셋
+
+    # 매장 좌표에서 중심점 계산
+    coords = [s.coordinates for s in global_store.stores.values() if s.coordinates]
+    if coords:
+        center_lat = sum(c[0] for c in coords) / len(coords)
+        center_lng = sum(c[1] for c in coords) / len(coords)
+        print(f"    매장 기반 중심점: ({center_lat:.4f}, {center_lng:.4f})")
+    else:
+        center_lat = DEFAULT_NETWORK_CENTER_LAT
+        center_lng = DEFAULT_NETWORK_CENTER_LNG
+        print(f"    기본 중심점 사용: ({center_lat:.4f}, {center_lng:.4f})")
+
+    config = StreetNetworkConfig(
+        center_lat=center_lat,
+        center_lng=center_lng,
+        radius_m=DEFAULT_NETWORK_RADIUS_M,
+        network_type="walk",
+    )
+    network = StreetNetwork(config)
+    network.load_graph()
+
+    return network
+
+
+def initialize_agent_locations(
+    agents: List[GenerativeAgent],
+    network: StreetNetwork
+) -> Dict[int, AgentLocation]:
+    """에이전트들의 초기 위치를 OSM 네트워크 상에 배치"""
+    agent_locations = {}
+    for agent in agents:
+        # 랜덤 시작 노드 선택
+        start_node = network.get_random_start_node()
+        node_data = network.graph_proj.nodes[start_node]
+        lat, lng = network.xy_to_latlng(node_data["x"], node_data["y"])
+
+        # 위치 초기화
+        location = network.initialize_agent_location(lat, lng)
+        agent_locations[agent.id] = location
+
+    return agent_locations
+
+
 def run_simulation(
     agents: List[GenerativeAgent],
     global_store: GlobalStore,
@@ -221,15 +257,31 @@ def run_simulation(
     target_store: str = "류진",
 ) -> pd.DataFrame:
     """
-    시뮬레이션 실행.
+    OSM 네트워크 기반 시뮬레이션 실행.
+
+    에이전트들이 거리를 걸으며 타임슬롯(07:00, 12:00, 18:00, 22:00)마다
+    반경 3km 내 매장을 인식하고 의사결정을 수행합니다.
+
+    시간 시스템:
+    - 현실보다 24배 빠름 (1분 현실 = 24분 시뮬레이션)
+    - 하루 24시간 시뮬레이션
     """
     print(f"\n[3/4] 시뮬레이션 실행 중...")
     print(f"  타겟 매장: {target_store}")
+    print(f"  시간 배속: {TIME_SPEED_MULTIPLIER}x")
+    print(f"  매장 인식 반경: {STORE_RECOGNITION_RADIUS_KM}km")
+
+    # OSM 거리 네트워크 초기화
+    network = initialize_street_network(global_store)
+
+    # 에이전트 위치 초기화
+    print(f"\n  에이전트 {len(agents)}명 위치 초기화 중...")
+    agent_locations = initialize_agent_locations(agents, network)
 
     algorithm = ActionAlgorithm(rate_limit_delay=0.5)
 
-    # 모든 매장 목록
-    all_stores = list(global_store.stores.values())
+    # 타겟 매장 객체
+    target_store_obj = global_store.get_by_name(target_store)
 
     # 결과 저장
     results = []
@@ -237,19 +289,40 @@ def run_simulation(
     # 시작 날짜 (금요일 - 일식 점심 수요 높은 요일)
     start_date = datetime(2025, 2, 7)  # 금요일 시작
 
+    # 타임슬롯 리스트 (시간 순서대로 정렬)
+    time_slot_list = sorted(TIME_SLOTS.items(), key=lambda x: x[1])
+
+    # 전체 진행률 계산용
     total_slots = len(agents) * days * len(TIME_SLOTS)
     processed = 0
 
     for day_idx in range(days):
         current_date = start_date + timedelta(days=day_idx)
-        # 실제 날짜의 요일 계산 (월=0, 일=6)
         weekday = WEEKDAYS[current_date.weekday()]
 
-        # 새로운 날 시작 시 상태 리셋은 하지 않음 (메모리 유지)
+        print(f"\n  === Day {day_idx + 1}/{days}: {current_date.strftime('%Y-%m-%d')} ({weekday}요일) ===")
 
-        for time_slot in TIME_SLOTS:
-            hour_start, hour_end = TIME_SLOT_HOURS[time_slot]
-            slot_time = current_date.replace(hour=random.randint(hour_start, hour_end - 1))
+        # 하루의 시뮬레이션 시간 (00:00 시작)
+        sim_hour = 0  # 시뮬레이션 시간 (시)
+
+        for slot_name, slot_hour in time_slot_list:
+            # 해당 타임슬롯까지 시간 이동 (에이전트들이 걸어다님)
+            hours_to_walk = slot_hour - sim_hour
+            if hours_to_walk > 0:
+                # 현실 시간으로 걷는 시간 계산 (24배 빠름)
+                # 시뮬레이션 1시간 = 현실 2.5분
+                walk_time_real_seconds = (hours_to_walk * 3600) / TIME_SPEED_MULTIPLIER
+                walk_distance_m = walk_time_real_seconds * WALKING_SPEED_MS
+
+                # 모든 에이전트 이동
+                for agent in agents:
+                    location = agent_locations[agent.id]
+                    agent_locations[agent.id] = network.move_agent(location, walk_distance_m)
+
+            sim_hour = slot_hour
+            slot_time = current_date.replace(hour=slot_hour, minute=0, second=0)
+
+            print(f"    [{slot_name}] {slot_time.strftime('%H:%M')} - 에이전트 의사결정 중...")
 
             for agent in agents:
                 processed += 1
@@ -257,21 +330,27 @@ def run_simulation(
                 # 진행 상황 출력 (10% 단위)
                 if processed % max(1, total_slots // 10) == 0:
                     pct = processed / total_slots * 100
-                    print(f"  진행: {processed}/{total_slots} ({pct:.0f}%)")
+                    print(f"      진행: {processed}/{total_slots} ({pct:.0f}%)")
 
-                # 주변 매장 (실제로는 위치 기반이지만, 여기서는 전체 매장 사용)
-                # 타겟 매장을 항상 포함하여 방문 기회 제공
-                target_store_obj = next((s for s in all_stores if s.store_name == target_store), None)
-                other_stores = [s for s in all_stores if s.store_name != target_store]
-                nearby_stores = random.sample(other_stores, min(19, len(other_stores)))
-                if target_store_obj:
+                # 에이전트 현재 위치
+                location = agent_locations[agent.id]
+
+                # 반경 3km 내 매장 조회
+                nearby_stores = global_store.get_stores_in_radius(
+                    center_lat=location.lat,
+                    center_lng=location.lng,
+                    radius_km=STORE_RECOGNITION_RADIUS_KM
+                )
+
+                # 타겟 매장이 없으면 추가 (테스트/디버깅용)
+                if target_store_obj and target_store_obj not in nearby_stores:
                     nearby_stores.append(target_store_obj)
 
                 # 4단계 의사결정
                 result = algorithm.process_decision(
                     agent=agent,
                     nearby_stores=nearby_stores,
-                    time_slot=time_slot,
+                    time_slot=slot_name,
                     weekday=weekday,
                     current_datetime=slot_time.isoformat(),
                 )
@@ -289,13 +368,19 @@ def run_simulation(
                     "change_preference": agent.change_preference,
                     "budget": agent.budget_per_meal,
                     "weekday": weekday,
-                    "time_slot": time_slot,
+                    "time_slot": slot_name,
                     "decision": result["decision"],
                     "visited_store": result.get("visited_store"),
                     "visited_category": result.get("visited_category"),
+                    # 위치 정보 추가
+                    "agent_lat": location.lat,
+                    "agent_lng": location.lng,
+                    # 평점 정보
                     "taste_rating": result.get("ratings", {}).get("taste") if result.get("ratings") else None,
                     "value_rating": result.get("ratings", {}).get("value") if result.get("ratings") else None,
+                    "atmosphere_rating": result.get("ratings", {}).get("atmosphere") if result.get("ratings") else None,
                     "reason": result.get("reason", ""),
+                    "nearby_store_count": len(nearby_stores),
                 }
                 results.append(record)
 
@@ -348,12 +433,14 @@ def save_results(results_df: pd.DataFrame, global_store: GlobalStore, agents: Li
         for store, count in store_visits.items():
             print(f"  {store}: {count}회")
 
-        # 평균 평점
+        # 평균 평점 (1~5 스케일)
         avg_taste = visit_df["taste_rating"].mean()
         avg_value = visit_df["value_rating"].mean()
-        print(f"\n평균 평점:")
-        print(f"  맛: {avg_taste:.2f} / 2.00")
-        print(f"  가성비: {avg_value:.2f} / 2.00")
+        avg_atmosphere = visit_df["atmosphere_rating"].mean() if "atmosphere_rating" in visit_df else 0
+        print(f"\n평균 평점 (1~5점):")
+        print(f"  맛: {avg_taste:.2f}")
+        print(f"  가성비: {avg_value:.2f}")
+        print(f"  분위기: {avg_atmosphere:.2f}")
 
     # GlobalStore 통계
     stats = global_store.get_statistics()
@@ -412,11 +499,16 @@ def main():
         help="확인 없이 바로 실행",
     )
     parser.add_argument(
-        "--improved",
-        action="store_true",
-        help="타겟 매장 개선 버전으로 시뮬레이션 (--target-store와 함께 사용)",
+        "--seed",
+        type=int,
+        default=DEFAULT_SEED,
+        help=f"랜덤 시드 (기본: {DEFAULT_SEED}, 개선 전/후 비교 시 동일 시드 사용)",
     )
     args = parser.parse_args()
+
+    # 시드 고정 (개선 전/후 비교 시 동일 에이전트 구성 보장)
+    random.seed(args.seed)
+    np.random.seed(args.seed)
 
     agent_count = min(99, max(1, args.agents))
     days = max(1, args.days)
@@ -425,6 +517,7 @@ def main():
 
     print("=" * 60)
     print("Generative Agents 시뮬레이션")
+    print(f"시드: {args.seed}")
     print("=" * 60)
     print(f"LLM: {settings.llm.provider} / {settings.llm.model_name}")
     print(f"타겟 매장: {args.target_store}")
@@ -449,7 +542,7 @@ def main():
             return
 
     # 실행
-    global_store = load_environment(settings, improved=args.improved, target_store=args.target_store)
+    global_store = load_environment(settings, target_store=args.target_store)
     agents = generate_agents(agent_count)
 
     # 타겟 매장 설정 저장

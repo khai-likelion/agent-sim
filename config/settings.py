@@ -24,7 +24,7 @@ class AreaSettings(BaseSettings):
     center_lat: float = Field(default=37.5559, description="도로 네트워크 중심 위도")
     center_lng: float = Field(default=126.9106, description="도로 네트워크 중심 경도")
 
-    model_config = {"env_prefix": "AREA_"}
+    model_config = {"env_prefix": "AREA_", "env_file": ".env", "extra": "ignore"}
 
 
 class SimulationSettings(BaseSettings):
@@ -49,7 +49,7 @@ class SimulationSettings(BaseSettings):
     )
     visit_threshold: float = Field(default=0.5, description="방문 결정 점수 임계값")
 
-    model_config = {"env_prefix": "SIM_"}
+    model_config = {"env_prefix": "SIM_", "env_file": ".env", "extra": "ignore"}
 
 
 class PathSettings(BaseSettings):
@@ -93,17 +93,20 @@ class PathSettings(BaseSettings):
 
 
 class LLMSettings(BaseSettings):
-    """LLM API configuration (future use)."""
+    """LLM API configuration. Default: Ollama with Qwen2.5-7B."""
 
     provider: str = Field(
-        default="openai", description="LLM provider: openai | anthropic"
+        default="ollama", description="LLM provider: ollama | deepseek | sambanova | huggingface | groq | openai | anthropic"
     )
-    model_name: str = Field(default="gpt-4o-mini", description="LLM model name")
-    api_key: str = Field(default="", description="API key (load from .env)")
+    model_name: str = Field(
+        default="qwen2.5:7b",
+        description="Model name. Ollama: qwen2.5:7b, llama3.1:8b. DeepSeek: deepseek-chat. SambaNova: Meta-Llama-3.3-70B-Instruct"
+    )
+    api_key: str = Field(default="http://localhost:11434", description="API key or Ollama base URL")
     temperature: float = Field(default=0.7)
-    max_tokens: int = Field(default=2048)
+    max_tokens: int = Field(default=1024)
 
-    model_config = {"env_prefix": "LLM_"}
+    model_config = {"env_prefix": "LLM_", "env_file": ".env", "extra": "ignore"}
 
 
 class Settings(BaseSettings):

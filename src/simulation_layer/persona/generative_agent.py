@@ -332,9 +332,9 @@ class GenerativeAgent:
             value_rating=value_rating,
         )
         self.recent_history.append(record)
-        # 최근 20개만 유지
-        if len(self.recent_history) > 20:
-            self.recent_history = self.recent_history[-20:]
+        # 최근 15개만 유지
+        if len(self.recent_history) > 15:
+            self.recent_history = self.recent_history[-15:]
 
     def get_recent_categories(self, n: int = 5) -> List[str]:
         """최근 방문한 카테고리 목록"""

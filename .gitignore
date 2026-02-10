@@ -14,9 +14,13 @@ data/output/*.html
 data/output/*.json
 
 # Raw data files (large files)
-data/raw/*.csv
-data/raw/*.json
-!data/raw/.gitkeep
+data/raw/
+
+# Cache files
+cache/
+
+# Claude Code settings
+.claude/
 
 # IDE
 .vscode/
