@@ -1,0 +1,22 @@
+당신은 {agent_name}입니다. 방금 [{store_name}]에서 식사를 마쳤습니다.
+
+{persona_summary}
+
+방문한 매장 정보:
+{store_info}{improvement_section}
+
+당신의 경험을 바탕으로 평점을 매겨주세요.
+평점 기준 (1~5점):
+- 1점: 매우별로
+- 2점: 별로
+- 3점: 보통
+- 4점: 좋음
+- 5점: 매우좋음
+
+평가 항목:
+1. 맛 (taste_rating): 음식의 맛, 건강 성향과의 일치도
+2. 가성비 (value_rating): 가격 대비 만족도
+3. 분위기 (atmosphere_rating): 매장 분위기, 서비스
+
+반드시 아래 JSON 형식으로만 응답하세요:
+{{"taste_rating": 1~5, "value_rating": 1~5, "atmosphere_rating": 1~5, "comment": "한줄 평가"}}

@@ -1,0 +1,24 @@
+당신은 {agent_name}입니다.
+
+{persona_summary}
+
+현재 상황:
+- 시간대: {time_slot}
+- 원하는 업종: {category}
+- 한끼 가용비: {budget}원
+
+변화 성향 "{change_preference}":
+- {change_description}
+
+최근 방문한 매장: {recent_stores}
+
+주변 매장 정보:
+{stores_text}{improvement_section}
+
+질문: 어떤 매장을 방문할지 선택하세요.
+- "{change_preference}" 성향에 맞게 선택하세요
+- 매장 정보와 에이전트 평점을 참고하세요
+- 예산({budget}원) 내에서 선택하세요
+
+반드시 아래 JSON 형식으로만 응답하세요:
+{{"store_name": "선택한 매장명", "reason": "선택 이유"}}

@@ -107,10 +107,27 @@ def load_simulation_data():
     else:
         agents = []
 
-    # 매장 데이터
-    stores_path = DATA_DIR / "raw" / "stores.csv"
-    if stores_path.exists():
-        stores_df = pd.read_csv(stores_path)
+    # 매장 데이터 (JSON 파일에서 로드)
+    json_dir = DATA_DIR / "raw" / "split_by_store_id"
+    if json_dir.exists():
+        stores_list = []
+        for json_file in json_dir.glob("*.json"):
+            try:
+                with open(json_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    if data and len(data) > 0:
+                        store = data[0]
+                        stores_list.append({
+                            '장소명': store.get('store_name', ''),
+                            'x': store.get('x', 0),
+                            'y': store.get('y', 0),
+                            '카테고리': store.get('category', ''),
+                            'address': store.get('address', ''),
+                            'store_id': store.get('store_id', '')
+                        })
+            except Exception:
+                continue
+        stores_df = pd.DataFrame(stores_list) if stores_list else pd.DataFrame()
     else:
         stores_df = pd.DataFrame()
 
@@ -1110,37 +1127,80 @@ def main():
                     col_play1, col_play2 = st.columns(2)
 
                     with col_play1:
+                        # 보간 포인트 수 설정
+                        interp_steps = st.selectbox("보간 단계", [1, 5, 10, 20], index=1,
+                                                     help="timeslot 사이 중간 프레임 수")
+
                         if st.button("▶️ 자동 재생", use_container_width=True, type="primary"):
+                            # 보간된 타임라인 생성
+                            interpolated_timeline = []
+                            for i in range(len(timeline_data) - 1):
+                                start = timeline_data[i]
+                                end = timeline_data[i + 1]
+                                interpolated_timeline.append(start)
+                                # 중간 포인트 생성
+                                for j in range(1, interp_steps):
+                                    t = j / interp_steps
+                                    interp_point = {
+                                        'lat': start['lat'] + (end['lat'] - start['lat']) * t,
+                                        'lng': start['lng'] + (end['lng'] - start['lng']) * t,
+                                        'time_slot': f"{start['time_slot']}→{end['time_slot']}",
+                                        'timestamp': start['timestamp'],
+                                        'decision': 'moving',
+                                        'visited_store': '',
+                                        'date': start['date'],
+                                        'time': f"이동중 ({int(t*100)}%)",
+                                    }
+                                    interpolated_timeline.append(interp_point)
+                            interpolated_timeline.append(timeline_data[-1])
+
                             # 자동 재생 모드
                             map_placeholder = st.empty()
                             info_placeholder = st.empty()
                             progress_bar = st.progress(0)
 
-                            for step in range(st.session_state.animation_step, total_steps):
-                                st.session_state.animation_step = step
+                            total_interp_steps = len(interpolated_timeline)
 
-                                # 지도 업데이트
-                                anim_map, _ = create_animated_agent_map(
-                                    results_df, visits_df, stores_df,
-                                    selected_agent, agent_info,
-                                    current_step=step, show_trail=True
-                                )
+                            for step, point in enumerate(interpolated_timeline):
+                                # 지도 생성 (보간 포인트용)
+                                m = folium.Map(location=[point['lat'], point['lng']], zoom_start=16)
+
+                                # 경로 표시
+                                trail_coords = [(p['lat'], p['lng']) for p in interpolated_timeline[:step+1]]
+                                if len(trail_coords) > 1:
+                                    folium.PolyLine(trail_coords, weight=3, color='#3498db', opacity=0.6).add_to(m)
+
+                                # 현재 위치 마커
+                                is_visit = point['decision'] == 'visit'
+                                marker_color = 'green' if is_visit else ('blue' if point['decision'] == 'moving' else 'gray')
+                                folium.CircleMarker(
+                                    location=[point['lat'], point['lng']],
+                                    radius=12,
+                                    color='white',
+                                    fill=True,
+                                    fill_color=marker_color,
+                                    fill_opacity=1.0,
+                                    weight=3,
+                                ).add_to(m)
 
                                 with map_placeholder.container():
-                                    st_folium(anim_map, width=600, height=350, key=f"anim_map_{step}")
+                                    st_folium(m, width=600, height=350, key=f"anim_map_{step}")
 
                                 # 정보 업데이트
-                                curr = timeline_data[step]
                                 with info_placeholder.container():
-                                    decision_text = "🍽️ 방문" if curr['decision'] == 'visit' else "🏠 외출안함"
-                                    store_text = f" → {curr['visited_store']}" if curr['visited_store'] else ""
-                                    st.info(f"Step {step + 1}/{total_steps}: {curr['date']} {curr['time_slot']} ({curr['time']}) - {decision_text}{store_text}")
+                                    if point['decision'] == 'visit':
+                                        decision_text = f"🍽️ 방문 → {point['visited_store']}"
+                                    elif point['decision'] == 'moving':
+                                        decision_text = "🚶 이동 중..."
+                                    else:
+                                        decision_text = "🏠 외출안함"
+                                    st.info(f"Frame {step + 1}/{total_interp_steps}: {point['date']} {point['time_slot']} - {decision_text}")
 
                                 # 진행률
-                                progress_bar.progress((step + 1) / total_steps)
+                                progress_bar.progress((step + 1) / total_interp_steps)
 
-                                # 속도 조절
-                                time_module.sleep(1.0 / play_speed)
+                                # 속도 조절 (보간 시 더 빠르게)
+                                time_module.sleep(0.3 / play_speed)
 
                             st.success("✅ 재생 완료!")
 

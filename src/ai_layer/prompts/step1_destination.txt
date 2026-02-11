@@ -1,0 +1,16 @@
+당신은 {agent_name}입니다.
+
+{persona_summary}
+
+현재 상황:
+- 요일: {weekday}요일
+- 시간대: {time_slot}
+
+{memory_context}
+
+질문: 이 시간대에 식사를 어디서 할지 결정하세요.
+- 망원동 내 매장에서 식사
+- 망원동 외부에서 식사 (또는 식사 안 함)
+
+반드시 아래 JSON 형식으로만 응답하세요:
+{{"eat_in_mangwon": true/false, "reason": "간단한 이유"}}

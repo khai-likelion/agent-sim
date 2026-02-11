@@ -199,8 +199,8 @@ class VisitRecord:
     visit_datetime: str  # ISO format
     store_name: str
     category: str
-    taste_rating: int  # 0: 별로, 1: 보통, 2: 좋음
-    value_rating: int  # 0: 별로, 1: 보통, 2: 좋음
+    taste_rating: int  # 1: 매우별로, 2: 별로, 3: 보통, 4: 좋음, 5: 매우좋음
+    value_rating: int  # 1: 매우별로, 2: 별로, 3: 보통, 4: 좋음, 5: 매우좋음
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -359,10 +359,10 @@ class GenerativeAgent:
 
         lines = ["최근 방문 기록:"]
         for v in self.recent_history[-5:]:
-            rating_text = {0: "별로", 1: "보통", 2: "좋음"}
+            rating_text = {1: "매우별로", 2: "별로", 3: "보통", 4: "좋음", 5: "매우좋음"}
             lines.append(
                 f"  - {v.store_name} ({v.category}): "
-                f"맛 {rating_text[v.taste_rating]}, 가성비 {rating_text[v.value_rating]}"
+                f"맛 {rating_text.get(v.taste_rating, '?')}, 가성비 {rating_text.get(v.value_rating, '?')}"
             )
         return "\n".join(lines)
 

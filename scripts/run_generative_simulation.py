@@ -62,7 +62,7 @@ STORE_RECOGNITION_RADIUS_KM = 3.0
 # OSM 네트워크 설정 (서울 강남역 주변 기준)
 DEFAULT_NETWORK_CENTER_LAT = 37.4980
 DEFAULT_NETWORK_CENTER_LNG = 127.0276
-DEFAULT_NETWORK_RADIUS_M = 3000.0
+DEFAULT_NETWORK_RADIUS_M = 800.0  # 망원동 구역 내로 제한
 
 
 def estimate_simulation(agent_count: int, days: int = 7, time_slots: int = 4) -> Dict[str, Any]:
@@ -341,10 +341,6 @@ def run_simulation(
                     center_lng=location.lng,
                     radius_km=STORE_RECOGNITION_RADIUS_KM
                 )
-
-                # 타겟 매장이 없으면 추가 (테스트/디버깅용)
-                if target_store_obj and target_store_obj not in nearby_stores:
-                    nearby_stores.append(target_store_obj)
 
                 # 4단계 의사결정
                 result = algorithm.process_decision(

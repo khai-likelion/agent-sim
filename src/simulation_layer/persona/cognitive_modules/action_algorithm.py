@@ -24,6 +24,7 @@ from pathlib import Path
 from src.simulation_layer.persona.generative_agent import GenerativeAgent, HEALTH_PREFERENCES
 from src.data_layer.global_store import get_global_store, GlobalStore, StoreRating
 from src.ai_layer.llm_client import create_llm_client, LLMClient
+from src.ai_layer.prompts import render_prompt, STEP1_DESTINATION, STEP2_CATEGORY, STEP3_STORE, STEP4_EVALUATE
 from config import get_settings
 
 
@@ -136,43 +137,33 @@ class ActionAlgorithm:
 
         return "\n".join(lines)
 
-    # ==================== Step 1: 목적지 유형 결정 ====================
+    # ==================== Step 1: 망원동 내 식사 여부 결정 ====================
 
-    def step1_destination_type(
+    def step1_eat_in_mangwon(
         self,
         agent: GenerativeAgent,
         time_slot: str,
         weekday: str,
     ) -> Dict[str, Any]:
         """
-        Step 1: 목적지 유형 결정
+        Step 1: 망원동 내 식사 여부 결정
         LLM 실패 시 LLMCallFailedError 발생 (Fallback 없음)
 
-        Returns: {"go_out": bool, "destination_type": str, "reason": str}
+        Returns: {"eat_in_mangwon": bool, "reason": str}
         """
-        available_types = DESTINATION_TYPES.get(time_slot, ["식당"])
-
-        prompt = f"""당신은 {agent.name}입니다.
-
-{agent.get_persona_summary()}
-
-현재 상황:
-- 요일: {weekday}요일
-- 시간대: {time_slot}
-- 가능한 외출 유형: {', '.join(available_types)}
-
-{agent.get_memory_context()}
-
-질문: 이 시간대에 외출해서 식사/음료를 할 것인지 결정하세요.
-외출한다면, {', '.join(available_types)} 중 어디로 갈지 선택하세요.
-
-반드시 아래 JSON 형식으로만 응답하세요:
-{{"go_out": true/false, "destination_type": "식당/카페/주점 중 하나 또는 null", "reason": "간단한 이유"}}"""
+        prompt = render_prompt(
+            STEP1_DESTINATION,
+            agent_name=agent.name,
+            persona_summary=agent.get_persona_summary(),
+            weekday=weekday,
+            time_slot=time_slot,
+            memory_context=agent.get_memory_context(),
+        )
 
         response = self._call_llm(prompt)
         result = self._parse_json_response(response)
 
-        if result and "go_out" in result:
+        if result and "eat_in_mangwon" in result:
             return result
 
         raise LLMCallFailedError("Step1: Failed to parse LLM response")
@@ -197,26 +188,18 @@ class ActionAlgorithm:
         recent_categories = agent.get_recent_categories(5)
         recent_text = ", ".join(recent_categories) if recent_categories else "없음"
 
-        prompt = f"""당신은 {agent.name}입니다.
-
-{agent.get_persona_summary()}
-
-현재 상황:
-- 시간대: {time_slot}
-- 목적지 유형: {destination_type}
-- 선택 가능한 업종: {', '.join(available_categories)}
-
-건강 성향 "{agent.health_preference}":
-- 선호하는 음식: {', '.join(preferred[:5])}
-- 기피하는 음식: {', '.join(avoided[:3])}
-
-최근 먹은 음식 종류: {recent_text}
-
-질문: 어떤 업종(종류)의 음식을 먹을지 선택하세요.
-최근에 자주 먹은 음식은 피하고, 건강 성향을 고려하세요.
-
-반드시 아래 JSON 형식으로만 응답하세요:
-{{"category": "선택한 업종", "reason": "선택 이유"}}"""
+        prompt = render_prompt(
+            STEP2_CATEGORY,
+            agent_name=agent.name,
+            persona_summary=agent.get_persona_summary(),
+            time_slot=time_slot,
+            destination_type=destination_type,
+            available_categories=", ".join(available_categories),
+            health_preference=agent.health_preference,
+            preferred_foods=", ".join(preferred[:5]),
+            avoided_foods=", ".join(avoided[:3]),
+            recent_categories=recent_text,
+        )
 
         response = self._call_llm(prompt)
         result = self._parse_json_response(response)
@@ -274,30 +257,19 @@ class ActionAlgorithm:
         if improvement_text:
             improvement_section = f"\n\n[개선사항 안내]\n{improvement_text}"
 
-        prompt = f"""당신은 {agent.name}입니다.
-
-{agent.get_persona_summary()}
-
-현재 상황:
-- 시간대: {time_slot}
-- 원하는 업종: {category}
-- 한끼 가용비: {agent.budget_per_meal:,}원
-
-변화 성향 "{agent.change_preference}":
-- {agent.change_description}
-
-최근 방문한 매장: {recent_text}
-
-주변 매장 정보:
-{stores_text}{improvement_section}
-
-질문: 어떤 매장을 방문할지 선택하세요.
-- "{agent.change_preference}" 성향에 맞게 선택하세요
-- 매장 정보와 에이전트 평점을 참고하세요
-- 예산({agent.budget_per_meal:,}원) 내에서 선택하세요
-
-반드시 아래 JSON 형식으로만 응답하세요:
-{{"store_name": "선택한 매장명", "reason": "선택 이유"}}"""
+        prompt = render_prompt(
+            STEP3_STORE,
+            agent_name=agent.name,
+            persona_summary=agent.get_persona_summary(),
+            time_slot=time_slot,
+            category=category,
+            budget=f"{agent.budget_per_meal:,}",
+            change_preference=agent.change_preference,
+            change_description=agent.change_description,
+            recent_stores=recent_text,
+            stores_text=stores_text,
+            improvement_section=improvement_section,
+        )
 
         response = self._call_llm(prompt)
         result = self._parse_json_response(response)
@@ -348,28 +320,14 @@ class ActionAlgorithm:
         if improvement_text:
             improvement_section = f"\n\n[이 매장의 개선사항]\n{improvement_text}"
 
-        prompt = f"""당신은 {agent.name}입니다. 방금 [{store.store_name}]에서 식사를 마쳤습니다.
-
-{agent.get_persona_summary()}
-
-방문한 매장 정보:
-{store_info}{improvement_section}
-
-당신의 경험을 바탕으로 평점을 매겨주세요.
-평점 기준 (1~5점):
-- 1점: 매우별로
-- 2점: 별로
-- 3점: 보통
-- 4점: 좋음
-- 5점: 매우좋음
-
-평가 항목:
-1. 맛 (taste_rating): 음식의 맛, 건강 성향과의 일치도
-2. 가성비 (value_rating): 가격 대비 만족도
-3. 분위기 (atmosphere_rating): 매장 분위기, 서비스
-
-반드시 아래 JSON 형식으로만 응답하세요:
-{{"taste_rating": 1~5, "value_rating": 1~5, "atmosphere_rating": 1~5, "comment": "한줄 평가"}}"""
+        prompt = render_prompt(
+            STEP4_EVALUATE,
+            agent_name=agent.name,
+            store_name=store.store_name,
+            persona_summary=agent.get_persona_summary(),
+            store_info=store_info,
+            improvement_section=improvement_section,
+        )
 
         response = self._call_llm(prompt)
         result = self._parse_json_response(response)
@@ -437,21 +395,24 @@ class ActionAlgorithm:
         }
         """
         try:
-            # Step 1: 목적지 유형 결정
-            step1 = self.step1_destination_type(agent, time_slot, weekday)
+            # Step 1: 망원동 내 식사 여부 결정
+            step1 = self.step1_eat_in_mangwon(agent, time_slot, weekday)
 
-            if not step1.get("go_out", False):
+            if not step1.get("eat_in_mangwon", False):
                 return {
                     "decision": "stay_home",
                     "steps": {"step1": step1},
                     "visited_store": None,
                     "visited_category": None,
                     "ratings": None,
-                    "reason": step1.get("reason", "외출 안 함"),
+                    "reason": step1.get("reason", "망원동 외부 식사"),
                     "error": None,
                 }
 
-            destination_type = step1.get("destination_type", "식당")
+            # 시간대에 따른 목적지 유형 결정
+            destination_type = "식당"  # 기본값
+            if time_slot in ["저녁", "야식"]:
+                destination_type = "식당"  # 저녁/야식은 식당 위주
 
             # Step 2: 업종 선택
             step2 = self.step2_category_selection(agent, destination_type, time_slot)
