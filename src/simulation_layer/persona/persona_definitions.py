@@ -4,7 +4,9 @@
 구조:
 - group_type_description: 그룹 유형 자연어 (생활베이스형/사적모임형/공적모임형/가족모임형)
 - generation_description: 세대 자연어 (Z1/Z2/Y/X/S)
-- 생활베이스형만 망원 거주 여부를 natural_language_persona에 포함
+- agent_type: 상주/유동 구분
+  - 유동: 조합 템플릿 113가지 (기존)
+  - 상주: 개별 에이전트 47명 (1인 생활베이스/빌라 + 2인 가족모임/단독연립 + 4인 가족모임/아파트)
 """
 
 from dataclasses import dataclass
@@ -83,7 +85,7 @@ GENERATION_DESCRIPTIONS = {
 
 
 # ============================================================================
-# 3. 거주지 수식어 (생활베이스형 전용)
+# 3. 거주지 수식어 (상주 에이전트용)
 # ============================================================================
 
 RESIDENCE_MODIFIER = {
@@ -94,7 +96,39 @@ RESIDENCE_MODIFIER = {
 
 
 # ============================================================================
-# 4. 페르소나 조합 정의
+# 4. 상주 에이전트 구성 정의 (47명)
+# ============================================================================
+
+RESIDENT_AGENT_CONFIG = {
+    "1인_생활베이스형": {
+        "housing_type": "다세대(빌라)",
+        "cluster_short_cd": ["0017", "0009", "0031"],
+        "total": 19,
+        "by_generation": {"Z2": 6, "Y": 8, "X": 4, "S": 1},
+    },
+    "2인_가족모임형": {
+        "housing_type": "단독·연립(주택)",
+        "cluster_short_cd": ["0013", "0026", "0002"],
+        "total": 14,
+        "by_generation": {"Z2": 1, "Y": 4, "X": 7, "S": 2},
+    },
+    "4인_가족모임형": {
+        "housing_type": "아파트",
+        "cluster_short_cd": ["0601", "0901", "1201"],
+        "total": 14,
+        "by_generation": {"Z2": 1, "Y": 2, "X": 7, "S": 4},
+    },
+}
+
+RESIDENT_GENDER_DISTRIBUTION = {
+    # 실제 망원동 성별 비중 (0.46 : 0.54) 적용 -> 남 22명 / 여 25명
+    "남": {"Z2": 4, "Y": 6, "X": 9, "S": 3},   # 22명
+    "여": {"Z2": 4, "Y": 8, "X": 9, "S": 4},   # 25명
+}
+
+
+# ============================================================================
+# 5. 페르소나 조합 정의
 # ============================================================================
 
 @dataclass
@@ -105,12 +139,172 @@ class PersonaCombination:
     group_size: int
     generation: str
     gender_composition: str
-    is_mangwon_resident: Optional[bool] = None  # 생활베이스형만 해당 (True: 거주, False: 외부)
+    agent_type: str = "유동"                  # "상주" 또는 "유동"
+    housing_type: Optional[str] = None        # 상주: 다세대(빌라)/단독·연립(주택)/아파트
     special_condition: Optional[str] = None
 
 
-def generate_all_combinations() -> List[PersonaCombination]:
-    """모든 페르소나 조합 생성"""
+def generate_resident_combinations() -> List[PersonaCombination]:
+    """
+    상주 페르소나 조합 47가지 생성.
+    유동 조합 중 상주 대상 유형을 상주 버전으로 복제:
+    - 1인 생활베이스형 10가지 → 다세대(빌라)
+    - 2인 가족모임형  18가지 → 단독·연립(주택)
+    - 4인 가족모임형  19가지 → 아파트
+    실제 스폰 인원/성별 비율은 RESIDENT_AGENT_CONFIG, RESIDENT_GENDER_DISTRIBUTION 참조.
+    """
+    combinations = []
+    combo_id = 1
+
+    # 1인 생활베이스형 [상주/빌라]: 5세대 × 2성별 = 10가지
+    for gen in ["Z1", "Z2", "Y", "X", "S"]:
+        for gender in ["남", "여"]:
+            combinations.append(PersonaCombination(
+                id=f"R{combo_id:03d}",
+                group_type="생활베이스형",
+                group_size=1,
+                generation=gen,
+                gender_composition=gender,
+                agent_type="상주",
+                housing_type="다세대(빌라)",
+            ))
+            combo_id += 1
+
+    # 2인 가족모임형 [상주/단독·연립]: 18가지
+    for z1_gender in ["남", "여"]:
+        combinations.append(PersonaCombination(
+            id=f"R{combo_id:03d}",
+            group_type="가족모임형",
+            group_size=2,
+            generation="Z1",
+            gender_composition=z1_gender,
+            agent_type="상주",
+            housing_type="단독·연립(주택)",
+            special_condition="S포함_Z1포함",
+        ))
+        combo_id += 1
+
+    combinations.append(PersonaCombination(
+        id=f"R{combo_id:03d}",
+        group_type="가족모임형",
+        group_size=2,
+        generation="S",
+        gender_composition="혼성",
+        agent_type="상주",
+        housing_type="단독·연립(주택)",
+        special_condition="S포함_Z1미포함",
+    ))
+    combo_id += 1
+
+    for z1_gender in ["남", "여", "혼성"]:
+        combinations.append(PersonaCombination(
+            id=f"R{combo_id:03d}",
+            group_type="가족모임형",
+            group_size=2,
+            generation="Z1",
+            gender_composition=z1_gender,
+            agent_type="상주",
+            housing_type="단독·연립(주택)",
+            special_condition="S미포함_Z1포함",
+        ))
+        combo_id += 1
+
+    for gen in ["Z2", "Y", "X"]:
+        for gender in ["남", "여", "혼성"]:
+            combinations.append(PersonaCombination(
+                id=f"R{combo_id:03d}",
+                group_type="가족모임형",
+                group_size=2,
+                generation=gen,
+                gender_composition=gender,
+                agent_type="상주",
+                housing_type="단독·연립(주택)",
+                special_condition="S미포함_Z1미포함",
+            ))
+            combo_id += 1
+    for gender in ["남", "여", "혼성"]:
+        combinations.append(PersonaCombination(
+            id=f"R{combo_id:03d}",
+            group_type="가족모임형",
+            group_size=2,
+            generation="혼합",
+            gender_composition=gender,
+            agent_type="상주",
+            housing_type="단독·연립(주택)",
+            special_condition="S미포함_Z1미포함_혼합세대",
+        ))
+        combo_id += 1
+
+    # 4인 가족모임형 [상주/아파트]: 19가지
+    for z1_gender in ["남", "여", "혼성"]:
+        combinations.append(PersonaCombination(
+            id=f"R{combo_id:03d}",
+            group_type="가족모임형",
+            group_size=4,
+            generation="Z1",
+            gender_composition=z1_gender,
+            agent_type="상주",
+            housing_type="아파트",
+            special_condition="S포함_Z1포함",
+        ))
+        combo_id += 1
+
+    combinations.append(PersonaCombination(
+        id=f"R{combo_id:03d}",
+        group_type="가족모임형",
+        group_size=4,
+        generation="S",
+        gender_composition="혼성",
+        agent_type="상주",
+        housing_type="아파트",
+        special_condition="S포함_Z1미포함",
+    ))
+    combo_id += 1
+
+    for z1_gender in ["남", "여", "혼성"]:
+        combinations.append(PersonaCombination(
+            id=f"R{combo_id:03d}",
+            group_type="가족모임형",
+            group_size=4,
+            generation="Z1",
+            gender_composition=z1_gender,
+            agent_type="상주",
+            housing_type="아파트",
+            special_condition="S미포함_Z1포함",
+        ))
+        combo_id += 1
+
+    for gen in ["Z2", "Y", "X"]:
+        for gender in ["남", "여", "혼성"]:
+            combinations.append(PersonaCombination(
+                id=f"R{combo_id:03d}",
+                group_type="가족모임형",
+                group_size=4,
+                generation=gen,
+                gender_composition=gender,
+                agent_type="상주",
+                housing_type="아파트",
+                special_condition="S미포함_Z1미포함",
+            ))
+            combo_id += 1
+    for gender in ["남", "여", "혼성"]:
+        combinations.append(PersonaCombination(
+            id=f"R{combo_id:03d}",
+            group_type="가족모임형",
+            group_size=4,
+            generation="혼합",
+            gender_composition=gender,
+            agent_type="상주",
+            housing_type="아파트",
+            special_condition="S미포함_Z1미포함_혼합세대",
+        ))
+        combo_id += 1
+
+    return combinations
+
+
+def generate_floating_combinations() -> List[PersonaCombination]:
+    """유동 페르소나 조합 113가지 생성"""
     combinations = []
     combo_id = 1
 
@@ -118,19 +312,17 @@ def generate_all_combinations() -> List[PersonaCombination]:
     # 1인
     # ========================================
 
-    # 생활베이스형 1인: 5세대 × 2성별 × 2거주지 = 20가지
-    for is_resident in [True, False]:
-        for gen in ["Z1", "Z2", "Y", "X", "S"]:
-            for gender in ["남", "여"]:
-                combinations.append(PersonaCombination(
-                    id=f"P{combo_id:03d}",
-                    group_type="생활베이스형",
-                    group_size=1,
-                    generation=gen,
-                    gender_composition=gender,
-                    is_mangwon_resident=is_resident,
-                ))
-                combo_id += 1
+    # 생활베이스형 1인: 5세대 × 2성별 = 10가지
+    for gen in ["Z1", "Z2", "Y", "X", "S"]:
+        for gender in ["남", "여"]:
+            combinations.append(PersonaCombination(
+                id=f"P{combo_id:03d}",
+                group_type="생활베이스형",
+                group_size=1,
+                generation=gen,
+                gender_composition=gender,
+            ))
+            combo_id += 1
 
     # 사적모임형 1인: 5세대 × 2성별 = 10가지
     for gen in ["Z1", "Z2", "Y", "X", "S"]:
@@ -148,19 +340,17 @@ def generate_all_combinations() -> List[PersonaCombination]:
     # 2인
     # ========================================
 
-    # 생활베이스형 2인: 3세대(Z1,Z2,Y) × 3성별조합 × 2거주지 = 18가지
-    for is_resident in [True, False]:
-        for gen in ["Z1", "Z2", "Y"]:
-            for gender in ["남", "여", "혼성"]:
-                combinations.append(PersonaCombination(
-                    id=f"P{combo_id:03d}",
-                    group_type="생활베이스형",
-                    group_size=2,
-                    generation=gen,
-                    gender_composition=gender,
-                    is_mangwon_resident=is_resident,
-                ))
-                combo_id += 1
+    # 생활베이스형 2인: 3세대(Z1,Z2,Y) × 3성별조합 = 9가지
+    for gen in ["Z1", "Z2", "Y"]:
+        for gender in ["남", "여", "혼성"]:
+            combinations.append(PersonaCombination(
+                id=f"P{combo_id:03d}",
+                group_type="생활베이스형",
+                group_size=2,
+                generation=gen,
+                gender_composition=gender,
+            ))
+            combo_id += 1
 
     # 사적모임형 2인: Z1(3) + Z2(3) + Y(3) + X(3) + S(1) = 13가지
     for gen in ["Z1", "Z2", "Y", "X"]:
@@ -241,19 +431,17 @@ def generate_all_combinations() -> List[PersonaCombination]:
     # 4인
     # ========================================
 
-    # 생활베이스형 4인: 3세대(Z1,Z2,Y) × 3성별조합 × 2거주지 = 18가지
-    for is_resident in [True, False]:
-        for gen in ["Z1", "Z2", "Y"]:
-            for gender in ["남", "여", "혼성"]:
-                combinations.append(PersonaCombination(
-                    id=f"P{combo_id:03d}",
-                    group_type="생활베이스형",
-                    group_size=4,
-                    generation=gen,
-                    gender_composition=gender,
-                    is_mangwon_resident=is_resident,
-                ))
-                combo_id += 1
+    # 생활베이스형 4인: 3세대(Z1,Z2,Y) × 3성별조합 = 9가지
+    for gen in ["Z1", "Z2", "Y"]:
+        for gender in ["남", "여", "혼성"]:
+            combinations.append(PersonaCombination(
+                id=f"P{combo_id:03d}",
+                group_type="생활베이스형",
+                group_size=4,
+                generation=gen,
+                gender_composition=gender,
+            ))
+            combo_id += 1
 
     # 사적모임형 4인
     for gen in ["Z1", "Z2", "Y", "X"]:
@@ -354,8 +542,15 @@ def generate_all_combinations() -> List[PersonaCombination]:
     return combinations
 
 
+def generate_all_combinations() -> List[PersonaCombination]:
+    """모든 페르소나 조합 생성 (유동 113 + 상주 47 = 160)"""
+    floating = generate_floating_combinations()
+    resident = generate_resident_combinations()
+    return floating + resident
+
+
 # ============================================================================
-# 5. 자연어 페르소나 생성
+# 6. 자연어 페르소나 생성
 # ============================================================================
 
 def get_generations_from_combo(combo: PersonaCombination) -> List[str]:
@@ -380,22 +575,14 @@ def get_generations_from_combo(combo: PersonaCombination) -> List[str]:
     # 가족모임형의 special_condition 처리
     if combo.group_type == "가족모임형" and combo.special_condition:
         if combo.special_condition == "S포함_Z1포함":
-            # S세대(조부모)와 Z1세대(손자녀) 모두 포함
-            # 중간 세대(Y 또는 X)도 존재하지만, 의사결정은 S와 Z1에 맞춰짐
             return ["S", "Z1"]
         elif combo.special_condition == "S포함_Z1미포함":
-            # S세대(조부모) 포함, Z1 없음
-            # S + 성인 자녀(Y 또는 X) 구성
             return ["S", "Y"]
         elif combo.special_condition == "S미포함_Z1포함":
-            # Z1세대(어린 자녀) 포함, S 없음
-            # Z1 + 부모 세대(Y 또는 X) 구성
             return ["Z1", "Y"]
         elif combo.special_condition == "S미포함_Z1미포함":
-            # S와 Z1 모두 없음 - 단일 세대 (Z2, Y, X 중 하나)
             return [combo.generation]
         elif combo.special_condition == "S미포함_Z1미포함_혼합세대":
-            # S와 Z1 없이 Z2, Y, X 혼합 - 조합이 특정되지 않아 대표 세대(Y) 사용
             return ["Y"]
 
     # 공적모임형의 혼합 세대 처리
@@ -405,7 +592,6 @@ def get_generations_from_combo(combo: PersonaCombination) -> List[str]:
         return inner.split("+")
 
     # 2인/4인 단일 세대 (생활베이스형, 사적모임형 등)
-    # 동일 세대로만 구성됨
     return [combo.generation]
 
 
@@ -417,24 +603,18 @@ def generate_natural_language_persona(combo: PersonaCombination) -> str:
     # 1. 그룹 유형 설명
     parts.append(GROUP_TYPE_DESCRIPTIONS[combo.group_type])
 
-    # 2. 거주지 설명 (생활베이스형만)
-    if combo.group_type == "생활베이스형" and combo.is_mangwon_resident is not None:
-        if combo.is_mangwon_resident:
-            parts.append(RESIDENCE_MODIFIER["망원동_거주"])
-        else:
-            parts.append(RESIDENCE_MODIFIER["망원동_외부"])
+    # 2. 거주지 설명 (상주 에이전트 -> 망원동 거주)
+    if combo.agent_type == "상주":
+        parts.append(RESIDENCE_MODIFIER["망원동_거주"])
 
     # 3. 세대 설명 (다중 세대일 경우 모든 세대의 설명 포함)
     generations = get_generations_from_combo(combo)
 
-    # 모든 세대의 설명을 추가 (원본 자연어만 사용)
     for gen in generations:
         if gen in GENERATION_DESCRIPTIONS:
             if len(generations) > 1:
-                # 다중 세대인 경우 세대 구분 헤더 추가
                 parts.append(f"[{gen} 세대 구성원]\n{GENERATION_DESCRIPTIONS[gen]}")
             else:
-                # 단일 세대인 경우 헤더 없이 설명만
                 parts.append(GENERATION_DESCRIPTIONS[gen])
 
     return "\n\n".join(parts)
@@ -449,6 +629,8 @@ def export_personas_to_json(filepath: str):
         "group_type_descriptions": GROUP_TYPE_DESCRIPTIONS,
         "generation_descriptions": GENERATION_DESCRIPTIONS,
         "residence_modifier": RESIDENCE_MODIFIER,
+        "resident_agent_config": RESIDENT_AGENT_CONFIG,
+        "resident_gender_distribution": RESIDENT_GENDER_DISTRIBUTION,
         "personas": []
     }
 
@@ -459,8 +641,12 @@ def export_personas_to_json(filepath: str):
             "group_size": combo.group_size,
             "generation": combo.generation,
             "gender_composition": combo.gender_composition,
+            "agent_type": combo.agent_type,
             "natural_language_persona": generate_natural_language_persona(combo),
         }
+
+        if combo.housing_type:
+            persona_data["housing_type"] = combo.housing_type
 
         if combo.special_condition:
             persona_data["special_condition"] = combo.special_condition
@@ -480,33 +666,42 @@ def export_personas_to_markdown(filepath: str):
     lines = [
         "# 망원동 상권 시뮬레이션 - 페르소나 목록",
         "",
-        f"총 {len(combinations)}가지 페르소나",
+        f"총 {len(combinations)}가지 페르소나 (유동 {len(generate_floating_combinations())} + 상주 {len(generate_resident_combinations())})",
         "",
         "---",
         "",
     ]
 
+    current_agent_type = None
     current_group = None
     current_size = None
 
     for combo in combinations:
+        if combo.agent_type != current_agent_type:
+            current_agent_type = combo.agent_type
+            current_group = None
+            current_size = None
+            lines.append(f"# {'=' * 40}")
+            lines.append(f"# {current_agent_type} 에이전트")
+            lines.append(f"# {'=' * 40}")
+            lines.append("")
+
         if combo.group_type != current_group:
             current_group = combo.group_type
             current_size = None
-            lines.append(f"# {current_group}")
+            lines.append(f"## {current_group}")
             lines.append("")
 
         if combo.group_size != current_size:
             current_size = combo.group_size
-            lines.append(f"## {current_size}인")
+            lines.append(f"### {current_size}인")
             lines.append("")
 
         # 제목
-        title_parts = [combo.id, combo.group_type, f"{combo.group_size}인", combo.generation, combo.gender_composition]
-        if combo.group_type == "생활베이스형" and combo.is_mangwon_resident is not None:
-            residence_label = "망원동 거주" if combo.is_mangwon_resident else "망원동 외부"
-            title_parts.insert(2, residence_label)
-        lines.append(f"### {' / '.join(title_parts)}")
+        title_parts = [combo.id, combo.group_type, f"[{combo.agent_type}]", f"{combo.group_size}인", combo.generation, combo.gender_composition]
+        if combo.housing_type:
+            title_parts.insert(3, combo.housing_type)
+        lines.append(f"#### {' / '.join(title_parts)}")
         lines.append("")
 
         # 자연어 페르소나
@@ -521,22 +716,42 @@ def export_personas_to_markdown(filepath: str):
 
 def print_distribution():
     """페르소나 분포 출력"""
-    combinations = generate_all_combinations()
-    print(f"\n총 페르소나 수: {len(combinations)}")
+    floating = generate_floating_combinations()
+    resident = generate_resident_combinations()
+    all_combos = floating + resident
 
+    print(f"\n총 페르소나 조합: {len(all_combos)}가지 (유동 {len(floating)} + 상주 {len(resident)})")
+
+    # 유동 분포
+    print(f"\n--- 유동 조합 ({len(floating)}가지) ---")
     size_counts = {}
-    for c in combinations:
+    for c in floating:
         size_counts[c.group_size] = size_counts.get(c.group_size, 0) + 1
-    print("\n인원별 분포:")
+    print("인원별:")
     for size, count in sorted(size_counts.items()):
         print(f"  {size}인: {count}가지")
 
     group_counts = {}
-    for c in combinations:
+    for c in floating:
         group_counts[c.group_type] = group_counts.get(c.group_type, 0) + 1
-    print("\n그룹 유형별 분포:")
+    print("그룹 유형별:")
     for group, count in sorted(group_counts.items()):
         print(f"  {group}: {count}가지")
+
+    # 상주 분포
+    print(f"\n--- 상주 조합 ({len(resident)}가지) ---")
+    from collections import Counter
+    resident_type_counts = Counter((c.group_type, c.group_size, c.housing_type) for c in resident)
+    for (gt, gs, ht), cnt in sorted(resident_type_counts.items(), key=lambda x: x[0][1]):
+        print(f"  {gt} {gs}인 ({ht}): {cnt}가지")
+
+    # 스폰 설정
+    print("\n--- 상주 스폰 설정 (RESIDENT_AGENT_CONFIG) ---")
+    for key, config in RESIDENT_AGENT_CONFIG.items():
+        print(f"  {key} ({config['housing_type']}): {config['total']}명")
+        for gen, cnt in config["by_generation"].items():
+            print(f"    {gen}: {cnt}명")
+    print(f"  성별 비율: 남 {sum(RESIDENT_GENDER_DISTRIBUTION['남'].values())}명 / 여 {sum(RESIDENT_GENDER_DISTRIBUTION['여'].values())}명")
 
 
 if __name__ == "__main__":
