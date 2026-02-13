@@ -358,6 +358,57 @@ def generate_all_combinations() -> List[PersonaCombination]:
 # 5. 자연어 페르소나 생성
 # ============================================================================
 
+def get_generations_from_combo(combo: PersonaCombination) -> List[str]:
+    """
+    조합에서 포함된 모든 세대를 추출.
+
+    2인/4인 그룹의 세대 구성 규칙:
+    - 생활베이스형/사적모임형: 동일 세대로만 구성 (단일 세대)
+    - 공적모임형 4인: 단일 세대 또는 혼합(Z2+Y, Y+X, Z2+X)
+    - 가족모임형:
+      - S(o)Z₁(o): S + Z1 두 세대
+      - S(o)Z₁(x): S + 중간 세대(Y 또는 X)
+      - S(x)Z₁(o): Z1 + 부모 세대(Y 또는 X)
+      - S(x)Z₁(x) 단일: 해당 세대만 (Z2, Y, X)
+      - S(x)Z₁(x) 혼합: Z2, Y, X 모든 세대
+    """
+
+    # 1인은 단일 세대
+    if combo.group_size == 1:
+        return [combo.generation]
+
+    # 가족모임형의 special_condition 처리
+    if combo.group_type == "가족모임형" and combo.special_condition:
+        if combo.special_condition == "S포함_Z1포함":
+            # S세대(조부모)와 Z1세대(손자녀) 모두 포함
+            # 중간 세대(Y 또는 X)도 존재하지만, 의사결정은 S와 Z1에 맞춰짐
+            return ["S", "Z1"]
+        elif combo.special_condition == "S포함_Z1미포함":
+            # S세대(조부모) 포함, Z1 없음
+            # S + 성인 자녀(Y 또는 X) 구성
+            return ["S", "Y"]
+        elif combo.special_condition == "S미포함_Z1포함":
+            # Z1세대(어린 자녀) 포함, S 없음
+            # Z1 + 부모 세대(Y 또는 X) 구성
+            return ["Z1", "Y"]
+        elif combo.special_condition == "S미포함_Z1미포함":
+            # S와 Z1 모두 없음 - 단일 세대 (Z2, Y, X 중 하나)
+            return [combo.generation]
+        elif combo.special_condition == "S미포함_Z1미포함_혼합세대":
+            # S와 Z1 없이 Z2, Y, X 혼합 - 조합이 특정되지 않아 대표 세대(Y) 사용
+            return ["Y"]
+
+    # 공적모임형의 혼합 세대 처리
+    if combo.generation.startswith("혼합("):
+        # "혼합(Z2+Y)" -> ["Z2", "Y"]
+        inner = combo.generation[3:-1]  # "Z2+Y"
+        return inner.split("+")
+
+    # 2인/4인 단일 세대 (생활베이스형, 사적모임형 등)
+    # 동일 세대로만 구성됨
+    return [combo.generation]
+
+
 def generate_natural_language_persona(combo: PersonaCombination) -> str:
     """조합을 기반으로 자연어 페르소나 생성 (group_type + residence + generation)"""
 
@@ -373,11 +424,18 @@ def generate_natural_language_persona(combo: PersonaCombination) -> str:
         else:
             parts.append(RESIDENCE_MODIFIER["망원동_외부"])
 
-    # 3. 세대 설명
-    if combo.generation.startswith("혼합"):
-        parts.append("다양한 세대가 함께하여 의견 조율이 필요합니다. 각 세대의 특성이 혼합되어 나타나며, 극단적인 선호보다는 모두가 수용할 수 있는 중간 지점을 찾는 경향이 있습니다.")
-    else:
-        parts.append(GENERATION_DESCRIPTIONS[combo.generation])
+    # 3. 세대 설명 (다중 세대일 경우 모든 세대의 설명 포함)
+    generations = get_generations_from_combo(combo)
+
+    # 모든 세대의 설명을 추가 (원본 자연어만 사용)
+    for gen in generations:
+        if gen in GENERATION_DESCRIPTIONS:
+            if len(generations) > 1:
+                # 다중 세대인 경우 세대 구분 헤더 추가
+                parts.append(f"[{gen} 세대 구성원]\n{GENERATION_DESCRIPTIONS[gen]}")
+            else:
+                # 단일 세대인 경우 헤더 없이 설명만
+                parts.append(GENERATION_DESCRIPTIONS[gen])
 
     return "\n\n".join(parts)
 
