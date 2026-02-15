@@ -30,10 +30,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from config import get_settings
-from src.simulation_layer.persona.generative_agent import (
-    GenerativeAgent,
-    GenerativeAgentFactory,
-)
+from src.simulation_layer.persona.agent import GenerativeAgent, load_personas_from_md
 from src.data_layer.global_store import get_global_store, GlobalStore
 from src.simulation_layer.persona.cognitive_modules.action_algorithm import ActionAlgorithm
 from src.data_layer.street_network import StreetNetwork, StreetNetworkConfig, AgentLocation, reset_street_network
@@ -57,7 +54,11 @@ TIME_SPEED_MULTIPLIER = 24
 WALKING_SPEED_MS = 1.4
 
 # 매장 인식 반경 (km)
-STORE_RECOGNITION_RADIUS_KM = 3.0
+STORE_RECOGNITION_RADIUS_KM = 3.0        # 유동 에이전트
+RESIDENT_STORE_RADIUS_KM = 0.8           # 상주 에이전트 (800m)
+
+# 유동 에이전트 일일 활동 수 (113명 중 53명만 매일 활동)
+DAILY_FLOATING_AGENT_COUNT = 53
 
 # OSM 네트워크 설정 (서울 강남역 주변 기준)
 DEFAULT_NETWORK_CENTER_LAT = 37.4980
@@ -65,7 +66,8 @@ DEFAULT_NETWORK_CENTER_LNG = 127.0276
 DEFAULT_NETWORK_RADIUS_M = 800.0  # 망원동 구역 내로 제한
 
 
-def estimate_simulation(agent_count: int, days: int = 7, time_slots: int = 4) -> Dict[str, Any]:
+def estimate_simulation(agent_count: int, days: int = 7, time_slots: int = 4,
+                        resident_count: int = 47, floating_count: int = 113) -> Dict[str, Any]:
     """
     시뮬레이션 전 예상치 계산.
 
@@ -76,10 +78,14 @@ def estimate_simulation(agent_count: int, days: int = 7, time_slots: int = 4) ->
     - Step 4: 방문한 에이전트만 (평가)
 
     가정:
+    - 상주 에이전트: 매일 전원 활동
+    - 유동 에이전트: 매일 53명만 활동 (하루짜리)
     - 외출 확률 약 50%
     - 방문 성공률 약 90% (외출 결정 중)
     """
-    total_slots = agent_count * days * time_slots
+    daily_floating = min(DAILY_FLOATING_AGENT_COUNT, floating_count)
+    daily_active = resident_count + daily_floating
+    total_slots = daily_active * days * time_slots
 
     # Step 1: 모든 슬롯에서 호출
     step1_calls = total_slots
@@ -117,6 +123,7 @@ def estimate_simulation(agent_count: int, days: int = 7, time_slots: int = 4) ->
 
     return {
         "agent_count": agent_count,
+        "daily_active": daily_active,
         "simulation_days": days,
         "time_slots_per_day": time_slots,
         "total_time_slots": total_slots,
@@ -141,7 +148,7 @@ def print_estimates(estimates: Dict[str, Any]):
     print("\n" + "=" * 60)
     print("시뮬레이션 예상치")
     print("=" * 60)
-    print(f"에이전트 수: {estimates['agent_count']}명")
+    print(f"에이전트 수: {estimates['agent_count']}명 (일일 활동: {estimates.get('daily_active', estimates['agent_count'])}명)")
     print(f"시뮬레이션 기간: {estimates['simulation_days']}일")
     print(f"일일 타임슬롯: {estimates['time_slots_per_day']}개")
     print(f"총 타임슬롯 수: {estimates['total_time_slots']:,}개")
@@ -190,14 +197,29 @@ def load_environment(settings, target_store: str = None):
 
 
 def generate_agents(agent_count: int) -> List[GenerativeAgent]:
-    """에이전트 생성"""
-    print(f"\n[2/4] 에이전트 생성 중 ({agent_count}명)...")
+    """personas_160.md에서 에이전트 로드"""
+    print(f"\n[2/4] 에이전트 로드 중 ({agent_count}명)...")
 
-    factory = GenerativeAgentFactory()
-    agents = factory.generate_unique_agents(max_count=agent_count)
+    agents = load_personas_from_md()
 
-    # 분포 출력
-    factory.print_distribution(agents)
+    if agent_count < len(agents):
+        import random as _rng
+        _rng.shuffle(agents)
+        agents = agents[:agent_count]
+        for i, a in enumerate(agents):
+            a.id = i + 1
+
+    print(f"  총 {len(agents)}명 로드 완료")
+    type_counts = {}
+    for a in agents:
+        type_counts[a.agent_type] = type_counts.get(a.agent_type, 0) + 1
+    for t, c in sorted(type_counts.items()):
+        print(f"    {t}: {c}명")
+
+    floating_count = type_counts.get("유동", 0)
+    resident_count = type_counts.get("상주", 0)
+    daily_active = resident_count + min(DAILY_FLOATING_AGENT_COUNT, floating_count)
+    print(f"  일일 활동 에이전트: {daily_active}명 (상주 {resident_count} + 유동 {min(DAILY_FLOATING_AGENT_COUNT, floating_count)})")
 
     return agents
 
@@ -234,15 +256,11 @@ def initialize_agent_locations(
     agents: List[GenerativeAgent],
     network: StreetNetwork
 ) -> Dict[int, AgentLocation]:
-    """에이전트들의 초기 위치를 OSM 네트워크 상에 배치"""
+    """에이전트들의 초기 위치를 home_location 기반으로 OSM 네트워크 상에 배치"""
     agent_locations = {}
     for agent in agents:
-        # 랜덤 시작 노드 선택
-        start_node = network.get_random_start_node()
-        node_data = network.graph_proj.nodes[start_node]
-        lat, lng = network.xy_to_latlng(node_data["x"], node_data["y"])
-
-        # 위치 초기화
+        # home_location이 있으면 해당 좌표 사용, 없으면 랜덤
+        lat, lng = agent.home_location
         location = network.initialize_agent_location(lat, lng)
         agent_locations[agent.id] = location
 
@@ -269,14 +287,16 @@ def run_simulation(
     print(f"\n[3/4] 시뮬레이션 실행 중...")
     print(f"  타겟 매장: {target_store}")
     print(f"  시간 배속: {TIME_SPEED_MULTIPLIER}x")
-    print(f"  매장 인식 반경: {STORE_RECOGNITION_RADIUS_KM}km")
+    print(f"  매장 인식 반경: 상주 {RESIDENT_STORE_RADIUS_KM}km / 유동 제한없음")
 
     # OSM 거리 네트워크 초기화
     network = initialize_street_network(global_store)
 
-    # 에이전트 위치 초기화
-    print(f"\n  에이전트 {len(agents)}명 위치 초기화 중...")
-    agent_locations = initialize_agent_locations(agents, network)
+    # 상주/유동 에이전트 분리
+    resident_agents = [a for a in agents if a.is_resident]
+    floating_agents = [a for a in agents if a.is_floating]
+    print(f"\n  상주 에이전트: {len(resident_agents)}명 (매일 활동)")
+    print(f"  유동 에이전트: {len(floating_agents)}명 (매일 {DAILY_FLOATING_AGENT_COUNT}명 샘플링)")
 
     algorithm = ActionAlgorithm(rate_limit_delay=0.5)
 
@@ -292,15 +312,37 @@ def run_simulation(
     # 타임슬롯 리스트 (시간 순서대로 정렬)
     time_slot_list = sorted(TIME_SLOTS.items(), key=lambda x: x[1])
 
-    # 전체 진행률 계산용
-    total_slots = len(agents) * days * len(TIME_SLOTS)
-    processed = 0
+    # 에이전트 초기 위치 딕셔너리
+    agent_locations = {}
 
     for day_idx in range(days):
         current_date = start_date + timedelta(days=day_idx)
         weekday = WEEKDAYS[current_date.weekday()]
 
+        # 매일 유동 에이전트 53명 랜덤 샘플링
+        daily_floating_count = min(DAILY_FLOATING_AGENT_COUNT, len(floating_agents))
+        daily_floating = random.sample(floating_agents, daily_floating_count)
+
+        # 유동 에이전트: 매일 새로운 초기 위치(FLOATING_LOCATIONS)에서 시작
+        from src.simulation_layer.persona.agent import FLOATING_LOCATIONS
+        for agent in daily_floating:
+            loc = random.choice(list(FLOATING_LOCATIONS.values()))
+            agent_locations[agent.id] = network.initialize_agent_location(loc["lat"], loc["lng"])
+
+        # 상주 에이전트: 매일 home_location에서 시작
+        for agent in resident_agents:
+            lat, lng = agent.home_location
+            agent_locations[agent.id] = network.initialize_agent_location(lat, lng)
+
+        # 오늘 활동할 에이전트 = 상주(전원) + 유동(샘플링)
+        daily_agents = resident_agents + daily_floating
+
         print(f"\n  === Day {day_idx + 1}/{days}: {current_date.strftime('%Y-%m-%d')} ({weekday}요일) ===")
+        print(f"      활동 에이전트: {len(daily_agents)}명 (상주 {len(resident_agents)} + 유동 {len(daily_floating)})")
+
+        # 전체 진행률 계산용
+        total_day_slots = len(daily_agents) * len(TIME_SLOTS)
+        day_processed = 0
 
         # 하루의 시뮬레이션 시간 (00:00 시작)
         sim_hour = 0  # 시뮬레이션 시간 (시)
@@ -314,33 +356,43 @@ def run_simulation(
                 walk_time_real_seconds = (hours_to_walk * 3600) / TIME_SPEED_MULTIPLIER
                 walk_distance_m = walk_time_real_seconds * WALKING_SPEED_MS
 
-                # 모든 에이전트 이동
-                for agent in agents:
+                # 오늘 활동하는 에이전트만 이동
+                for agent in daily_agents:
                     location = agent_locations[agent.id]
                     agent_locations[agent.id] = network.move_agent(location, walk_distance_m)
 
             sim_hour = slot_hour
             slot_time = current_date.replace(hour=slot_hour, minute=0, second=0)
 
+            # 이전 타임슬롯에서 쌓인 평점을 GlobalStore에 반영
+            flushed = global_store.flush_pending_ratings()
+            if flushed > 0:
+                print(f"      평점 반영: {flushed}건")
+
             print(f"    [{slot_name}] {slot_time.strftime('%H:%M')} - 에이전트 의사결정 중...")
 
-            for agent in agents:
-                processed += 1
+            for agent in daily_agents:
+                day_processed += 1
 
                 # 진행 상황 출력 (10% 단위)
-                if processed % max(1, total_slots // 10) == 0:
-                    pct = processed / total_slots * 100
-                    print(f"      진행: {processed}/{total_slots} ({pct:.0f}%)")
+                if day_processed % max(1, total_day_slots // 10) == 0:
+                    pct = day_processed / total_day_slots * 100
+                    print(f"      Day {day_idx+1} 진행: {day_processed}/{total_day_slots} ({pct:.0f}%)")
 
                 # 에이전트 현재 위치
                 location = agent_locations[agent.id]
 
-                # 반경 3km 내 매장 조회
-                nearby_stores = global_store.get_stores_in_radius(
-                    center_lat=location.lat,
-                    center_lng=location.lng,
-                    radius_km=STORE_RECOGNITION_RADIUS_KM
-                )
+                # 에이전트 유형별 매장 인식 범위
+                if agent.is_resident:
+                    # 상주 에이전트: 반경 800m 이내 매장만
+                    nearby_stores = global_store.get_stores_in_radius(
+                        center_lat=location.lat,
+                        center_lng=location.lng,
+                        radius_km=RESIDENT_STORE_RADIUS_KM
+                    )
+                else:
+                    # 유동 에이전트: 전체 매장
+                    nearby_stores = list(global_store.stores.values())
 
                 # 4단계 의사결정
                 result = algorithm.process_decision(
@@ -355,14 +407,10 @@ def run_simulation(
                 record = {
                     "timestamp": slot_time.strftime("%Y-%m-%d %H:%M"),
                     "agent_id": agent.id,
-                    "agent_name": agent.name,
+                    "persona_id": agent.persona_id,
                     "generation": agent.generation,
-                    "age": agent.age,
-                    "gender": agent.gender,
+                    "gender_composition": agent.gender_composition,
                     "segment": agent.segment,
-                    "health_preference": agent.health_preference,
-                    "change_preference": agent.change_preference,
-                    "budget": agent.budget_per_meal,
                     "weekday": weekday,
                     "time_slot": slot_name,
                     "decision": result["decision"],
@@ -379,6 +427,11 @@ def run_simulation(
                     "nearby_store_count": len(nearby_stores),
                 }
                 results.append(record)
+
+    # 마지막 타임슬롯의 평점 반영
+    flushed = global_store.flush_pending_ratings()
+    if flushed > 0:
+        print(f"      마지막 평점 반영: {flushed}건")
 
     return pd.DataFrame(results)
 
@@ -506,7 +559,7 @@ def main():
     random.seed(args.seed)
     np.random.seed(args.seed)
 
-    agent_count = min(99, max(1, args.agents))
+    agent_count = min(160, max(1, args.agents))
     days = max(1, args.days)
 
     settings = get_settings()
@@ -518,8 +571,8 @@ def main():
     print(f"LLM: {settings.llm.provider} / {settings.llm.model_name}")
     print(f"타겟 매장: {args.target_store}")
 
-    # 예상치 계산 및 출력
-    estimates = estimate_simulation(agent_count, days)
+    # 예상치 계산 및 출력 (160명 기준: 상주 47 + 유동 113)
+    estimates = estimate_simulation(agent_count, days, resident_count=47, floating_count=113)
     print_estimates(estimates)
 
     if args.dry_run or args.estimate_only:

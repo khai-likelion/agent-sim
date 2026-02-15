@@ -21,7 +21,7 @@ import time
 from typing import Optional, List, Dict, Any
 from pathlib import Path
 
-from src.simulation_layer.persona.generative_agent import GenerativeAgent, HEALTH_PREFERENCES
+from src.simulation_layer.persona.agent import GenerativeAgent
 from src.data_layer.global_store import get_global_store, GlobalStore, StoreRating
 from src.ai_layer.llm_client import create_llm_client, LLMClient
 from src.ai_layer.prompts import render_prompt, STEP1_DESTINATION, STEP2_CATEGORY, STEP3_STORE, STEP4_EVALUATE, STEP5_NEXT_ACTION
@@ -153,7 +153,7 @@ class ActionAlgorithm:
         """
         prompt = render_prompt(
             STEP1_DESTINATION,
-            agent_name=agent.name,
+            agent_name=agent.persona_id,
             persona_summary=agent.get_persona_summary(),
             weekday=weekday,
             time_slot=time_slot,
@@ -183,21 +183,16 @@ class ActionAlgorithm:
         Returns: {"category": str, "reason": str}
         """
         available_categories = DESTINATION_CATEGORIES.get(destination_type, ["한식"])
-        preferred = agent.preferred_categories
-        avoided = agent.avoided_categories
         recent_categories = agent.get_recent_categories(5)
         recent_text = ", ".join(recent_categories) if recent_categories else "없음"
 
         prompt = render_prompt(
             STEP2_CATEGORY,
-            agent_name=agent.name,
+            agent_name=agent.persona_id,
             persona_summary=agent.get_persona_summary(),
             time_slot=time_slot,
             destination_type=destination_type,
             available_categories=", ".join(available_categories),
-            health_preference=agent.health_preference,
-            preferred_foods=", ".join(preferred[:5]),
-            avoided_foods=", ".join(avoided[:3]),
             recent_categories=recent_text,
         )
 
@@ -228,17 +223,14 @@ class ActionAlgorithm:
 
         Returns: {"store_name": str, "reason": str}
         """
-        # 예산 내 매장 필터링
-        affordable_stores = [s for s in nearby_stores if s.average_price <= agent.budget_per_meal]
-        if not affordable_stores:
-            affordable_stores = nearby_stores[:10]
+        affordable_stores = nearby_stores
 
         # 카테고리 매칭 매장 우선
         category_stores = [s for s in affordable_stores if category.lower() in s.category.lower()]
         if not category_stores:
             category_stores = affordable_stores
 
-        display_stores = category_stores[:10]
+        display_stores = category_stores
 
         if not display_stores:
             return {"store_name": None, "reason": "주변에 적합한 매장 없음", "llm_failed": False}
@@ -259,13 +251,10 @@ class ActionAlgorithm:
 
         prompt = render_prompt(
             STEP3_STORE,
-            agent_name=agent.name,
+            agent_name=agent.persona_id,
             persona_summary=agent.get_persona_summary(),
             time_slot=time_slot,
             category=category,
-            budget=f"{agent.budget_per_meal:,}",
-            change_preference=agent.change_preference,
-            change_description=agent.change_description,
             recent_stores=recent_text,
             stores_text=stores_text,
             improvement_section=improvement_section,
@@ -322,7 +311,7 @@ class ActionAlgorithm:
 
         prompt = render_prompt(
             STEP4_EVALUATE,
-            agent_name=agent.name,
+            agent_name=agent.persona_id,
             store_name=store.store_name,
             persona_summary=agent.get_persona_summary(),
             store_info=store_info,
@@ -339,11 +328,11 @@ class ActionAlgorithm:
             atmosphere = max(1, min(5, int(result["atmosphere_rating"])))
             comment = result.get("comment", "")
 
-            # GlobalStore에 평점 추가
-            self.global_store.add_agent_rating(
+            # GlobalStore 평점 버퍼에 추가 (다음 타임슬롯에 반영)
+            self.global_store.add_pending_rating(
                 store_name=store.store_name,
                 agent_id=agent.id,
-                agent_name=agent.name,
+                agent_name=agent.persona_id,
                 taste_rating=taste,
                 value_rating=value,
                 atmosphere_rating=atmosphere,
@@ -395,7 +384,7 @@ class ActionAlgorithm:
         """
         prompt = render_prompt(
             STEP5_NEXT_ACTION,
-            agent_name=agent.name,
+            agent_name=agent.persona_id,
             persona_summary=agent.get_persona_summary(),
             weekday=weekday,
             current_time_slot=current_time_slot,
@@ -655,14 +644,13 @@ class ActionAlgorithm:
 
 if __name__ == "__main__":
     # 테스트
-    from src.simulation_layer.persona.generative_agent import GenerativeAgentFactory
+    from src.simulation_layer.persona.agent import load_personas_from_md
     from config import get_settings
 
     settings = get_settings()
 
-    # 에이전트 생성
-    factory = GenerativeAgentFactory()
-    agents = factory.generate_unique_agents(max_count=3)
+    # 에이전트 로드
+    agents = load_personas_from_md()[:3]
 
     # GlobalStore 초기화
     GlobalStore.reset_instance()

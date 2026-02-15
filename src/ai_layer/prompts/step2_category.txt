@@ -7,14 +7,10 @@
 - 목적지 유형: {destination_type}
 - 선택 가능한 업종: {available_categories}
 
-건강 성향 "{health_preference}":
-- 선호하는 음식: {preferred_foods}
-- 기피하는 음식: {avoided_foods}
-
 최근 먹은 음식 종류: {recent_categories}
 
 질문: 어떤 업종(종류)의 음식을 먹을지 선택하세요.
-최근에 자주 먹은 음식은 피하고, 건강 성향을 고려하세요.
+페르소나 설명을 기반으로, 최근에 자주 먹은 음식은 피하면서 선택하세요.
 
 반드시 아래 JSON 형식으로만 응답하세요:
 {{"category": "선택한 업종", "reason": "선택 이유"}}

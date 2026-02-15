@@ -209,6 +209,7 @@ class GlobalStore:
         self._initialized = True
         self.stores: Dict[str, StoreRating] = {}
         self._store_name_to_id: Dict[str, str] = {}
+        self._pending_ratings: List[Dict[str, Any]] = []
 
     @classmethod
     def reset_instance(cls):
@@ -368,6 +369,55 @@ class GlobalStore:
             )
             return True
         return False
+
+    def add_pending_rating(
+        self,
+        store_name: str,
+        agent_id: int,
+        agent_name: str,
+        taste_rating: int,
+        value_rating: int,
+        atmosphere_rating: int,
+        visit_datetime: Optional[str] = None
+    ) -> bool:
+        """
+        평점을 버퍼에 저장 (같은 타임슬롯 내 다른 에이전트에게 영향 안 줌).
+        flush_pending_ratings() 호출 시 실제 반영.
+        """
+        store = self.get_by_name(store_name)
+        if store:
+            self._pending_ratings.append({
+                "store_name": store_name,
+                "agent_id": agent_id,
+                "agent_name": agent_name,
+                "taste_rating": taste_rating,
+                "value_rating": value_rating,
+                "atmosphere_rating": atmosphere_rating,
+                "visit_datetime": visit_datetime,
+            })
+            return True
+        return False
+
+    def flush_pending_ratings(self) -> int:
+        """
+        버퍼에 쌓인 평점을 실제 매장에 일괄 반영.
+        Returns: 반영된 평점 수
+        """
+        count = 0
+        for rating in self._pending_ratings:
+            success = self.add_agent_rating(
+                store_name=rating["store_name"],
+                agent_id=rating["agent_id"],
+                agent_name=rating["agent_name"],
+                taste_rating=rating["taste_rating"],
+                value_rating=rating["value_rating"],
+                atmosphere_rating=rating["atmosphere_rating"],
+                visit_datetime=rating["visit_datetime"],
+            )
+            if success:
+                count += 1
+        self._pending_ratings.clear()
+        return count
 
     def get_stores_by_category(self, category_keyword: str) -> List[StoreRating]:
         """카테고리로 매장 검색"""

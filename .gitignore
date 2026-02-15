@@ -8,12 +8,10 @@ __pycache__/
 dist/
 build/
 
-# Output data (regeneratable)
+# Data files
 data/output/*.csv
 data/output/*.html
 data/output/*.json
-
-# Raw data files (large files)
 data/raw/
 
 # Cache files
