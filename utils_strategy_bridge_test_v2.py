@@ -74,12 +74,27 @@ class StrategyBridge:
         r'\([^)]*위해[^)]*\)',
     ]
 
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, base_url: str = None, model_name: str = None):
         """
         Args:
-            api_key: OpenAI API 키
+            api_key: API 키 (OpenAI or Gemini)
+            base_url: API 엔드포인트 (Gemini 사용 시 자동 감지)
+            model_name: 모델 이름 (None이면 환경변수 또는 기본값)
         """
-        self.client = AsyncOpenAI(api_key=api_key)
+        provider = os.getenv("LLM_PROVIDER", "openai").lower()
+
+        if base_url is None and provider == "gemini":
+            base_url = "https://generativelanguage.googleapis.com/v1beta/openai/"
+
+        if model_name is None:
+            model_name = os.getenv("LLM_MODEL_NAME", "gpt-4o-mini")
+
+        self.model_name = model_name
+
+        if base_url:
+            self.client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+        else:
+            self.client = AsyncOpenAI(api_key=api_key)
 
     async def _parse_json_with_retry(
         self,
@@ -97,7 +112,7 @@ class StrategyBridge:
         for attempt in range(max_retries + 1):
             try:
                 response = await self.client.chat.completions.create(
-                    model="gpt-4o-mini",
+                    model=self.model_name,
                     messages=messages,
                     temperature=temperature,
                     max_tokens=max_tokens,

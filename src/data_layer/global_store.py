@@ -327,14 +327,18 @@ class GlobalStore:
                     store.star_rating = float(data["별점"])
                 if "review_count" in data:
                     store.star_rating_count = int(data["review_count"])
-                if "맛" in data:
-                    store.taste_count = int(data["맛"])
-                if "가성비" in data:
-                    store.value_count = int(data["가성비"])
-                if "분위기" in data:
-                    store.atmosphere_count = int(data["분위기"])
-                if "서비스" in data:
-                    store.service_count = int(data["서비스"])
+
+                # 태그: 새 형식 "태깅":{맛,가성비,...} 우선, 없으면 최상위 키 시도
+                tagging = data.get("태깅", {})
+                tag_source = tagging if tagging else data
+                if "맛" in tag_source:
+                    store.taste_count = int(tag_source["맛"])
+                if "가성비" in tag_source:
+                    store.value_count = int(tag_source["가성비"])
+                if "분위기" in tag_source:
+                    store.atmosphere_count = int(tag_source["분위기"])
+                if "서비스" in tag_source:
+                    store.service_count = int(tag_source["서비스"])
 
                 # === 매장 정보 필드 로드 ===
                 store.market_analysis = data.get("market_analysis")
@@ -346,7 +350,9 @@ class GlobalStore:
                 if "top_keywords" in data:
                     store.top_keywords = data["top_keywords"]
                 if "critical_feedback" in data:
-                    store.critical_feedback = data["critical_feedback"]
+                    cf = data["critical_feedback"]
+                    # 리스트이면 줄바꿈으로 합침, 문자열이면 그대로
+                    store.critical_feedback = "\n".join(cf) if isinstance(cf, list) else cf
                 if "rag_context" in data:
                     store.rag_context = data["rag_context"]
 
@@ -657,10 +663,17 @@ class GlobalStore:
                 data["별점"] = store.star_rating
 
                 # === 태그 카운트 업데이트 ===
-                data["맛"] = store.taste_count
-                data["가성비"] = store.value_count
-                data["분위기"] = store.atmosphere_count
-                data["서비스"] = store.service_count
+                # 새 형식: "태깅" 중첩 딕셔너리 / 구 형식: 최상위 키
+                if "태깅" in data:
+                    data["태깅"]["맛"] = store.taste_count
+                    data["태깅"]["가성비"] = store.value_count
+                    data["태깅"]["분위기"] = store.atmosphere_count
+                    data["태깅"]["서비스"] = store.service_count
+                else:
+                    data["맛"] = store.taste_count
+                    data["가성비"] = store.value_count
+                    data["분위기"] = store.atmosphere_count
+                    data["서비스"] = store.service_count
 
                 # === agent_review 추가 (review_count 뒤) ===
                 data["agent_review"] = store.agent_review.to_dict()
@@ -695,7 +708,7 @@ if __name__ == "__main__":
     store = get_global_store()
 
     # JSON 매장 데이터 로드
-    json_dir = settings.paths.data_dir / "split_by_store_id"
+    json_dir = settings.paths.split_store_dir
     store.load_from_json_files(json_dir)
 
     print(f"로드된 매장 수: {len(store.stores)}")

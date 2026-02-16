@@ -54,7 +54,7 @@ def load_json_stores(json_dir: Optional[Path] = None) -> pd.DataFrame:
         - rag_context
     """
     if json_dir is None:
-        json_dir = settings.paths.data_dir / "split_by_store_id"
+        json_dir = settings.paths.split_store_dir
 
     json_files = list(json_dir.glob("*.json"))
     print(f"📂 {len(json_files)}개 JSON 파일 로드 중...")
@@ -113,6 +113,8 @@ def load_json_stores(json_dir: Optional[Path] = None) -> pd.DataFrame:
             store_info['price_value_score'] = feature_scores.get('price_value', {}).get('score')
             store_info['cleanliness_score'] = feature_scores.get('cleanliness', {}).get('score')
             store_info['service_score'] = feature_scores.get('service', {}).get('score')
+            store_info['turnover_score'] = feature_scores.get('turnover', {}).get('score')
+            store_info['atmosphere_score'] = feature_scores.get('atmosphere', {}).get('score')
 
             # 키워드 & 컨텍스트
             store_info['top_keywords'] = ','.join(store.get('top_keywords', []))  # 리스트를 문자열로

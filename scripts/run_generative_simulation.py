@@ -12,13 +12,14 @@ Stanford Generative Agents 논문 구조를 참조한 시뮬레이션:
 """
 
 import argparse
+import asyncio
 import json
 import sys
 import random
 import numpy as np
 from pathlib import Path
 from datetime import datetime, timedelta
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 import pandas as pd
 
@@ -47,8 +48,8 @@ TIME_SLOTS = {
 # 요일
 WEEKDAYS = ["월", "화", "수", "목", "금", "토", "일"]
 
-# 시뮬레이션 속도: 현실 24배 빠름 (1분 현실 = 24분 시뮬레이션)
-TIME_SPEED_MULTIPLIER = 24
+# 시뮬레이션 속도: 현실 120배 빠름 (1분 현실 = 120분 시뮬레이션)
+TIME_SPEED_MULTIPLIER = 120
 
 # 에이전트 걷는 속도 (m/s) - 평균 보행 속도 약 1.4 m/s (5 km/h)
 WALKING_SPEED_MS = 1.4
@@ -180,7 +181,7 @@ def load_environment(settings, target_store: str = None):
     global_store = get_global_store()
 
     # JSON 매장 데이터 로드 (stores.csv 대신 JSON 파일 사용)
-    json_dir = settings.paths.data_dir / "split_by_store_id"
+    json_dir = settings.paths.split_store_dir
     if json_dir.exists():
         global_store.load_from_json_files(json_dir)
         print(f"  매장 데이터 로드: {len(global_store.stores)}개")
@@ -267,12 +268,94 @@ def initialize_agent_locations(
     return agent_locations
 
 
-def run_simulation(
+async def agent_task(
+    agent: GenerativeAgent,
+    algorithm: ActionAlgorithm,
+    global_store: GlobalStore,
+    slot_name: str,
+    weekday: str,
+    slot_time: datetime,
+    agent_locations: Dict[int, Any],
+) -> Optional[Dict[str, Any]]:
+    """
+    에이전트 한 명의 한 타임슬롯 의사결정 코루틴.
+
+    - 에이전트 내 Step 1~4는 await로 순차 실행 (이전 결과가 다음 입력).
+    - 여러 에이전트의 코루틴은 asyncio.gather()로 동시에 실행됨.
+    - 평점은 add_pending_rating()에 버퍼링 → 타임슬롯 종료 후 flush.
+    """
+    # 유동 에이전트: 망원동 이탈 시 스킵
+    if agent.is_floating and agent.left_mangwon:
+        return None
+
+    # 유동 에이전트: entry_time_slot 이전이면 스킵 (아직 미도착)
+    if agent.is_floating and agent.entry_time_slot:
+        entry_hour = TIME_SLOTS.get(agent.entry_time_slot, 0)
+        if slot_time.hour < entry_hour:
+            return None
+
+    location = agent_locations[agent.id]
+
+    # 에이전트 유형별 매장 인식 범위
+    if agent.is_resident:
+        nearby_stores = global_store.get_stores_in_radius(
+            center_lat=location.lat,
+            center_lng=location.lng,
+            radius_km=RESIDENT_STORE_RADIUS_KM,
+        )
+    else:
+        nearby_stores = list(global_store.stores.values())
+
+    # 에이전트 내부: Step 1→2→3→4 순차 await (각 단계가 이전 결과에 의존)
+    result = await algorithm.process_decision(
+        agent=agent,
+        nearby_stores=nearby_stores,
+        time_slot=slot_name,
+        weekday=weekday,
+        current_datetime=slot_time.isoformat(),
+    )
+
+    # 실시간 결정 로그
+    decision = result.get("decision", "?")
+    steps = result.get("steps", {})
+    step4 = steps.get("step4", {})
+    if decision == "visit":
+        store = result.get("visited_store", "?")
+        category = result.get("visited_category", "")
+        ratings = result.get("ratings") or {}
+        rating = ratings.get("taste", "-")
+        comment = step4.get("comment", "")
+        tags = step4.get("selected_tags", [])
+        tags_str = " ".join(f"#{t}" for t in tags) if tags else ""
+        reason = result.get("reason", "")
+        reason_short = reason[:40] + "..." if len(reason) > 40 else reason
+        print(f"  [A{agent.id:>3}] {agent.name[:5]:5} | {slot_name} | "
+              f"방문: {store}({category}) | 별점:{rating}/5 {tags_str}")
+        if comment:
+            print(f"         리뷰: {comment[:60]}{'...' if len(comment)>60 else ''}")
+    elif decision == "stay_home":
+        step2 = steps.get("step2", {})
+        reason = result.get("reason", step2.get("reason", ""))
+        reason_short = reason[:40] + "..." if len(reason) > 40 else reason
+        print(f"  [A{agent.id:>3}] {agent.name[:5]:5} | {slot_name} | 외출안함 | {reason_short}")
+    elif decision == "llm_failed":
+        print(f"  [A{agent.id:>3}] {agent.name[:5]:5} | {slot_name} | LLM오류")
+
+    return {
+        "agent": agent,
+        "location": location,
+        "nearby_store_count": len(nearby_stores),
+        "result": result,
+    }
+
+
+async def run_simulation(
     agents: List[GenerativeAgent],
     global_store: GlobalStore,
     settings,
     days: int = 7,
     target_store: str = "류진",
+    max_concurrent_llm_calls: int = 10,
 ) -> pd.DataFrame:
     """
     OSM 네트워크 기반 시뮬레이션 실행.
@@ -288,6 +371,7 @@ def run_simulation(
     print(f"  타겟 매장: {target_store}")
     print(f"  시간 배속: {TIME_SPEED_MULTIPLIER}x")
     print(f"  매장 인식 반경: 상주 {RESIDENT_STORE_RADIUS_KM}km / 유동 제한없음")
+    print(f"  최대 동시 LLM 호출: {max_concurrent_llm_calls}개")
 
     # OSM 거리 네트워크 초기화
     network = initialize_street_network(global_store)
@@ -298,7 +382,9 @@ def run_simulation(
     print(f"\n  상주 에이전트: {len(resident_agents)}명 (매일 활동)")
     print(f"  유동 에이전트: {len(floating_agents)}명 (매일 {DAILY_FLOATING_AGENT_COUNT}명 샘플링)")
 
-    algorithm = ActionAlgorithm(rate_limit_delay=0.5)
+    # Semaphore: 동시에 실행되는 LLM 호출 수를 제한 (API rate limit 대응)
+    semaphore = asyncio.Semaphore(max_concurrent_llm_calls)
+    algorithm = ActionAlgorithm(rate_limit_delay=0.5, semaphore=semaphore)
 
     # 타겟 매장 객체
     target_store_obj = global_store.get_by_name(target_store)
@@ -374,9 +460,18 @@ def run_simulation(
             if flushed > 0:
                 print(f"      평점 반영: {flushed}건")
 
-            print(f"    [{slot_name}] {slot_time.strftime('%H:%M')} - 에이전트 의사결정 중...")
+            print(f"    [{slot_name}] {slot_time.strftime('%H:%M')} - 에이전트 {len(daily_agents)}명 병렬 의사결정 중...")
 
-            for agent in daily_agents:
+            # 타임슬롯 내 모든 에이전트의 의사결정을 동시에 실행.
+            # - 에이전트 간: asyncio.gather()로 병렬 실행 (LLM 응답 대기 중 다른 에이전트 요청 전송)
+            # - 에이전트 내: process_decision() 안에서 Step1→2→3→4 순차 await
+            tasks = [
+                agent_task(agent, algorithm, global_store, slot_name, weekday, slot_time, agent_locations)
+                for agent in daily_agents
+            ]
+            task_outputs = await asyncio.gather(*tasks, return_exceptions=True)
+
+            for agent, output in zip(daily_agents, task_outputs):
                 day_processed += 1
 
                 # 진행 상황 출력 (10% 단위)
@@ -384,39 +479,15 @@ def run_simulation(
                     pct = day_processed / total_day_slots * 100
                     print(f"      Day {day_idx+1} 진행: {day_processed}/{total_day_slots} ({pct:.0f}%)")
 
-                # 유동 에이전트: 망원동 떠난 경우 스킵
-                if agent.is_floating and agent.left_mangwon:
+                # gather의 예외 또는 스킵(None) 처리
+                if isinstance(output, Exception):
+                    print(f"      [경고] 에이전트 {agent.persona_id} 오류: {output}")
+                    continue
+                if output is None:
                     continue
 
-                # 유동 에이전트: entry_time_slot 이전이면 스킵 (아직 미도착)
-                if agent.is_floating and agent.entry_time_slot:
-                    entry_hour = TIME_SLOTS.get(agent.entry_time_slot, 0)
-                    if slot_hour < entry_hour:
-                        continue
-
-                # 에이전트 현재 위치
-                location = agent_locations[agent.id]
-
-                # 에이전트 유형별 매장 인식 범위
-                if agent.is_resident:
-                    # 상주 에이전트: 반경 800m 이내 매장만
-                    nearby_stores = global_store.get_stores_in_radius(
-                        center_lat=location.lat,
-                        center_lng=location.lng,
-                        radius_km=RESIDENT_STORE_RADIUS_KM
-                    )
-                else:
-                    # 유동 에이전트: 전체 매장
-                    nearby_stores = list(global_store.stores.values())
-
-                # 4단계 의사결정
-                result = algorithm.process_decision(
-                    agent=agent,
-                    nearby_stores=nearby_stores,
-                    time_slot=slot_name,
-                    weekday=weekday,
-                    current_datetime=slot_time.isoformat(),
-                )
+                location = output["location"]
+                result = output["result"]
 
                 # 결과 기록
                 record = {
@@ -431,7 +502,7 @@ def run_simulation(
                     "decision": result["decision"],
                     "visited_store": result.get("visited_store"),
                     "visited_category": result.get("visited_category"),
-                    # 위치 정보 추가
+                    # 위치 정보
                     "agent_lat": location.lat,
                     "agent_lng": location.lng,
                     # 평점 정보
@@ -439,7 +510,7 @@ def run_simulation(
                     "value_rating": result.get("ratings", {}).get("value") if result.get("ratings") else None,
                     "atmosphere_rating": result.get("ratings", {}).get("atmosphere") if result.get("ratings") else None,
                     "reason": result.get("reason", ""),
-                    "nearby_store_count": len(nearby_stores),
+                    "nearby_store_count": output["nearby_store_count"],
                 }
                 results.append(record)
 
@@ -527,7 +598,7 @@ def save_target_store(target_store: str, output_dir: Path):
     print(f"  타겟 매장 설정: {config_path}")
 
 
-def main():
+async def async_main():
     parser = argparse.ArgumentParser(description="Generative Agents 시뮬레이션")
     parser.add_argument(
         "--agents",
@@ -612,10 +683,18 @@ def main():
     # 타겟 매장 설정 저장
     save_target_store(args.target_store, settings.paths.output_dir)
 
-    results_df = run_simulation(agents, global_store, settings, days, target_store=args.target_store)
+    results_df = await run_simulation(
+        agents, global_store, settings, days,
+        target_store=args.target_store,
+        max_concurrent_llm_calls=20,
+    )
     save_results(results_df, global_store, agents, settings)
 
     print("\n시뮬레이션 완료!")
+
+
+def main():
+    asyncio.run(async_main())
 
 
 if __name__ == "__main__":

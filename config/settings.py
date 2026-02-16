@@ -58,10 +58,23 @@ class PathSettings(BaseSettings):
     project_root: Path = Field(
         default_factory=lambda: Path(__file__).resolve().parent.parent
     )
+    store_data_dir: Optional[Path] = Field(
+        default=None,
+        description="매장 JSON 데이터 디렉토리 경로 (설정 시 기본 경로 대신 사용)"
+    )
 
     @property
     def data_dir(self) -> Path:
         return self.project_root / "data" / "raw"
+
+    @property
+    def split_store_dir(self) -> Path:
+        """split_by_store_id 디렉토리 (STORE_DATA_DIR 환경변수로 오버라이드 가능)"""
+        if self.store_data_dir is not None:
+            return self.store_data_dir
+        return self.data_dir / "split_by_store_id"
+
+    model_config = {"env_prefix": "PATH_", "env_file": ".env", "extra": "ignore"}
 
     @property
     def output_dir(self) -> Path:

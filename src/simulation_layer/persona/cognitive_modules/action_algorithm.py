@@ -16,6 +16,7 @@ Action Algorithm Module - Stanford Generative Agents 기반 4단계 의사결정
 - 5: 매우좋음
 """
 
+import asyncio
 import json
 import random
 import time
@@ -65,18 +66,49 @@ class ActionAlgorithm:
     Fallback 없음 - LLM 실패 시 예외 발생.
     """
 
-    def __init__(self, rate_limit_delay: float = 0.5):
+    def __init__(self, rate_limit_delay: float = 0.5, semaphore: Optional[asyncio.Semaphore] = None):
         self.rate_limit_delay = rate_limit_delay
         self.llm_client: Optional[LLMClient] = None
         self.global_store: GlobalStore = get_global_store()
+        # None이면 호출 시 생성 (asyncio.run() 내부에서 생성해야 함)
+        self._semaphore = semaphore
 
     def _get_llm_client(self) -> LLMClient:
         if self.llm_client is None:
             self.llm_client = create_llm_client()
         return self.llm_client
 
+    async def _call_llm_async(self, prompt: str, max_retries: int = 3) -> str:
+        """비동기 LLM 호출 with retry. Semaphore로 동시 호출 수를 제한."""
+        client = self._get_llm_client()
+        semaphore = self._semaphore
+
+        async def _attempt():
+            for attempt in range(max_retries):
+                try:
+                    response = await client.generate(prompt)
+                    await asyncio.sleep(self.rate_limit_delay)
+                    return response
+                except Exception as e:
+                    error_str = str(e)
+                    if "429" in error_str or "rate" in error_str.lower():
+                        wait_time = (attempt + 1) * 10
+                        print(f"  Rate limit, waiting {wait_time}s...")
+                        await asyncio.sleep(wait_time)
+                    else:
+                        if attempt == max_retries - 1:
+                            raise LLMCallFailedError(f"LLM call failed: {e}")
+                        continue
+            raise LLMCallFailedError(f"LLM call failed after {max_retries} retries")
+
+        if semaphore is not None:
+            async with semaphore:
+                return await _attempt()
+        else:
+            return await _attempt()
+
     def _call_llm(self, prompt: str, max_retries: int = 3) -> str:
-        """LLM 호출 with retry. 실패 시 LLMCallFailedError 발생."""
+        """동기 LLM 호출 (하위 호환 / __main__ 테스트용). 실패 시 LLMCallFailedError 발생."""
         client = self._get_llm_client()
 
         for attempt in range(max_retries):
@@ -202,7 +234,7 @@ class ActionAlgorithm:
 
     # ==================== Step 2: 업종 선택 ====================
 
-    def step2_category_selection(
+    async def step2_category_selection(
         self,
         agent: GenerativeAgent,
         destination_type: str,
@@ -227,7 +259,7 @@ class ActionAlgorithm:
             memory_context=agent.get_memory_context(current_date),
         )
 
-        response = self._call_llm(prompt)
+        response = await self._call_llm_async(prompt)
         result = self._parse_json_response(response)
 
         if result and result.get("category"):
@@ -237,7 +269,7 @@ class ActionAlgorithm:
 
     # ==================== Step 3: 매장 선택 ====================
 
-    def step3_store_selection(
+    async def step3_store_selection(
         self,
         agent: GenerativeAgent,
         category: str,
@@ -294,7 +326,7 @@ class ActionAlgorithm:
             improvement_section=improvement_section,
         )
 
-        response = self._call_llm(prompt)
+        response = await self._call_llm_async(prompt)
         result = self._parse_json_response(response)
 
         if result and result.get("store_name"):
@@ -315,7 +347,7 @@ class ActionAlgorithm:
 
     # ==================== Step 4: 평가 및 피드백 ====================
 
-    def step4_evaluate_and_feedback(
+    async def step4_evaluate_and_feedback(
         self,
         agent: GenerativeAgent,
         store: StoreRating,
@@ -370,7 +402,7 @@ class ActionAlgorithm:
             focus_aspect=selected_focus,
         )
 
-        response = self._call_llm(prompt)
+        response = await self._call_llm_async(prompt)
         result = self._parse_json_response(response)
 
         if result and "rating" in result:
@@ -411,7 +443,7 @@ class ActionAlgorithm:
 
     # ==================== Step 5: 다음 행동 결정 ====================
 
-    def step5_next_action(
+    async def step5_next_action(
         self,
         agent: GenerativeAgent,
         current_time_slot: str,
@@ -473,7 +505,7 @@ class ActionAlgorithm:
             action_options=action_options,
         )
 
-        response = self._call_llm(prompt)
+        response = await self._call_llm_async(prompt)
         result = self._parse_json_response(response)
 
         if result and result.get("action"):
@@ -625,7 +657,7 @@ class ActionAlgorithm:
 
     # ==================== Main Process ====================
 
-    def process_decision(
+    async def process_decision(
         self,
         agent: GenerativeAgent,
         nearby_stores: List[StoreRating],
@@ -635,7 +667,8 @@ class ActionAlgorithm:
         improvement_text: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        4단계 의사결정 전체 프로세스 수행.
+        4단계 의사결정 전체 프로세스 수행 (비동기).
+        에이전트 내 각 단계는 이전 결과에 의존하므로 await로 순차 실행.
         LLM 실패 시 LLMCallFailedError 발생 (Fallback 없음)
 
         Args:
@@ -654,7 +687,7 @@ class ActionAlgorithm:
             # current_datetime에서 날짜 추출 (예: "2026-02-16T07:00:00" → "2026-02-16")
             current_date = current_datetime[:10] if current_datetime else ""
 
-            # Step 1: 망원동 내 식사 여부 결정
+            # Step 1: 망원동 내 식사 여부 결정 (확률 기반, LLM 불필요 → 동기)
             step1 = self.step1_eat_in_mangwon(agent, time_slot, weekday, current_date)
 
             if not step1.get("eat_in_mangwon", False):
@@ -673,12 +706,12 @@ class ActionAlgorithm:
             if time_slot in ["저녁", "야식"]:
                 destination_type = "식당"  # 저녁/야식은 식당 위주
 
-            # Step 2: 업종 선택
-            step2 = self.step2_category_selection(agent, destination_type, time_slot, current_date)
+            # Step 2: 업종 선택 (LLM, 이전 결과 필요 → await 순차)
+            step2 = await self.step2_category_selection(agent, destination_type, time_slot, current_date)
             category = step2.get("category", "한식")
 
-            # Step 3: 매장 선택
-            step3 = self.step3_store_selection(agent, category, nearby_stores, time_slot, improvement_text, current_date)
+            # Step 3: 매장 선택 (LLM, step2 결과 필요 → await 순차)
+            step3 = await self.step3_store_selection(agent, category, nearby_stores, time_slot, improvement_text, current_date)
             store_name = step3.get("store_name")
 
             if not store_name:
@@ -711,8 +744,8 @@ class ActionAlgorithm:
                     "error": None,
                 }
 
-            # Step 4: 평가 및 피드백
-            step4 = self.step4_evaluate_and_feedback(agent, store, current_datetime, improvement_text)
+            # Step 4: 평가 및 피드백 (LLM, step3 결과 필요 → await 순차)
+            step4 = await self.step4_evaluate_and_feedback(agent, store, current_datetime, improvement_text)
 
             return {
                 "decision": "visit",
@@ -754,7 +787,7 @@ if __name__ == "__main__":
     GlobalStore.reset_instance()
     global_store = get_global_store()
 
-    json_dir = settings.paths.data_dir / "split_by_store_id"
+    json_dir = settings.paths.split_store_dir
     if json_dir.exists():
         global_store.load_from_json_files(json_dir)
 
