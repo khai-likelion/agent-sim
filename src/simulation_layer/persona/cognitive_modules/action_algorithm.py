@@ -208,6 +208,7 @@ class ActionAlgorithm:
         agent: GenerativeAgent,
         destination_type: str,
         time_slot: str,
+        current_date: str = "",
     ) -> Dict[str, Any]:
         """
         Step 2: 업종 선택
@@ -216,8 +217,6 @@ class ActionAlgorithm:
         Returns: {"category": str, "reason": str}
         """
         available_categories = DESTINATION_CATEGORIES.get(destination_type, ["한식"])
-        recent_categories = agent.get_recent_categories(5)
-        recent_text = ", ".join(recent_categories) if recent_categories else "없음"
 
         prompt = render_prompt(
             STEP2_CATEGORY,
@@ -226,7 +225,7 @@ class ActionAlgorithm:
             time_slot=time_slot,
             destination_type=destination_type,
             available_categories=", ".join(available_categories),
-            recent_categories=recent_text,
+            memory_context=agent.get_memory_context(current_date),
         )
 
         response = self._call_llm(prompt)
@@ -246,6 +245,7 @@ class ActionAlgorithm:
         nearby_stores: List[StoreRating],
         time_slot: str,
         improvement_text: Optional[str] = None,
+        current_date: str = "",
     ) -> Dict[str, Any]:
         """
         Step 3: 매장 선택
@@ -278,8 +278,6 @@ class ActionAlgorithm:
             store_info_lines.append(self._get_store_info_for_prompt(store))
 
         stores_text = "\n\n".join(store_info_lines)
-        recent_stores = agent.get_recent_stores(5)
-        recent_text = ", ".join(recent_stores) if recent_stores else "없음"
 
         # 개선사항 텍스트 추가
         improvement_section = ""
@@ -292,7 +290,7 @@ class ActionAlgorithm:
             persona_summary=agent.get_persona_summary(),
             time_slot=time_slot,
             category=category,
-            recent_stores=recent_text,
+            memory_context=agent.get_memory_context(current_date),
             stores_text=stores_text,
             improvement_section=improvement_section,
         )
@@ -401,6 +399,7 @@ class ActionAlgorithm:
                 value_rating=rating,
                 atmosphere_rating=rating,
                 visit_datetime=visit_datetime,
+                comment=comment,
             )
 
             return {
@@ -635,11 +634,11 @@ class ActionAlgorithm:
                 destination_type = "식당"  # 저녁/야식은 식당 위주
 
             # Step 2: 업종 선택
-            step2 = self.step2_category_selection(agent, destination_type, time_slot)
+            step2 = self.step2_category_selection(agent, destination_type, time_slot, current_date)
             category = step2.get("category", "한식")
 
             # Step 3: 매장 선택
-            step3 = self.step3_store_selection(agent, category, nearby_stores, time_slot, improvement_text)
+            step3 = self.step3_store_selection(agent, category, nearby_stores, time_slot, improvement_text, current_date)
             store_name = step3.get("store_name")
 
             if not store_name:

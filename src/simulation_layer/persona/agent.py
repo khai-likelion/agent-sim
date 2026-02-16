@@ -52,6 +52,7 @@ class VisitRecord:
     taste_rating: int
     value_rating: int
     atmosphere_rating: int = 3
+    comment: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -90,12 +91,13 @@ class GenerativeAgent:
     def segment(self) -> str:
         return f"{self.agent_type}_{self.group_type}_{self.group_size}인"
 
-    def add_visit(self, store_name: str, category: str, taste_rating: int, value_rating: int, atmosphere_rating: int = 3, visit_datetime: str = ""):
+    def add_visit(self, store_name: str, category: str, taste_rating: int, value_rating: int, atmosphere_rating: int = 3, visit_datetime: str = "", comment: str = ""):
         record = VisitRecord(
             visit_datetime=visit_datetime or datetime.now().isoformat(),
             store_name=store_name, category=category,
             taste_rating=taste_rating, value_rating=value_rating,
             atmosphere_rating=atmosphere_rating,
+            comment=comment,
         )
         self.recent_history.append(record)
         if len(self.recent_history) > 15:
@@ -135,14 +137,12 @@ class GenerativeAgent:
                 return "최근 방문 기록이 없습니다."
         else:
             rating_text = {1: "매우별로", 2: "별로", 3: "보통", 4: "좋음", 5: "매우좋음"}
-            lines.append("최근 방문 기록:")
+            lines.append("당신의 과거 경험:")
             for v in self.recent_history[-5:]:
-                lines.append(
-                    f"  - {v.store_name} ({v.category}): "
-                    f"맛 {rating_text.get(v.taste_rating, '?')}, "
-                    f"가성비 {rating_text.get(v.value_rating, '?')}, "
-                    f"분위기 {rating_text.get(v.atmosphere_rating, '?')}"
-                )
+                line = f"  - {v.store_name} ({v.category}): {rating_text.get(v.taste_rating, '?')}"
+                if v.comment:
+                    line += f' → "{v.comment}"'
+                lines.append(line)
 
         return "\n".join(lines)
 
