@@ -54,7 +54,7 @@ def load_json_stores(json_dir: Optional[Path] = None) -> pd.DataFrame:
         - rag_context
     """
     if json_dir is None:
-        json_dir = settings.paths.data_dir / "split_by_store_id"
+        json_dir = settings.paths.data_dir / "split_by_store_id_ver3"
 
     json_files = list(json_dir.glob("*.json"))
     print(f"📂 {len(json_files)}개 JSON 파일 로드 중...")

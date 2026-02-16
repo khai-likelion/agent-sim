@@ -17,6 +17,7 @@ Action Algorithm Module - Stanford Generative Agents 기반 4단계 의사결정
 """
 
 import json
+import random
 import time
 from typing import Optional, List, Dict, Any
 from pathlib import Path
@@ -34,6 +35,14 @@ DESTINATION_TYPES = {
     "점심": ["식당", "카페"],
     "저녁": ["식당", "주점", "카페"],
     "야식": ["식당", "주점"],  # 야식에는 카페 제외
+}
+
+# 시간대별 기본 외식 확률 (현실적 수치)
+BASE_EATING_OUT_PROB = {
+    "아침": 0.40,
+    "점심": 0.70,
+    "저녁": 0.60,
+    "야식": 0.20,
 }
 
 # 목적지 유형과 카테고리 매핑
@@ -146,27 +155,50 @@ class ActionAlgorithm:
         weekday: str,
     ) -> Dict[str, Any]:
         """
-        Step 1: 망원동 내 식사 여부 결정
-        LLM 실패 시 LLMCallFailedError 발생 (Fallback 없음)
+        Step 1: 망원동 내 식사 여부 결정 (확률 기반)
+
+        시간대별 기본 확률에 페르소나 보정을 적용.
+        - 이전 식사 횟수가 2회 이상이면 확률 감소 (하루 2~3끼)
+        - 주말이면 확률 약간 증가
 
         Returns: {"eat_in_mangwon": bool, "reason": str}
         """
-        prompt = render_prompt(
-            STEP1_DESTINATION,
-            agent_name=agent.persona_id,
-            persona_summary=agent.get_persona_summary(),
-            weekday=weekday,
-            time_slot=time_slot,
-            memory_context=agent.get_memory_context(),
-        )
+        base_prob = BASE_EATING_OUT_PROB.get(time_slot, 0.50)
 
-        response = self._call_llm(prompt)
-        result = self._parse_json_response(response)
+        # 이전 식사 횟수 보정 (하루 2~3끼 제한)
+        meals_today = len(agent.recent_history)
+        if meals_today >= 3:
+            base_prob *= 0.1  # 3끼 이상이면 크게 감소
+        elif meals_today >= 2:
+            base_prob *= 0.5  # 2끼면 절반
+        elif meals_today >= 1 and time_slot == "아침":
+            pass  # 아침에 이미 먹었으면 그대로
 
-        if result and "eat_in_mangwon" in result:
-            return result
+        # 주말 보정
+        if weekday in ["토", "일"]:
+            base_prob = min(1.0, base_prob * 1.15)
 
-        raise LLMCallFailedError("Step1: Failed to parse LLM response")
+        # 확률적 결정
+        eat_out = random.random() < base_prob
+
+        if eat_out:
+            reasons = {
+                "아침": "아침 식사를 위해 외출",
+                "점심": "점심 시간 외식",
+                "저녁": "저녁 외식",
+                "야식": "야식이 땡김",
+            }
+            reason = reasons.get(time_slot, "외식")
+        else:
+            reasons_skip = [
+                "배가 안 고픔",
+                "이전 식사로 충분",
+                "집에서 해결",
+                "이 시간에는 안 먹음",
+            ]
+            reason = random.choice(reasons_skip)
+
+        return {"eat_in_mangwon": eat_out, "reason": reason}
 
     # ==================== Step 2: 업종 선택 ====================
 
@@ -234,6 +266,10 @@ class ActionAlgorithm:
 
         if not display_stores:
             return {"store_name": None, "reason": "주변에 적합한 매장 없음", "llm_failed": False}
+
+        # 매장 순서 셔플 (LLM의 위치 편향 방지)
+        display_stores = list(display_stores)
+        random.shuffle(display_stores)
 
         # 매장 정보 포맷팅
         store_info_lines = []
@@ -337,6 +373,7 @@ class ActionAlgorithm:
                 value_rating=value,
                 atmosphere_rating=atmosphere,
                 visit_datetime=visit_datetime,
+                comment=comment,
             )
 
             # 에이전트 메모리에도 추가
@@ -626,6 +663,7 @@ class ActionAlgorithm:
                     "value": step4["value_rating"],
                     "atmosphere": step4["atmosphere_rating"],
                 },
+                "comment": step4.get("comment", ""),
                 "reason": f"{step1.get('reason', '')} → {step2.get('reason', '')} → {step3.get('reason', '')}",
                 "error": None,
             }
@@ -656,7 +694,7 @@ if __name__ == "__main__":
     GlobalStore.reset_instance()
     global_store = get_global_store()
 
-    json_dir = settings.paths.data_dir / "split_by_store_id"
+    json_dir = settings.paths.data_dir / "split_by_store_id_ver3"
     if json_dir.exists():
         global_store.load_from_json_files(json_dir)
 

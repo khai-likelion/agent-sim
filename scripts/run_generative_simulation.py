@@ -171,7 +171,7 @@ def print_estimates(estimates: Dict[str, Any]):
     print("=" * 60)
 
 
-def load_environment(settings, target_store: str = None):
+def load_environment(settings):
     """환경 데이터 로드"""
     print("\n[1/4] 환경 데이터 로드 중...")
 
@@ -180,18 +180,10 @@ def load_environment(settings, target_store: str = None):
     global_store = get_global_store()
 
     # JSON 매장 데이터 로드 (stores.csv 대신 JSON 파일 사용)
-    json_dir = settings.paths.data_dir / "split_by_store_id"
+    json_dir = settings.paths.data_dir / "split_by_store_id_ver3"
     if json_dir.exists():
         global_store.load_from_json_files(json_dir)
         print(f"  매장 데이터 로드: {len(global_store.stores)}개")
-
-    # 타겟 매장 확인
-    if target_store:
-        target = global_store.get_by_name(target_store)
-        if target:
-            print(f"  ⭐ 타겟 매장: {target_store} (가격: {target.average_price}원)")
-        else:
-            print(f"  ⚠️ 타겟 매장 '{target_store}'를 찾을 수 없습니다.")
 
     return global_store
 
@@ -272,20 +264,18 @@ def run_simulation(
     global_store: GlobalStore,
     settings,
     days: int = 7,
-    target_store: str = "류진",
 ) -> pd.DataFrame:
     """
     OSM 네트워크 기반 시뮬레이션 실행.
 
     에이전트들이 거리를 걸으며 타임슬롯(07:00, 12:00, 18:00, 22:00)마다
-    반경 3km 내 매장을 인식하고 의사결정을 수행합니다.
+    반경 내 매장을 인식하고 의사결정을 수행합니다.
 
     시간 시스템:
     - 현실보다 24배 빠름 (1분 현실 = 24분 시뮬레이션)
     - 하루 24시간 시뮬레이션
     """
     print(f"\n[3/4] 시뮬레이션 실행 중...")
-    print(f"  타겟 매장: {target_store}")
     print(f"  시간 배속: {TIME_SPEED_MULTIPLIER}x")
     print(f"  매장 인식 반경: 상주 {RESIDENT_STORE_RADIUS_KM}km / 유동 제한없음")
 
@@ -299,9 +289,6 @@ def run_simulation(
     print(f"  유동 에이전트: {len(floating_agents)}명 (매일 {DAILY_FLOATING_AGENT_COUNT}명 샘플링)")
 
     algorithm = ActionAlgorithm(rate_limit_delay=0.5)
-
-    # 타겟 매장 객체
-    target_store_obj = global_store.get_by_name(target_store)
 
     # 결과 저장
     results = []
@@ -423,6 +410,7 @@ def run_simulation(
                     "taste_rating": result.get("ratings", {}).get("taste") if result.get("ratings") else None,
                     "value_rating": result.get("ratings", {}).get("value") if result.get("ratings") else None,
                     "atmosphere_rating": result.get("ratings", {}).get("atmosphere") if result.get("ratings") else None,
+                    "comment": result.get("comment", ""),
                     "reason": result.get("reason", ""),
                     "nearby_store_count": len(nearby_stores),
                 }
@@ -499,17 +487,6 @@ def save_results(results_df: pd.DataFrame, global_store: GlobalStore, agents: Li
     print(f"  총 에이전트 평점: {stats['total_agent_ratings']}건")
 
 
-def save_target_store(target_store: str, output_dir: Path):
-    """타겟 매장 설정 저장 (대시보드와 공유)"""
-    config = {
-        "target_store": target_store,
-        "description": "현재 시뮬레이션 및 대시보드에서 추적 중인 타겟 매장",
-        "updated_at": datetime.now().isoformat()
-    }
-    config_path = output_dir / "target_store.json"
-    with open(config_path, "w", encoding="utf-8") as f:
-        json.dump(config, f, ensure_ascii=False, indent=2)
-    print(f"  타겟 매장 설정: {config_path}")
 
 
 def main():
@@ -525,12 +502,6 @@ def main():
         type=int,
         default=7,
         help="시뮬레이션 기간 (기본: 7일)",
-    )
-    parser.add_argument(
-        "--target-store",
-        type=str,
-        default="류진",
-        help="추적할 타겟 매장 이름 (기본: 류진)",
     )
     parser.add_argument(
         "--dry-run",
@@ -569,8 +540,6 @@ def main():
     print(f"시드: {args.seed}")
     print("=" * 60)
     print(f"LLM: {settings.llm.provider} / {settings.llm.model_name}")
-    print(f"타겟 매장: {args.target_store}")
-
     # 예상치 계산 및 출력 (160명 기준: 상주 47 + 유동 113)
     estimates = estimate_simulation(agent_count, days, resident_count=47, floating_count=113)
     print_estimates(estimates)
@@ -591,13 +560,10 @@ def main():
             return
 
     # 실행
-    global_store = load_environment(settings, target_store=args.target_store)
+    global_store = load_environment(settings)
     agents = generate_agents(agent_count)
 
-    # 타겟 매장 설정 저장
-    save_target_store(args.target_store, settings.paths.output_dir)
-
-    results_df = run_simulation(agents, global_store, settings, days, target_store=args.target_store)
+    results_df = run_simulation(agents, global_store, settings, days)
     save_results(results_df, global_store, agents, settings)
 
     print("\n시뮬레이션 완료!")

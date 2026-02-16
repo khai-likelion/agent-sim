@@ -51,6 +51,7 @@ class AgentRatingRecord:
     taste_rating: int      # 1~5: 매우별로~매우좋음
     value_rating: int      # 1~5: 매우별로~매우좋음
     atmosphere_rating: int # 1~5: 매우별로~매우좋음
+    comment: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -60,6 +61,7 @@ class AgentRatingRecord:
             "taste_rating": self.taste_rating,
             "value_rating": self.value_rating,
             "atmosphere_rating": self.atmosphere_rating,
+            "comment": self.comment,
         }
 
 
@@ -147,7 +149,8 @@ class StoreRating:
         taste_rating: int,
         value_rating: int,
         atmosphere_rating: int,
-        visit_datetime: Optional[str] = None
+        visit_datetime: Optional[str] = None,
+        comment: str = "",
     ):
         """
         에이전트 평점 추가 (1~5점)
@@ -159,6 +162,7 @@ class StoreRating:
             taste_rating=taste_rating,
             value_rating=value_rating,
             atmosphere_rating=atmosphere_rating,
+            comment=comment,
         )
         self.agent_ratings.append(record)
 
@@ -217,18 +221,42 @@ class GlobalStore:
         with cls._lock:
             cls._instance = None
 
+    def _load_stores_csv(self, json_dir: Path) -> Dict[str, Dict[str, Any]]:
+        """stores.csv에서 좌표/카테고리/주소 정보를 store_id 기준으로 로드"""
+        import csv
+        stores_csv = json_dir.parent / "stores.csv"
+        result: Dict[str, Dict[str, Any]] = {}
+        if not stores_csv.exists():
+            return result
+        with open(stores_csv, "r", encoding="utf-8-sig") as f:
+            for row in csv.DictReader(f):
+                sid = str(row.get("ID", ""))
+                if sid:
+                    result[sid] = {
+                        "store_name": row.get("장소명", ""),
+                        "x": row.get("x"),
+                        "y": row.get("y"),
+                        "category": row.get("카테고리", ""),
+                        "address": row.get("주소", ""),
+                    }
+        return result
+
     def load_from_json_files(self, json_dir: Path):
         """
         JSON 파일들에서 매장 데이터 로드.
+        좌표/카테고리/주소는 stores.csv에서 보조 로딩.
 
         로드하는 필드:
-        - store_id, store_name, category, x, y, address
+        - store_id, store_name, category, x, y, address (stores.csv 우선)
         - market_analysis, revenue_analysis, customer_analysis
         - review_metrics, top_keywords, critical_feedback, rag_context
         - raw_data_context.trend_history, metadata
         """
         if not json_dir.exists():
             return
+
+        # stores.csv에서 좌표/카테고리/주소 로드
+        csv_data = self._load_stores_csv(json_dir)
 
         for json_file in json_dir.glob("*.json"):
             try:
@@ -241,12 +269,21 @@ class GlobalStore:
 
                 store_id = str(data.get("store_id", json_file.stem))
                 store_name = data.get("store_name", "Unknown")
-                category = data.get("category", "")
 
-                # 좌표 추출
-                x = data.get("x")  # longitude
-                y = data.get("y")  # latitude
-                coordinates = (float(y), float(x)) if x and y else None
+                # stores.csv에서 좌표/카테고리/주소 보충
+                csv_info = csv_data.get(store_id, {})
+                category = data.get("category") or csv_info.get("category", "")
+                address = data.get("address") or csv_info.get("address", "")
+
+                # 좌표 추출: JSON 우선, 없으면 stores.csv
+                x = data.get("x") or csv_info.get("x")
+                y = data.get("y") or csv_info.get("y")
+                coordinates = None
+                if x and y:
+                    try:
+                        coordinates = (float(y), float(x))
+                    except (ValueError, TypeError):
+                        pass
 
                 # 매장 찾기 또는 새로 생성
                 store = None
@@ -260,10 +297,18 @@ class GlobalStore:
                         store_name=store_name,
                         category=category,
                         coordinates=coordinates,
-                        address=data.get("address", ""),
+                        address=address,
                     )
                     self.stores[store_id] = store
                     self._store_name_to_id[store_name] = store_id
+
+                # 기존 매장이면 누락된 정보 보충
+                if store.coordinates is None and coordinates:
+                    store.coordinates = coordinates
+                if not store.category and category:
+                    store.category = category
+                if not store.address and address:
+                    store.address = address
 
                 # === 매장 정보 필드 로드 ===
                 store.market_analysis = data.get("market_analysis")
@@ -351,7 +396,8 @@ class GlobalStore:
         taste_rating: int,
         value_rating: int,
         atmosphere_rating: int,
-        visit_datetime: Optional[str] = None
+        visit_datetime: Optional[str] = None,
+        comment: str = "",
     ) -> bool:
         """
         매장에 에이전트 평점 추가 (1~5점).
@@ -366,6 +412,7 @@ class GlobalStore:
                 value_rating=value_rating,
                 atmosphere_rating=atmosphere_rating,
                 visit_datetime=visit_datetime,
+                comment=comment,
             )
             return True
         return False
@@ -378,7 +425,8 @@ class GlobalStore:
         taste_rating: int,
         value_rating: int,
         atmosphere_rating: int,
-        visit_datetime: Optional[str] = None
+        visit_datetime: Optional[str] = None,
+        comment: str = "",
     ) -> bool:
         """
         평점을 버퍼에 저장 (같은 타임슬롯 내 다른 에이전트에게 영향 안 줌).
@@ -394,6 +442,7 @@ class GlobalStore:
                 "value_rating": value_rating,
                 "atmosphere_rating": atmosphere_rating,
                 "visit_datetime": visit_datetime,
+                "comment": comment,
             })
             return True
         return False
@@ -413,6 +462,7 @@ class GlobalStore:
                 value_rating=rating["value_rating"],
                 atmosphere_rating=rating["atmosphere_rating"],
                 visit_datetime=rating["visit_datetime"],
+                comment=rating.get("comment", ""),
             )
             if success:
                 count += 1
@@ -497,7 +547,7 @@ if __name__ == "__main__":
     store = get_global_store()
 
     # JSON 매장 데이터 로드
-    json_dir = settings.paths.data_dir / "split_by_store_id"
+    json_dir = settings.paths.data_dir / "split_by_store_id_ver3"
     store.load_from_json_files(json_dir)
 
     print(f"로드된 매장 수: {len(store.stores)}")

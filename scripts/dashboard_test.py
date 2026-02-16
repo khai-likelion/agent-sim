@@ -369,7 +369,7 @@ def load_data():
 
     # 매장 데이터
     stores_dict = {}
-    json_dir = DATA_DIR / "raw" / "split_by_store_id"
+    json_dir = DATA_DIR / "raw" / "split_by_store_id_ver3"
     if json_dir.exists():
         for json_file in json_dir.glob("*.json"):
             try:

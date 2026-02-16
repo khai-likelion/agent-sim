@@ -213,24 +213,38 @@ def load_simulation_data():
                 villa = random.choice(villas)
                 agent['home_location'] = [villa["lat"], villa["lng"]]
 
-    # 매장 데이터 (JSON 파일에서 로드)
-    json_dir = DATA_DIR / "raw" / "split_by_store_id"
+    # 매장 데이터: stores.csv (좌표/카테고리) + split_by_store_id_ver3 (분석 데이터)
+    stores_csv_path = DATA_DIR / "raw" / "stores.csv"
+    json_dir = DATA_DIR / "raw" / "split_by_store_id_ver3"
+
+    # stores.csv에서 좌표/카테고리/주소 로드 (store_id 기준)
+    csv_lookup = {}
+    if stores_csv_path.exists():
+        import csv
+        with open(stores_csv_path, 'r', encoding='utf-8-sig') as f:
+            for row in csv.DictReader(f):
+                sid = str(row.get('ID', ''))
+                if sid:
+                    csv_lookup[sid] = row
+
     if json_dir.exists():
         stores_list = []
         for json_file in json_dir.glob("*.json"):
             try:
                 with open(json_file, 'r', encoding='utf-8') as f:
                     data = json.load(f)
-                    if data and len(data) > 0:
-                        store = data[0]
-                        stores_list.append({
-                            '장소명': store.get('store_name', ''),
-                            'x': store.get('x', 0),
-                            'y': store.get('y', 0),
-                            '카테고리': store.get('category', ''),
-                            'address': store.get('address', ''),
-                            'store_id': store.get('store_id', '')
-                        })
+                    if isinstance(data, list):
+                        data = data[0] if data else {}
+                    sid = str(data.get('store_id', ''))
+                    csv_info = csv_lookup.get(sid, {})
+                    stores_list.append({
+                        '장소명': data.get('store_name', ''),
+                        'x': data.get('x') or csv_info.get('x', 0),
+                        'y': data.get('y') or csv_info.get('y', 0),
+                        '카테고리': data.get('category') or csv_info.get('카테고리', ''),
+                        'address': data.get('address') or csv_info.get('주소', ''),
+                        'store_id': sid,
+                    })
             except Exception:
                 continue
         stores_df = pd.DataFrame(stores_list) if stores_list else pd.DataFrame()
