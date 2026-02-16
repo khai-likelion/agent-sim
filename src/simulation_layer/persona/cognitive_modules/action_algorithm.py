@@ -134,13 +134,12 @@ class ActionAlgorithm:
 
         # 에이전트 평점 (있으면 표시)
         if store.agent_rating_count > 0:
-            lines.append(f"  에이전트 평점: 맛 {store.agent_taste_score:.1f}/5, 가성비 {store.agent_value_score:.1f}/5, 분위기 {store.agent_atmosphere_score:.1f}/5 ({store.agent_rating_count}건)")
+            lines.append(f"  에이전트 평점: {store.agent_avg_rating:.1f}/5 ({store.agent_rating_count}건), 태그: 맛 {store.taste_count}, 가성비 {store.value_count}, 분위기 {store.atmosphere_count}, 서비스 {store.service_count}")
 
             # 최근 3개 평가
-            recent = store.agent_ratings[-3:]
             rating_labels = {0: "없음", 1: "매우별로", 2: "별로", 3: "보통", 4: "좋음", 5: "매우좋음"}
-            for r in recent:
-                lines.append(f"    - {r.agent_name}: 맛 {rating_labels.get(r.taste_rating, '?')}, 가성비 {rating_labels.get(r.value_rating, '?')}")
+            for r in store.agent_ratings[-3:]:
+                lines.append(f"    - {r.agent_name}: {rating_labels.get(r.rating, '?')} {r.selected_tags}")
         else:
             lines.append("  에이전트 평점: 아직 없음")
 
@@ -721,9 +720,9 @@ class ActionAlgorithm:
                 "visited_store": store_name,
                 "visited_category": store.category,
                 "ratings": {
-                    "taste": step4["taste_rating"],
-                    "value": step4["value_rating"],
-                    "atmosphere": step4["atmosphere_rating"],
+                    "taste": step4["rating"],
+                    "value": step4["rating"],
+                    "atmosphere": step4["rating"],
                 },
                 "reason": f"{step1.get('reason', '')} → {step2.get('reason', '')} → {step3.get('reason', '')}",
                 "error": None,

@@ -1,16 +1,20 @@
 """
-LLM client for OpenAI API.
+LLM client for OpenAI-compatible APIs (OpenAI, Gemini, etc.).
 """
 
 from typing import Optional
 import httpx
 from config import get_settings
 
+# Provider별 OpenAI-compatible 엔드포인트
+PROVIDER_URLS = {
+    "openai": "https://api.openai.com/v1/chat/completions",
+    "gemini": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+}
+
 
 class LLMClient:
-    """OpenAI API client."""
-
-    BASE_URL = "https://api.openai.com/v1/chat/completions"
+    """OpenAI-compatible API client."""
 
     def __init__(self):
         settings = get_settings()
@@ -18,6 +22,10 @@ class LLMClient:
         self.api_key = settings.llm.api_key
         self.temperature = settings.llm.temperature
         self.max_tokens = settings.llm.max_tokens
+        self.provider = settings.llm.provider
+        self.base_url = PROVIDER_URLS.get(
+            self.provider, PROVIDER_URLS["openai"]
+        )
 
     def _build_messages(self, prompt: str, system_prompt: Optional[str] = None) -> list:
         messages = []
@@ -31,7 +39,7 @@ class LLMClient:
     ) -> str:
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(
-                self.BASE_URL,
+                self.base_url,
                 headers={
                     "Authorization": f"Bearer {self.api_key}",
                     "Content-Type": "application/json",
@@ -52,7 +60,7 @@ class LLMClient:
     ) -> str:
         with httpx.Client(timeout=60.0) as client:
             response = client.post(
-                self.BASE_URL,
+                self.base_url,
                 headers={
                     "Authorization": f"Bearer {self.api_key}",
                     "Content-Type": "application/json",
