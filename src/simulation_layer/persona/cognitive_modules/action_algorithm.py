@@ -153,20 +153,21 @@ class ActionAlgorithm:
         agent: GenerativeAgent,
         time_slot: str,
         weekday: str,
+        current_date: str = "",
     ) -> Dict[str, Any]:
         """
         Step 1: 망원동 내 식사 여부 결정 (확률 기반)
 
         시간대별 기본 확률에 보정을 적용.
-        - 이전 식사 횟수가 2회 이상이면 확률 감소 (하루 2~3끼)
+        - 오늘 식사 횟수가 2회 이상이면 확률 감소 (하루 2~3끼)
         - 주말이면 확률 약간 증가
 
         Returns: {"eat_in_mangwon": bool, "reason": str}
         """
         base_prob = BASE_EATING_OUT_PROB.get(time_slot, 0.50)
 
-        # 이전 식사 횟수 보정 (하루 2~3끼 제한)
-        meals_today = len(agent.recent_history)
+        # 오늘 식사 횟수 보정 (하루 2~3끼 제한)
+        meals_today = len(agent.get_meals_today(current_date)) if current_date else len(agent.recent_history)
         if meals_today >= 3:
             base_prob *= 0.1  # 3끼 이상이면 크게 감소
         elif meals_today >= 2:
@@ -399,6 +400,7 @@ class ActionAlgorithm:
                 taste_rating=rating,
                 value_rating=rating,
                 atmosphere_rating=rating,
+                visit_datetime=visit_datetime,
             )
 
             return {
@@ -418,6 +420,7 @@ class ActionAlgorithm:
         next_time_slot: str,
         weekday: str,
         last_action: str,
+        current_date: str = "",
     ) -> Dict[str, Any]:
         """
         Step 5: 다음 시간대까지 무엇을 할지 결정
@@ -443,7 +446,7 @@ class ActionAlgorithm:
             current_time_slot=current_time_slot,
             next_time_slot=next_time_slot,
             last_action=last_action,
-            memory_context=agent.get_memory_context(),
+            memory_context=agent.get_memory_context(current_date),
         )
 
         response = self._call_llm(prompt)
@@ -609,8 +612,11 @@ class ActionAlgorithm:
         }
         """
         try:
+            # current_datetime에서 날짜 추출 (예: "2026-02-16T07:00:00" → "2026-02-16")
+            current_date = current_datetime[:10] if current_datetime else ""
+
             # Step 1: 망원동 내 식사 여부 결정
-            step1 = self.step1_eat_in_mangwon(agent, time_slot, weekday)
+            step1 = self.step1_eat_in_mangwon(agent, time_slot, weekday, current_date)
 
             if not step1.get("eat_in_mangwon", False):
                 return {

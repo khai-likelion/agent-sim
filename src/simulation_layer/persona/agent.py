@@ -90,9 +90,9 @@ class GenerativeAgent:
     def segment(self) -> str:
         return f"{self.agent_type}_{self.group_type}_{self.group_size}인"
 
-    def add_visit(self, store_name: str, category: str, taste_rating: int, value_rating: int, atmosphere_rating: int = 3):
+    def add_visit(self, store_name: str, category: str, taste_rating: int, value_rating: int, atmosphere_rating: int = 3, visit_datetime: str = ""):
         record = VisitRecord(
-            visit_datetime=datetime.now().isoformat(),
+            visit_datetime=visit_datetime or datetime.now().isoformat(),
             store_name=store_name, category=category,
             taste_rating=taste_rating, value_rating=value_rating,
             atmosphere_rating=atmosphere_rating,
@@ -100,6 +100,10 @@ class GenerativeAgent:
         self.recent_history.append(record)
         if len(self.recent_history) > 15:
             self.recent_history = self.recent_history[-15:]
+
+    def get_meals_today(self, current_date: str) -> List['VisitRecord']:
+        """현재 시뮬레이션 날짜 기준 오늘 식사 기록만 반환"""
+        return [v for v in self.recent_history if v.visit_datetime.startswith(current_date)]
 
     def get_recent_stores(self, n: int = 5) -> List[str]:
         return [v.store_name for v in self.recent_history[-n:]]
@@ -110,18 +114,36 @@ class GenerativeAgent:
     def has_visited(self, store_name: str) -> bool:
         return any(v.store_name == store_name for v in self.recent_history)
 
-    def get_memory_context(self) -> str:
+    def get_memory_context(self, current_date: str = "") -> str:
+        lines = []
+
+        # 오늘 식사 기록 (current_date가 있을 때)
+        if current_date:
+            today_meals = self.get_meals_today(current_date)
+            if today_meals:
+                lines.append(f"오늘의 식사 기록 (현재 {len(today_meals)}끼 외식 완료):")
+                for v in today_meals:
+                    time_part = v.visit_datetime[11:16] if len(v.visit_datetime) > 16 else ""
+                    lines.append(f"  - {time_part} {v.store_name} ({v.category})")
+            else:
+                lines.append("오늘의 식사 기록: 아직 없음")
+            lines.append("")
+
+        # 최근 방문 기록 (이전 날짜 포함)
         if not self.recent_history:
-            return "최근 방문 기록이 없습니다."
-        rating_text = {1: "매우별로", 2: "별로", 3: "보통", 4: "좋음", 5: "매우좋음"}
-        lines = ["최근 방문 기록:"]
-        for v in self.recent_history[-5:]:
-            lines.append(
-                f"  - {v.store_name} ({v.category}): "
-                f"맛 {rating_text.get(v.taste_rating, '?')}, "
-                f"가성비 {rating_text.get(v.value_rating, '?')}, "
-                f"분위기 {rating_text.get(v.atmosphere_rating, '?')}"
-            )
+            if not lines:
+                return "최근 방문 기록이 없습니다."
+        else:
+            rating_text = {1: "매우별로", 2: "별로", 3: "보통", 4: "좋음", 5: "매우좋음"}
+            lines.append("최근 방문 기록:")
+            for v in self.recent_history[-5:]:
+                lines.append(
+                    f"  - {v.store_name} ({v.category}): "
+                    f"맛 {rating_text.get(v.taste_rating, '?')}, "
+                    f"가성비 {rating_text.get(v.value_rating, '?')}, "
+                    f"분위기 {rating_text.get(v.atmosphere_rating, '?')}"
+                )
+
         return "\n".join(lines)
 
     def get_persona_summary(self) -> str:
