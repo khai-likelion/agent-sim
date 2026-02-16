@@ -323,11 +323,16 @@ def run_simulation(
         daily_floating_count = min(DAILY_FLOATING_AGENT_COUNT, len(floating_agents))
         daily_floating = random.sample(floating_agents, daily_floating_count)
 
-        # 유동 에이전트: 매일 새로운 초기 위치(FLOATING_LOCATIONS)에서 시작
-        from src.simulation_layer.persona.agent import FLOATING_LOCATIONS
+        # 유동 에이전트: 매일 초기화 (entry_point에서 시작, left_mangwon 리셋)
         for agent in daily_floating:
-            loc = random.choice(list(FLOATING_LOCATIONS.values()))
-            agent_locations[agent.id] = network.initialize_agent_location(loc["lat"], loc["lng"])
+            agent.left_mangwon = False
+            if agent.entry_point:
+                lat, lng = agent.entry_point
+            else:
+                from src.simulation_layer.persona.agent import FLOATING_LOCATIONS
+                loc = random.choice(list(FLOATING_LOCATIONS.values()))
+                lat, lng = loc["lat"], loc["lng"]
+            agent_locations[agent.id] = network.initialize_agent_location(lat, lng)
 
         # 상주 에이전트: 매일 home_location에서 시작
         for agent in resident_agents:
@@ -378,6 +383,16 @@ def run_simulation(
                 if day_processed % max(1, total_day_slots // 10) == 0:
                     pct = day_processed / total_day_slots * 100
                     print(f"      Day {day_idx+1} 진행: {day_processed}/{total_day_slots} ({pct:.0f}%)")
+
+                # 유동 에이전트: 망원동 떠난 경우 스킵
+                if agent.is_floating and agent.left_mangwon:
+                    continue
+
+                # 유동 에이전트: entry_time_slot 이전이면 스킵 (아직 미도착)
+                if agent.is_floating and agent.entry_time_slot:
+                    entry_hour = TIME_SLOTS.get(agent.entry_time_slot, 0)
+                    if slot_hour < entry_hour:
+                        continue
 
                 # 에이전트 현재 위치
                 location = agent_locations[agent.id]

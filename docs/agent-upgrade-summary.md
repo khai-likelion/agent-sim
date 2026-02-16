@@ -6,7 +6,7 @@
 |---|------|----------|--------|------------|
 | 1 | 리뷰 멘트 다양성 | Step4 프롬프트가 "한줄 평가"만 지시 → 전원 동일한 키워드 재조합 | 페르소나 말투 지정 + 관점 분산 + 구체적 경험 유도 | **완료** (tone_instruction + focus_aspect + comment 규칙) |
 | 2 | 4끼 전부 외식 | 매 타임슬롯마다 Step1 호출, memory_context에 당일 식사 이력 없음 | A. Step1 확률기반 전환 + B. memory_context에 당일 식사 이력 추가 | **A+B 완료** |
-| 3 | 유동 초기위치/시작시간 | FLOATING_LOCATIONS → home_location 저장, 아침부터 전원 활동 | entry_point 분리 + entry_time_slot 도입 + "집에서_쉬기" → "망원동 떠나기" | 미정 |
+| 3 | 유동 초기위치/시작시간 | FLOATING_LOCATIONS → home_location 저장, 아침부터 전원 활동 | entry_point 분리 + entry_time_slot 도입 + "집에서_쉬기" → "망원동 떠나기" | **완료** |
 | 4 | LLM 모델 선택 | GPT-4o-mini (고정) | Gemini 2.0 Flash (33% 저렴, 성능 우위, 속도 40% 빠름) | 미정 |
 | 5 | 유동인구 교체 비율 | 매일 113명 중 53명 랜덤 샘플링 (고정) | 요일별 차등(평일 40/주말 70) + 재방문율 30% | 미정 |
 | 6 | 상주인구 초기위치 | 주거유형별 3좌표 고정 (아파트3, 빌라3, 주택3) | 고정 좌표를 중심점으로 반경 100~200m 랜덤 오프셋 | 미정 |
@@ -116,7 +116,13 @@
    > 떠나기 선택 시 해당 일 시뮬레이션에서 퇴장.
 
 ### 최종 채택안
-미정
+**완료** — entry_point 분리 + entry_time_slot(세그먼트별) + Step5 유형별 선택지 + 망원동_떠나기
+
+### 변경 파일
+- `src/simulation_layer/persona/agent.py`: `entry_point`, `entry_time_slot`, `left_mangwon` 필드 추가, `load_personas_from_md()`에서 유동 에이전트 초기화 로직 분리
+- `src/ai_layer/prompts/step5_next_action.txt`: `{available_actions}`, `{action_options}` 템플릿 변수 도입
+- `src/simulation_layer/persona/cognitive_modules/action_algorithm.py`: Step5 유형별 선택지 생성, `_get_action_destination`에 "망원동_떠나기" 처리
+- `scripts/run_generative_simulation.py`: entry_time_slot 이전 스킵 + left_mangwon 스킵 + 유동 에이전트 매일 초기화
 
 ---
 

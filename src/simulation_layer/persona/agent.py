@@ -79,6 +79,11 @@ class GenerativeAgent:
     current_location: Optional[Any] = field(default=None, repr=False)
     home_location: Tuple[float, float] = field(default=(37.5565, 126.9029), repr=False)
 
+    # 유동 에이전트 전용: 진입 지점 (home_location과 분리)
+    entry_point: Optional[Tuple[float, float]] = field(default=None, repr=False)
+    entry_time_slot: Optional[str] = field(default=None, repr=False)  # "아침", "점심", "저녁", "야식"
+    left_mangwon: bool = field(default=False, repr=False)  # 망원동 떠남 여부
+
     @property
     def is_resident(self) -> bool:
         return self.agent_type == "상주"
@@ -166,6 +171,8 @@ class GenerativeAgent:
             "agent_type": self.agent_type, "segment": self.segment,
             "housing_type": self.housing_type,
             "home_location": list(self.home_location),
+            "entry_point": list(self.entry_point) if self.entry_point else None,
+            "entry_time_slot": self.entry_time_slot,
             "recent_history": [v.to_dict() for v in self.recent_history],
         }
 
@@ -234,10 +241,25 @@ def load_personas_from_md(
             continue
 
         # 에이전트 유형별 초기 위치 설정
+        entry_point = None
+        entry_time_slot = None
+
         if attrs["agent_type"] == "유동":
-            # 유동 에이전트: FLOATING_LOCATIONS 중 랜덤
+            # 유동 에이전트: entry_point 설정 (home_location과 분리)
             loc = random.choice(list(FLOATING_LOCATIONS.values()))
-            home = (loc["lat"], loc["lng"])
+            entry_point = (loc["lat"], loc["lng"])
+            home = (0.0, 0.0)  # 유동은 home 없음
+
+            # 세그먼트별 진입 시간대
+            group_type = attrs["group_type"]
+            if group_type == "공적모임형":
+                entry_time_slot = "점심"  # 직장인 → 점심
+            elif group_type == "사적모임형":
+                entry_time_slot = random.choice(["점심", "저녁"])  # 친구/데이트
+            elif group_type == "가족모임형":
+                entry_time_slot = random.choice(["아침", "점심"])  # 가족 나들이
+            else:  # 생활베이스형
+                entry_time_slot = random.choice(["아침", "점심", "저녁"])  # 자유
         elif attrs["agent_type"] == "상주" and attrs["group_type"] == "가족모임형" and attrs["group_size"] == 4:
             # 상주 + 가족모임형 + 4인 → 아파트1~3 중 랜덤
             loc = random.choice(RESIDENT_LOCATIONS["아파트"])
@@ -264,6 +286,8 @@ def load_personas_from_md(
             natural_language_persona=body,
             housing_type=attrs["housing_type"],
             home_location=home,
+            entry_point=entry_point,
+            entry_time_slot=entry_time_slot,
         ))
 
     return agents

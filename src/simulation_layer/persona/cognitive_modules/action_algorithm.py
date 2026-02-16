@@ -437,6 +437,30 @@ class ActionAlgorithm:
 
         walking_speed는 LLM이 페르소나 특징을 보고 직접 판단한 km/h 값
         """
+        # 에이전트 유형별 선택지 분리
+        if agent.is_resident:
+            available_actions = (
+                "- 집에서_쉬기: 집에 돌아가서 휴식\n"
+                "- 카페_가기: 근처 카페에서 시간 보내기\n"
+                "- 배회하기: 망원동 거리를 걸으며 구경하기\n"
+                "- 한강공원_산책: 망원한강공원에서 산책\n"
+                "- 망원시장_장보기: 망원시장에서 장보기\n"
+                "- 회사_가기: 직장에 출근하기 (직장인만)"
+            )
+            valid_actions = ["집에서_쉬기", "카페_가기", "배회하기", "한강공원_산책", "망원시장_장보기", "회사_가기"]
+            action_options = "|".join(valid_actions)
+        else:
+            # 유동 에이전트: 집에서_쉬기/회사_가기 대신 망원동_떠나기
+            available_actions = (
+                "- 카페_가기: 근처 카페에서 시간 보내기\n"
+                "- 배회하기: 망원동 거리를 걸으며 구경하기\n"
+                "- 한강공원_산책: 망원한강공원에서 산책\n"
+                "- 망원시장_장보기: 망원시장에서 장보기\n"
+                "- 망원동_떠나기: 볼일을 마치고 망원동을 떠남 (되돌아올 수 없음)"
+            )
+            valid_actions = ["카페_가기", "배회하기", "한강공원_산책", "망원시장_장보기", "망원동_떠나기"]
+            action_options = "|".join(valid_actions)
+
         prompt = render_prompt(
             STEP5_NEXT_ACTION,
             agent_name=agent.persona_id,
@@ -446,6 +470,8 @@ class ActionAlgorithm:
             next_time_slot=next_time_slot,
             last_action=last_action,
             memory_context=agent.get_memory_context(current_date),
+            available_actions=available_actions,
+            action_options=action_options,
         )
 
         response = self._call_llm(prompt)
@@ -453,7 +479,6 @@ class ActionAlgorithm:
 
         if result and result.get("action"):
             action = result["action"]
-            valid_actions = ["집에서_쉬기", "카페_가기", "배회하기", "한강공원_산책", "망원시장_장보기", "회사_가기"]
 
             # 걷는 속도 파싱 (LLM이 직접 판단한 km/h 값)
             walking_speed_raw = result.get("walking_speed", 4.0)
@@ -556,6 +581,22 @@ class ActionAlgorithm:
                 "name": "망원동 거리",
                 "lat": None,
                 "lng": None,
+            }
+        elif action == "망원동_떠나기":
+            # 유동 에이전트: 진입 지점으로 돌아가서 떠남
+            if agent.entry_point:
+                agent.left_mangwon = True
+                return {
+                    "type": "leave",
+                    "name": "망원동 밖",
+                    "lat": agent.entry_point[0],
+                    "lng": agent.entry_point[1],
+                }
+            return {
+                "type": "leave",
+                "name": "망원동 밖",
+                "lat": 37.556069,
+                "lng": 126.910108,
             }
         return None
 
