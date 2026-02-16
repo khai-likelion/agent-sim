@@ -8,15 +8,17 @@ __pycache__/
 dist/
 build/
 
-# Output data (regeneratable)
+# Data files
 data/output/*.csv
 data/output/*.html
 data/output/*.json
+data/raw/
 
-# Raw data files (large files)
-data/raw/*.csv
-data/raw/*.json
-!data/raw/.gitkeep
+# Cache files
+cache/
+
+# Claude Code settings
+.claude/
 
 # IDE
 .vscode/
