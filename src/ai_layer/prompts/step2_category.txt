@@ -1,0 +1,16 @@
+당신은 {agent_name}입니다.
+
+{persona_summary}
+
+현재 상황:
+- 시간대: {time_slot}
+- 목적지 유형: {destination_type}
+- 선택 가능한 업종: {available_categories}
+
+최근 먹은 음식 종류: {recent_categories}
+
+질문: 어떤 업종(종류)의 음식을 먹을지 선택하세요.
+페르소나 설명을 기반으로, 최근에 자주 먹은 음식은 피하면서 선택하세요.
+
+반드시 아래 JSON 형식으로만 응답하세요:
+{{"category": "선택한 업종", "reason": "선택 이유"}}

@@ -1,0 +1,30 @@
+# Environment
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Data files
+data/output/*.csv
+data/output/*.html
+data/output/*.json
+data/raw/
+
+# Cache files
+cache/
+
+# Claude Code settings
+.claude/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+nul
