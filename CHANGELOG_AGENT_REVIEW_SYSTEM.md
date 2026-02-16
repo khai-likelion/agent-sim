@@ -276,3 +276,86 @@ store.add_agent_rating(
 - `src/simulation_layer/persona/cognitive_modules/action_algorithm.py`
 - `src/ai_layer/prompts/step4_evaluate.txt`
 - `src/ai_layer/prompts/step1_destination.txt`
+
+---
+
+## 9. v2.2.0 업데이트 상세 (2026-02-16)
+
+### 9.1 StoreAnalyzer - 단일 매장 고객 행동 변화 심층 분석기
+
+전략 적용 전후 시뮬레이션 결과를 비교하여 **"누가, 왜 이 가게를 새로 찾기 시작했는가?"**를 밝혀내는 분석 모듈입니다.
+
+#### 핵심 기능
+
+1. **에이전트 유입 분석 (Inflow Analysis)**
+   - 신규 유입 고객: Baseline에서 방문하지 않았으나 전략 후 방문한 에이전트
+   - 이탈 고객: 전략 적용 후 방문을 중단한 고객
+   - 전환 고객: 경쟁점에서 이 매장으로 마음을 돌린 고객
+
+2. **세그먼트 변화 추적 (Segment Analysis)**
+   - 세대별 분포 변화 (Z세대/Y세대/X세대/S세대)
+   - 성별 분포 변화
+   - 라이프스타일별 분포 변화
+   - 거주유형별 분포 (상주/유동)
+   - 연령대별 분포
+
+3. **의사결정 이유 심층 비교 (Reasoning Analysis)**
+   - 주요 키워드 변화 (Before vs After)
+   - 감성 변화 (긍정/부정/중립)
+   - 긍정/부정 리뷰 대조
+
+4. **종합 리포트 생성**
+   - Markdown 형식의 상세 분석 리포트
+   - 핵심 지표 변화표
+   - 고객 프로필 변화
+   - 전략 유효성 검증
+
+#### 사용법
+
+```python
+from src.analysis_layer.store_analyzer import StoreAnalyzer, SimulationResult
+
+analyzer = StoreAnalyzer(
+    target_store="스몰굿커피 망원역점",
+    baseline_result=baseline_sim_result,
+    strategy_result=strategy_sim_result,
+    agent_personas=agent_personas_dict,
+    all_store_visits_before=visits_before,
+    all_store_visits_after=visits_after,
+    applied_strategies=strategies_list,
+)
+
+# 리포트 생성 및 저장
+analyzer.save_report("target_store_analysis.md")
+```
+
+#### 생성되는 리포트 구조
+
+```markdown
+# {매장명} 고객 행동 변화 심층 분석 리포트
+
+## 1. 핵심 지표 변화
+| 지표 | Before | After | 변화 |
+
+## 2. 에이전트 유입 분석 (Inflow Analysis)
+### 2.1 신규 유입 고객
+### 2.2 이탈 고객
+### 2.3 전환 고객
+
+## 3. 세그먼트 변화 추적
+### 3.1 세대별 분포
+### 3.2 성별 분포
+### 3.3 라이프스타일별 분포
+...
+
+## 4. 의사결정 이유 심층 비교
+### 4.1 주요 키워드 변화
+### 4.2 고객 리뷰 감성 변화
+
+## 5. 전략 유효성 검증
+```
+
+### 9.2 변경된 파일
+
+- `src/analysis_layer/__init__.py` (신규)
+- `src/analysis_layer/store_analyzer.py` (신규)
