@@ -14,9 +14,10 @@ pyproj>=3.6.0
 streamlit>=1.30.0
 folium>=0.15.0
 streamlit-folium>=0.20.0
-pydeck>=0.8.0
 plotly>=5.0.0
 
 # Simulation
+numpy>=1.24.0
 tqdm>=4.60.0
 openai>=1.0.0
+httpx>=0.24.0
