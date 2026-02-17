@@ -215,9 +215,9 @@ def load_environment(settings, target_store: str = None):
     if target_store:
         target = global_store.get_by_name(target_store)
         if target:
-            print(f"  ⭐ 타겟 매장: {target_store} (가격: {target.average_price}원)")
+            print(f"  [타겟] 매장: {target_store} (가격: {target.average_price}원)")
         else:
-            print(f"  ⚠️ 타겟 매장 '{target_store}'를 찾을 수 없습니다.")
+            print(f"  [경고] 타겟 매장 '{target_store}'를 찾을 수 없습니다.")
 
     return global_store
 
