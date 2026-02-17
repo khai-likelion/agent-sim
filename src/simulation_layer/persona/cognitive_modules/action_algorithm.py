@@ -53,6 +53,14 @@ DESTINATION_CATEGORIES = {
     "주점": ["호프", "이자카야", "포차", "와인바", "술집", "막걸리", "칵테일바", "칵테일"],
 }
 
+# 시간대별 카테고리 풀 — destination_type 분기 없이 LLM에 직접 전달
+TIME_SLOT_CATEGORIES = {
+    "아침": DESTINATION_CATEGORIES["식당"] + DESTINATION_CATEGORIES["카페"],
+    "점심": DESTINATION_CATEGORIES["식당"] + DESTINATION_CATEGORIES["카페"],
+    "저녁": DESTINATION_CATEGORIES["식당"] + DESTINATION_CATEGORIES["주점"] + DESTINATION_CATEGORIES["카페"],
+    "야식": DESTINATION_CATEGORIES["식당"] + DESTINATION_CATEGORIES["주점"],
+}
+
 
 class LLMCallFailedError(Exception):
     """LLM 호출 실패 예외"""
@@ -244,7 +252,6 @@ class ActionAlgorithm:
     async def step2_category_selection(
         self,
         agent: GenerativeAgent,
-        destination_type: str,
         time_slot: str,
         current_date: str = "",
     ) -> Dict[str, Any]:
@@ -252,18 +259,31 @@ class ActionAlgorithm:
         Step 2: 업종 선택
         LLM 실패 시 LLMCallFailedError 발생 (Fallback 없음)
 
+        시간대별 전체 카테고리 풀(식당+카페+주점)을 LLM에 전달,
+        페르소나 기반으로 자연 선택하게 함.
+
         Returns: {"category": str, "reason": str}
         """
-        available_categories = DESTINATION_CATEGORIES.get(destination_type, ["한식"])
+        available_categories = TIME_SLOT_CATEGORIES.get(time_slot, DESTINATION_CATEGORIES["식당"])
+
+        # 시간대별 힌트
+        time_hints = {
+            "아침": "아침에는 식사 외에 카페/브런치도 고려하세요.",
+            "점심": "점심에는 다양한 식사와 카페 디저트도 고려하세요.",
+            "저녁": "저녁에는 식사, 술자리, 카페 중 자유롭게 선택하세요.",
+            "야식": "야식에는 식사나 술자리를 고려하세요.",
+        }
+        hint = time_hints.get(time_slot, "")
 
         prompt = render_prompt(
             STEP2_CATEGORY,
             agent_name=agent.persona_id,
             persona_summary=agent.get_persona_summary(),
             time_slot=time_slot,
-            destination_type=destination_type,
+            destination_type=time_slot,  # 하위 호환: 프롬프트 변수명 유지
             available_categories=", ".join(available_categories),
             memory_context=agent.get_memory_context(current_date),
+            time_hint=hint,
         )
 
         response = await self._call_llm_async(prompt)
@@ -717,13 +737,8 @@ class ActionAlgorithm:
                     "error": None,
                 }
 
-            # 시간대에 따른 목적지 유형 결정
-            destination_type = "식당"  # 기본값
-            if time_slot in ["저녁", "야식"]:
-                destination_type = "식당"  # 저녁/야식은 식당 위주
-
-            # Step 2: 업종 선택 (LLM, 이전 결과 필요 → await 순차)
-            step2 = await self.step2_category_selection(agent, destination_type, time_slot, current_date)
+            # Step 2: 업종 선택 — 시간대별 전체 카테고리 풀을 LLM에 전달
+            step2 = await self.step2_category_selection(agent, time_slot, current_date)
             category = step2.get("category", "한식")
 
             # Step 3: 매장 선택 (LLM, step2 결과 필요 → await 순차)
