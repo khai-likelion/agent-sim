@@ -533,18 +533,49 @@ class GlobalStore:
         total_exp = sum(exp_scores)
         probs = [e / total_exp for e in exp_scores]
 
-        # 비복원 가중 추출 (sample_k개)
+        # 계층화 샘플링: 상위(60%) + 중위(25%) + 하위(15%)
+        # 롱테일 매장도 LLM 후보에 포함되도록 다양성 보장
         k = min(sample_k, len(pool))
-        indices = list(range(len(pool)))
-        weights = list(probs)
-        selected = []
-        for _ in range(k):
-            total_w = sum(weights)
-            norm_weights = [w / total_w for w in weights]
-            chosen = random.choices(range(len(indices)), weights=norm_weights, k=1)[0]
-            selected.append(pool[indices[chosen]])
-            indices.pop(chosen)
-            weights.pop(chosen)
+        sorted_indices = sorted(range(len(pool)), key=lambda i: scores[i], reverse=True)
+
+        n = len(sorted_indices)
+        top_end = max(1, n // 3)
+        mid_end = max(top_end + 1, 2 * n // 3)
+
+        tier_top = sorted_indices[:top_end]
+        tier_mid = sorted_indices[top_end:mid_end]
+        tier_low = sorted_indices[mid_end:]
+
+        k_top = max(1, round(k * 0.60))
+        k_mid = max(1, round(k * 0.25))
+        k_low = k - k_top - k_mid
+
+        def _sample_tier(tier_indices, count):
+            if not tier_indices or count <= 0:
+                return []
+            tier_probs = [probs[i] for i in tier_indices]
+            total_p = sum(tier_probs)
+            if total_p == 0:
+                return random.sample(tier_indices, min(count, len(tier_indices)))
+            norm_p = [p / total_p for p in tier_probs]
+            chosen = []
+            idxs = list(tier_indices)
+            ws = list(norm_p)
+            for _ in range(min(count, len(idxs))):
+                tw = sum(ws)
+                nw = [w / tw for w in ws]
+                pick = random.choices(range(len(idxs)), weights=nw, k=1)[0]
+                chosen.append(idxs[pick])
+                idxs.pop(pick)
+                ws.pop(pick)
+            return chosen
+
+        selected_indices = (
+            _sample_tier(tier_top, k_top)
+            + _sample_tier(tier_mid, k_mid)
+            + _sample_tier(tier_low, k_low)
+        )
+        selected = [pool[i] for i in selected_indices]
 
         return selected
 
