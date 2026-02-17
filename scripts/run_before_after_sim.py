@@ -145,6 +145,8 @@ async def main():
     parser.add_argument("--skip-bridge", action="store_true",
                         help="StrategyBridge 건너뜀 (이미 적용된 경우)")
     parser.add_argument("-y", "--yes", action="store_true", help="확인 없이 바로 실행")
+    parser.add_argument("--output-prefix", type=str, default=None,
+                        help="결과 폴더 접두사 (예: '돼지야' → 돼지야_before, 돼지야_after)")
     args = parser.parse_args()
 
     settings = get_settings()
@@ -202,9 +204,13 @@ async def main():
         max_concurrent_llm_calls=20,
     )
 
+    prefix = args.output_prefix or args.target_store
+    before_dir = output_base / f"{prefix}_before"
+    after_dir = output_base / f"{prefix}_after"
+
     before_visit_df = save_results_to(
         results_before, global_store_before, agents_before,
-        output_base / "sim_before", "전략 전"
+        before_dir, "전략 전"
     )
 
     # ============================================================
@@ -256,7 +262,7 @@ async def main():
 
     after_visit_df = save_results_to(
         results_after, global_store_after, agents_after,
-        output_base / "sim_after", "전략 후"
+        after_dir, "전략 후"
     )
 
     # ============================================================
