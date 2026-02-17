@@ -420,8 +420,13 @@ async def run_simulation(
     # 결과 저장
     results = []
 
-    # 시작 날짜 (금요일 - 일식 점심 수요 높은 요일)
-    start_date = datetime(2025, 2, 7)  # 금요일 시작
+    # 시작 날짜: 오늘 기준 가장 가까운 직전 금요일 (한국 시간)
+    from datetime import timezone
+    _today = datetime.now(timezone(timedelta(hours=9))).replace(
+        hour=0, minute=0, second=0, microsecond=0, tzinfo=None
+    )
+    _days_since_friday = (_today.weekday() - 4) % 7  # 금=4
+    start_date = _today - timedelta(days=_days_since_friday)
 
     # 타임슬롯 리스트 (시간 순서대로 정렬)
     time_slot_list = sorted(TIME_SLOTS.items(), key=lambda x: x[1])
