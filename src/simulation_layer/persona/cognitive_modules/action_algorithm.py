@@ -24,7 +24,7 @@ from typing import Optional, List, Dict, Any
 from pathlib import Path
 
 from src.simulation_layer.persona.agent import GenerativeAgent
-from src.data_layer.global_store import get_global_store, GlobalStore, StoreRating
+from src.data_layer.global_store import get_global_store, GlobalStore, StoreRating, match_category
 from src.ai_layer.llm_client import create_llm_client, LLMClient
 from src.ai_layer.prompts import render_prompt, STEP1_DESTINATION, STEP2_CATEGORY, STEP3_STORE, STEP4_EVALUATE, STEP5_NEXT_ACTION
 from config import get_settings
@@ -310,7 +310,7 @@ class ActionAlgorithm:
             )
         else:
             # 상주 에이전트: 카테고리 매칭 후 전체 사용
-            category_stores = [s for s in affordable_stores if category.lower() in (s.category or "").lower()]
+            category_stores = [s for s in affordable_stores if match_category(category, s.category)]
             if not category_stores:
                 category_stores = affordable_stores
             display_stores = category_stores

@@ -28,6 +28,38 @@ import re
 from pathlib import Path
 import threading
 
+# LLM 선택값 → JSON 실제 카테고리 매핑 (부분 문자열 매칭 실패 보완)
+CATEGORY_ALIAS = {
+    "카페": "커피-음료",
+    "커피": "커피-음료",
+    "디저트": "제과점",
+    "베이커리": "제과점",
+    "브런치": "양식음식점",
+    "이자카야": "호프-간이주점",
+    "포차": "호프-간이주점",
+    "와인바": "호프-간이주점",
+    "술집": "호프-간이주점",
+    "막걸리": "호프-간이주점",
+    "칵테일바": "호프-간이주점",
+    "칵테일": "호프-간이주점",
+}
+
+
+def match_category(query: str, store_category: str) -> bool:
+    """LLM 선택 카테고리와 매장 카테고리 매칭.
+
+    1차: 부분 문자열 매칭 (예: "한식" in "한식음식점")
+    2차: CATEGORY_ALIAS 변환 후 매칭 (예: "카페" → "커피-음료" in "커피-음료")
+    """
+    q = query.lower()
+    sc = (store_category or "").lower()
+    if q in sc:
+        return True
+    alias = CATEGORY_ALIAS.get(query, "").lower()
+    if alias and alias in sc:
+        return True
+    return False
+
 
 def parse_average_price(revenue_analysis: str) -> Optional[int]:
     """revenue_analysis 텍스트에서 객단가 파싱"""
@@ -470,7 +502,7 @@ class GlobalStore:
             # 리뷰 수 (로그 스케일)
             score += math.log1p(store.star_rating_count or 0) * 0.5
             # 카테고리 매칭 보너스
-            if category and category.lower() in (store.category or "").lower():
+            if category and match_category(category, store.category):
                 score += 3.0
             # 거리 페널티
             if store.coordinates and agent_lat and agent_lng:
@@ -580,7 +612,7 @@ class GlobalStore:
         """카테고리로 매장 검색"""
         result = []
         for store in self.stores.values():
-            if category_keyword.lower() in store.category.lower():
+            if match_category(category_keyword, store.category):
                 result.append(store)
         return result
 
@@ -588,14 +620,14 @@ class GlobalStore:
         """예산 내 매장 조회"""
         stores = list(self.stores.values())
         if category:
-            stores = [s for s in stores if category.lower() in s.category.lower()]
+            stores = [s for s in stores if match_category(category, s.category)]
         return [s for s in stores if s.average_price <= max_budget]
 
     def get_top_stores_by_agent_rating(self, n: int = 10, category: Optional[str] = None) -> List[StoreRating]:
         """에이전트 평점 기준 상위 매장 (평점 있는 매장만)"""
         stores = [s for s in self.stores.values() if s.agent_rating_count > 0]
         if category:
-            stores = [s for s in stores if category.lower() in s.category.lower()]
+            stores = [s for s in stores if match_category(category, s.category)]
         stores.sort(key=lambda s: s.star_rating, reverse=True)
         return stores[:n]
 
