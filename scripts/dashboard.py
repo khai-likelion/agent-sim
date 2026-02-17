@@ -16,6 +16,7 @@ from pathlib import Path
 from datetime import datetime, timedelta
 import folium
 from streamlit_folium import st_folium
+import pydeck as pdk
 import random
 import networkx as nx
 import osmnx as ox
@@ -111,61 +112,69 @@ st.markdown("""
     }
     .time-display {
         font-size: 3rem;
-        font-weight: bold;
+        font-weight: 700;
         text-align: center;
-        font-family: 'Courier New', monospace;
-        color: #1f77b4;
-        padding: 10px;
-        background: #f0f2f6;
-        border-radius: 10px;
-        margin-bottom: 20px;
+        font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace;
+        color: #1a1a2e;
+        padding: 12px 20px;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 12px;
+        margin-bottom: 16px;
+        border: 1px solid #dee2e6;
+        letter-spacing: 2px;
     }
     .status-box {
-        padding: 15px;
-        border-radius: 10px;
-        margin: 10px 0;
+        padding: 16px 20px;
+        border-radius: 12px;
+        margin: 8px 0;
+        border: 1px solid rgba(0,0,0,0.06);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
     }
+    .status-box h4 { margin: 0 0 6px 0; font-size: 1.1rem; }
+    .status-box p { margin: 2px 0; font-size: 0.9rem; color: #444; }
     .status-eating {
-        background: #d4edda;
-        border-left: 5px solid #28a745;
+        background: linear-gradient(135deg, #d4edda, #c3e6cb);
+        border-left: 4px solid #28a745;
     }
     .status-cafe {
-        background: #fff3cd;
-        border-left: 5px solid #ffc107;
+        background: linear-gradient(135deg, #fff3cd, #ffeeba);
+        border-left: 4px solid #ffc107;
     }
     .status-idle {
-        background: #e2e3e5;
-        border-left: 5px solid #6c757d;
+        background: linear-gradient(135deg, #e9ecef, #dee2e6);
+        border-left: 4px solid #6c757d;
     }
     .status-moving {
-        background: #cce5ff;
-        border-left: 5px solid #007bff;
+        background: linear-gradient(135deg, #cce5ff, #b8daff);
+        border-left: 4px solid #007bff;
     }
     .status-wander {
-        background: #f8d7da;
-        border-left: 5px solid #dc3545;
+        background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+        border-left: 4px solid #dc3545;
     }
     .status-park {
-        background: #d1e7dd;
-        border-left: 5px solid #198754;
+        background: linear-gradient(135deg, #d1e7dd, #c3dfd1);
+        border-left: 4px solid #198754;
     }
     .status-market {
-        background: #e2d5f1;
-        border-left: 5px solid #6f42c1;
+        background: linear-gradient(135deg, #e2d5f1, #d6c5e8);
+        border-left: 4px solid #6f42c1;
     }
     .status-work {
-        background: #d1ecf1;
-        border-left: 5px solid #17a2b8;
+        background: linear-gradient(135deg, #d1ecf1, #bee5eb);
+        border-left: 4px solid #17a2b8;
     }
 </style>
 """, unsafe_allow_html=True)
 
 
 @st.cache_data
-def load_simulation_data():
-    """시뮬레이션 데이터 로드"""
-    # 전체 결과
-    result_path = OUTPUT_DIR / "generative_simulation_result.csv"
+def load_simulation_data(sim_folder: str = ""):
+    """시뮬레이션 데이터 로드. sim_folder가 주어지면 해당 하위 폴더에서 로드."""
+    base = OUTPUT_DIR / sim_folder if sim_folder else OUTPUT_DIR
+
+    # 전체 결과 — 하위 폴더에서는 simulation_result.csv 사용
+    result_path = base / "simulation_result.csv" if sim_folder else base / "generative_simulation_result.csv"
     if result_path.exists():
         results_df = pd.read_csv(result_path)
         results_df['timestamp'] = pd.to_datetime(results_df['timestamp'])
@@ -174,7 +183,7 @@ def load_simulation_data():
         results_df = pd.DataFrame()
 
     # 방문 로그
-    visit_path = OUTPUT_DIR / "generative_visit_log.csv"
+    visit_path = base / "visit_log.csv" if sim_folder else base / "generative_visit_log.csv"
     if visit_path.exists():
         visits_df = pd.read_csv(visit_path)
         visits_df['timestamp'] = pd.to_datetime(visits_df['timestamp'])
@@ -183,7 +192,7 @@ def load_simulation_data():
         visits_df = pd.DataFrame()
 
     # 에이전트 상태
-    agents_path = OUTPUT_DIR / "agents_final_state.json"
+    agents_path = base / "agents_final.json" if sim_folder else base / "agents_final_state.json"
     if agents_path.exists():
         with open(agents_path, 'r', encoding='utf-8') as f:
             agents = json.load(f)
@@ -1119,8 +1128,21 @@ def create_map_with_routes(visits_df, stores_df, agents, selected_date=None,
 
 
 def main():
+    # ── 시뮬레이션 폴더 선택 ──
+    sim_folders = ["(기본)"]
+    for d in sorted(OUTPUT_DIR.iterdir()):
+        if d.is_dir() and (d / "visit_log.csv").exists():
+            sim_folders.append(d.name)
+
+    st.sidebar.title("시뮬레이션 결과")
+    selected_sim = st.sidebar.selectbox(
+        "결과 폴더", sim_folders, index=0,
+        help="before/after 비교 시뮬레이션 결과를 선택하세요"
+    )
+    sim_folder = "" if selected_sim == "(기본)" else selected_sim
+
     # 데이터 로드
-    results_df, visits_df, agents, stores_df, stores_dict = load_simulation_data()
+    results_df, visits_df, agents, stores_df, stores_dict = load_simulation_data(sim_folder)
     cafe_stores = load_cafe_stores()
 
     # 사이드바 - 필터
@@ -1292,275 +1314,406 @@ def main():
             with st.spinner("도로망 로드 중..."):
                 G_anim = load_street_network()
 
-            # 에이전트 프로필 + 애니메이션 컨트롤
-            col_profile, col_anim_ctrl = st.columns([1, 2])
+            # 에이전트 프로필
+            st.markdown("### 👤 에이전트 프로필")
+            prof_cols = st.columns(4)
+            prof_cols[0].markdown(f"**ID:** {agent_info['persona_id']}")
+            prof_cols[1].markdown(f"**세대:** {agent_info['generation']}")
+            prof_cols[2].markdown(f"**세그먼트:** {agent_segment}")
+            walking_speed_display = get_walking_speed(agent_segment, seed=hash(selected_agent))
+            prof_cols[3].markdown(f"**걷기:** {walking_speed_display:.1f} km/h")
 
-            with col_profile:
-                st.markdown("### 👤 에이전트 프로필")
-                st.markdown(f"**페르소나 ID:** {agent_info['persona_id']}")
-                st.markdown(f"**세대:** {agent_info['generation']}")
-                st.markdown(f"**성별 구성:** {agent_info.get('gender_composition', '-')}")
-                st.markdown(f"**세그먼트:** {agent_segment}")
-                st.markdown(f"**유형:** {agent_info.get('agent_type', '-')}")
-                if agent_info.get('housing_type'):
-                    st.markdown(f"**주거 유형:** {agent_info['housing_type']}")
-
-                walking_speed_display = get_walking_speed(agent_segment, seed=hash(selected_agent))
-                st.markdown(f"**걷는 속도:** {walking_speed_display:.1f} km/h")
-
-                if 'recent_history' in agent_info and agent_info['recent_history']:
-                    st.markdown("#### 📝 메모리 (최근 방문)")
-                    for i, visit in enumerate(agent_info['recent_history'][-5:], 1):
-                        st.caption(f"{i}. {visit.get('store_name', '?')} ({visit.get('category', '')})")
-
-            with col_anim_ctrl:
+            # ── 애니메이션 영역 (fragment로 부분 렌더링) ──
+            @st.fragment
+            def animation_fragment():
                 # 날짜 선택
                 agent_results_anim = results_df[results_df['persona_id'] == selected_agent].copy()
-                if not agent_results_anim.empty:
-                    agent_results_anim['date'] = agent_results_anim['timestamp'].dt.date
-                    anim_dates = sorted(agent_results_anim['date'].unique())
-                    anim_selected_date = st.selectbox(
-                        "애니메이션 날짜",
-                        anim_dates,
-                        key="anim_date_select"
-                    )
+                if agent_results_anim.empty:
+                    st.info("이 에이전트의 활동 기록이 없습니다.")
+                    return
 
-                    # 애니메이션 세션 상태
-                    if 'current_hour' not in st.session_state:
-                        st.session_state.current_hour = 6.0
-                    if 'anim_playing' not in st.session_state:
-                        st.session_state.anim_playing = False
+                agent_results_anim['date'] = agent_results_anim['timestamp'].dt.date
+                anim_dates = sorted(agent_results_anim['date'].unique())
 
-                    # 재생 컨트롤
-                    ctrl_col1, ctrl_col2, ctrl_col3 = st.columns(3)
-                    if ctrl_col1.button("⏮️ 처음", key="anim_start"):
-                        st.session_state.current_hour = 6.0
-                        st.session_state.anim_playing = False
-                    if ctrl_col2.button("▶️ 재생" if not st.session_state.anim_playing else "⏸️ 정지", key="anim_play"):
-                        st.session_state.anim_playing = not st.session_state.anim_playing
-                    if ctrl_col3.button("⏭️ 끝", key="anim_end"):
-                        st.session_state.current_hour = 24.0
-                        st.session_state.anim_playing = False
+                # 애니메이션 세션 상태
+                if 'current_hour' not in st.session_state:
+                    st.session_state.current_hour = 6.0
+                if 'anim_playing' not in st.session_state:
+                    st.session_state.anim_playing = False
 
-                    speed = st.slider("속도 (배속)", 1, 60, 10, 1, key="anim_speed")
+                # 날짜 선택
+                anim_selected_date = st.selectbox(
+                    "날짜", anim_dates, key="anim_date_select", label_visibility="collapsed"
+                )
 
-                    current_hour = st.slider(
-                        "시간", 6.0, 24.0,
-                        st.session_state.current_hour, 1/3600,
-                        format="%.4f",
-                        key="anim_hour_slider"
-                    )
-                    st.session_state.current_hour = current_hour
-
-            # 시간 표시
-            hours = int(current_hour)
-            remaining = (current_hour - hours) * 60
-            minutes = int(remaining)
-            seconds = int((remaining - minutes) * 60)
-            st.markdown(f'<div class="time-display">🕐 {hours:02d}:{minutes:02d}:{seconds:02d}</div>', unsafe_allow_html=True)
-
-            # 에이전트 상태 계산
-            agent_home = agent_info.get('home_location', None)
-            agent_lat, agent_lng, status, current_activity, route_coords, step5_action = get_agent_state(
-                results_df[results_df['persona_id'] == selected_agent],
-                stores_dict, G_anim, cafe_stores, anim_selected_date, current_hour,
-                agent_segment, selected_agent, home_location=agent_home
-            )
-
-            # 지도 + 상태 표시
-            map_col, status_col = st.columns([2, 1])
-
-            with map_col:
-                if agent_lat and agent_lng:
-                    m = folium.Map(location=[agent_lat, agent_lng], zoom_start=16, tiles='cartodbpositron')
-
-                    # 랜드마크
-                    for lm_name, lm_info in LANDMARKS.items():
-                        if lm_name != "집":
-                            folium.CircleMarker(
-                                location=[lm_info["lat"], lm_info["lng"]],
-                                radius=8, color='purple', fill=True, fillColor='purple',
-                                fillOpacity=0.5, tooltip=f"📍 {lm_info['name']}"
-                            ).add_to(m)
-
-                    # 유동 에이전트 출발 거점
-                    for fl_name, fl_coords in FLOATING_LOCATIONS.items():
-                        folium.CircleMarker(
-                            location=[fl_coords[0], fl_coords[1]],
-                            radius=6, color='orange', fill=True, fillColor='orange',
-                            fillOpacity=0.7, tooltip=f"🚏 {fl_name}"
-                        ).add_to(m)
-
-                    # 상주 에이전트 주거지
-                    for res_name, res_info in RESIDENT_LOCATIONS.items():
-                        folium.CircleMarker(
-                            location=[res_info["lat"], res_info["lng"]],
-                            radius=7, color=res_info["color"], fill=True,
-                            fillColor=res_info["color"], fillOpacity=0.7,
-                            tooltip=f"🏠 {res_name} ({res_info['type']})"
-                        ).add_to(m)
-
-                    # 이동 경로
-                    if route_coords and len(route_coords) > 1:
-                        if status == "wander":
-                            color = 'red'
-                        elif "park" in status:
-                            color = 'green'
-                        elif "market" in status:
-                            color = 'purple'
-                        else:
-                            color = 'blue'
-
-                        traveled = [route_coords[0]]
-                        for i in range(1, len(route_coords)):
-                            coord = route_coords[i]
-                            dist_to_agent = ((coord[0] - agent_lat) ** 2 + (coord[1] - agent_lng) ** 2) ** 0.5
-                            if dist_to_agent < 0.0001:
-                                traveled.append(coord)
-                                break
-                            traveled.append(coord)
-                            if i < len(route_coords) - 1:
-                                next_coord = route_coords[i + 1]
-                                seg_len = ((next_coord[0] - coord[0]) ** 2 + (next_coord[1] - coord[1]) ** 2) ** 0.5
-                                agent_dist = ((agent_lat - coord[0]) ** 2 + (agent_lng - coord[1]) ** 2) ** 0.5
-                                if agent_dist < seg_len:
-                                    traveled.append((agent_lat, agent_lng))
-                                    break
-
-                        if traveled and traveled[-1] != (agent_lat, agent_lng):
-                            last = traveled[-1]
-                            if ((last[0] - agent_lat) ** 2 + (last[1] - agent_lng) ** 2) ** 0.5 > 0.00001:
-                                traveled.append((agent_lat, agent_lng))
-
-                        if len(traveled) > 1:
-                            folium.PolyLine(traveled, color=color, weight=4, opacity=0.9).add_to(m)
-
-                    # 방문 매장 표시
-                    agent_visits_anim = visits_df[
-                        (visits_df['persona_id'] == selected_agent) &
-                        (visits_df['timestamp'].dt.date == anim_selected_date)
-                    ] if not visits_df.empty else pd.DataFrame()
-
-                    if not agent_visits_anim.empty:
-                        for _, row in agent_visits_anim.iterrows():
-                            visit_hour = TIMESLOT_HOURS.get(row['time_slot'], 0)
-                            if visit_hour + 0.5 <= current_hour:
-                                s_info = stores_dict.get(row['visited_store'], {})
-                                if s_info:
-                                    folium.CircleMarker(
-                                        location=[s_info['lat'], s_info['lng']],
-                                        radius=10, color='green', fill=True,
-                                        fillColor='green', fillOpacity=0.6,
-                                        tooltip=f"✓ {row['visited_store']} ({row['time_slot']})"
-                                    ).add_to(m)
-
-                    # 에이전트 마커
-                    status_icons = {
-                        "eating": ("🍽️", "식사 중"),
-                        "cafe": ("☕", "카페 휴식"),
-                        "wander": ("🚶", "배회 중"),
-                        "park": ("🌳", "공원 산책"),
-                        "market": ("🛒", "장보기"),
-                        "home": ("🏠", "집에서 휴식"),
-                        "work": ("💼", "회사 근무"),
-                        "idle": ("🏠", "대기"),
-                    }
-                    icon_emoji, tooltip_text = "🚶", "이동 중"
-                    if status in status_icons:
-                        icon_emoji, tooltip_text = status_icons[status]
-                    elif "moving" in status:
-                        icon_emoji, tooltip_text = "🚶", "이동 중"
-                        if current_activity is not None:
-                            if isinstance(current_activity, dict):
-                                dest = current_activity.get('visited_store') or current_activity.get('name', '')
-                            elif hasattr(current_activity, 'get'):
-                                dest = current_activity.get('visited_store', '')
-                            else:
-                                dest = ""
-                            if dest:
-                                tooltip_text = f"{dest}(으)로 이동 중"
-
-                    if status == "eating" and current_activity is not None:
-                        tooltip_text = f"{current_activity.get('visited_store', '')}에서 식사 중"
-
-                    folium.Marker(
-                        location=[agent_lat, agent_lng],
-                        icon=folium.DivIcon(
-                            html=f'<div style="font-size: 28px;">{icon_emoji}</div>',
-                            icon_size=(35, 35), icon_anchor=(17, 17)
-                        ),
-                        tooltip=f"{icon_emoji} {tooltip_text}"
-                    ).add_to(m)
-
-                    st_folium(m, width=700, height=500, key="anim_map")
-                else:
-                    st.info("이 시간에 에이전트 위치 데이터가 없습니다.")
-
-            with status_col:
-                st.markdown("### 현재 상태")
-
-                if status == "eating" and current_activity is not None:
-                    st.markdown(f'<div class="status-box status-eating"><h4>🍽️ 식사 중</h4><p><b>매장:</b> {current_activity["visited_store"]}</p><p><b>카테고리:</b> {current_activity["visited_category"]}</p></div>', unsafe_allow_html=True)
-                elif status == "cafe":
-                    cafe_name = current_activity.get('name', '카페') if (current_activity and isinstance(current_activity, dict)) else '카페'
-                    st.markdown(f'<div class="status-box status-cafe"><h4>☕ 카페에서 휴식</h4><p><b>장소:</b> {cafe_name}</p></div>', unsafe_allow_html=True)
-                elif status == "wander":
-                    st.markdown('<div class="status-box status-wander"><h4>🚶 배회 중</h4><p>망원동 거리를 걸으며 구경</p></div>', unsafe_allow_html=True)
-                elif status == "park":
-                    st.markdown('<div class="status-box status-park"><h4>🌳 한강공원 산책</h4><p>망원한강공원에서 산책 중</p></div>', unsafe_allow_html=True)
-                elif status == "market":
-                    st.markdown('<div class="status-box status-market"><h4>🛒 망원시장 장보기</h4><p>망원시장에서 장보기 중</p></div>', unsafe_allow_html=True)
-                elif status == "home":
-                    st.markdown('<div class="status-box status-idle"><h4>🏠 집에서 휴식</h4><p>집에서 쉬는 중</p></div>', unsafe_allow_html=True)
-                elif status == "work":
-                    st.markdown('<div class="status-box status-work"><h4>💼 회사에서 근무</h4><p>회사에서 일하는 중</p></div>', unsafe_allow_html=True)
-                elif "moving" in status and current_activity is not None:
-                    if isinstance(current_activity, dict):
-                        dest = current_activity.get('visited_store') or current_activity.get('name', '?')
-                    elif hasattr(current_activity, 'get'):
-                        dest = current_activity.get('visited_store', '?')
-                    else:
-                        dest = "?"
-                    st.markdown(f'<div class="status-box status-moving"><h4>🚶 이동 중</h4><p><b>목적지:</b> {dest}</p></div>', unsafe_allow_html=True)
-                else:
-                    st.markdown('<div class="status-box status-idle"><h4>🏠 대기 중</h4><p>집 또는 망원동 외부</p></div>', unsafe_allow_html=True)
-
-                if step5_action:
-                    action_names = {
-                        "카페_가기": "☕ 카페 가기", "배회하기": "🚶 배회하기",
-                        "한강공원_산책": "🌳 한강공원 산책", "망원시장_장보기": "🛒 망원시장 장보기",
-                        "집에서_쉬기": "🏠 집에서 쉬기", "회사_가기": "💼 회사 가기"
-                    }
-                    st.info(f"**현재 행동:** {action_names.get(step5_action, step5_action)}")
-
-                # 오늘 스케줄
-                st.markdown("### 📅 오늘의 스케줄")
-                day_data_anim = results_df[
-                    (results_df['persona_id'] == selected_agent) &
-                    (results_df['timestamp'].dt.date == anim_selected_date)
-                ].sort_values('timestamp')
-
-                for _, row in day_data_anim.iterrows():
-                    slot = row['time_slot']
-                    slot_hour = TIMESLOT_HOURS.get(slot, 0)
-                    is_past = slot_hour + 2 <= current_hour
-                    is_current = slot_hour <= current_hour < slot_hour + 2
-
-                    if row['decision'] == 'visit':
-                        icon = "▶️" if is_current else ("✅" if is_past else "⏳")
-                        st.markdown(f"**{icon} {slot} ({slot_hour}:00)** - {row['visited_store']}")
-                    else:
-                        icon = "⬜" if is_past else "⏳"
-                        st.markdown(f"**{icon} {slot} ({slot_hour}:00)** - 외부 식사")
-
-            # 자동 재생
-            if st.session_state.anim_playing:
-                time_module.sleep(0.1)
-                st.session_state.current_hour += (1/3600) * speed
-                if st.session_state.current_hour >= 24.0:
+                # 컨트롤 바: ⏮ ▶/⏸ ⏭ | 배속
+                btn_cols = st.columns([1, 1, 1, 3])
+                if btn_cols[0].button("⏮ 처음", key="anim_start", use_container_width=True):
                     st.session_state.current_hour = 6.0
                     st.session_state.anim_playing = False
-                st.rerun()
+                play_label = "⏸ 정지" if st.session_state.anim_playing else "▶ 재생"
+                if btn_cols[1].button(play_label, key="anim_play", use_container_width=True):
+                    st.session_state.anim_playing = not st.session_state.anim_playing
+                if btn_cols[2].button("⏭ 끝", key="anim_end", use_container_width=True):
+                    st.session_state.current_hour = 24.0
+                    st.session_state.anim_playing = False
+                speed = btn_cols[3].slider("배속", 1, 60, 10, 1, key="anim_speed", label_visibility="collapsed")
+
+                # 자동 재생: 슬라이더 값을 직접 업데이트
+                if st.session_state.anim_playing:
+                    # 배속1=0.1시간/틱, 배속10=0.2시간/틱, 배속60=0.5시간/틱
+                    increment = 0.1 + (speed - 1) * (0.4 / 59)
+                    new_hour = st.session_state.current_hour + increment
+                    if new_hour >= 24.0:
+                        new_hour = 6.0
+                        st.session_state.anim_playing = False
+                    st.session_state.current_hour = new_hour
+
+                # 슬라이더: 항상 current_hour를 기본값으로
+                current_hour = st.slider(
+                    "시간", 6.0, 24.0,
+                    value=st.session_state.current_hour,
+                    step=0.1, format="%.1f",
+                    label_visibility="collapsed",
+                )
+                # 슬라이더 값을 current_hour에 항상 반영 (사용자 드래그 포함)
+                st.session_state.current_hour = current_hour
+
+                # 시간 표시
+                hours = int(current_hour)
+                remaining = (current_hour - hours) * 60
+                minutes = int(remaining)
+                seconds = int((remaining - minutes) * 60)
+                time_period = "오전" if hours < 12 else "오후"
+                st.markdown(
+                    f'<div class="time-display">{hours:02d}:{minutes:02d}:{seconds:02d}'
+                    f'<span style="font-size:1.2rem; color:#888; margin-left:10px;">{time_period}</span></div>',
+                    unsafe_allow_html=True
+                )
+
+                # 에이전트 상태 계산
+                agent_home = agent_info.get('home_location', None)
+                agent_lat, agent_lng, status, current_activity, route_coords, step5_action = get_agent_state(
+                    results_df[results_df['persona_id'] == selected_agent],
+                    stores_dict, G_anim, cafe_stores, anim_selected_date, current_hour,
+                    agent_segment, selected_agent, home_location=agent_home
+                )
+
+                # 지도 + 상태 표시
+                map_col, status_col = st.columns([2, 1])
+
+                with map_col:
+                    if agent_lat and agent_lng:
+                        layers = []
+
+                        # 랜드마크 (아이콘 + 라벨)
+                        lm_data = []
+                        lm_icons = {"한강공원": "🌊", "망원시장": "🏪", "집": None, "회사": "🏢"}
+                        for k, v in LANDMARKS.items():
+                            icon = lm_icons.get(k)
+                            if icon is None:
+                                continue
+                            lm_data.append({
+                                "lat": v["lat"], "lng": v["lng"],
+                                "icon": icon, "name": v['name'],
+                            })
+                        if lm_data:
+                            layers.append(pdk.Layer(
+                                "TextLayer", data=lm_data,
+                                get_position='[lng, lat]', get_text='icon',
+                                get_size=28, get_color=[0, 0, 0],
+                                get_text_anchor='"middle"',
+                                get_alignment_baseline='"center"',
+                            ))
+                            layers.append(pdk.Layer(
+                                "TextLayer", data=lm_data,
+                                get_position='[lng, lat]', get_text='name',
+                                get_size=11, get_color=[80, 80, 80],
+                                get_pixel_offset='[0, 22]',
+                                get_text_anchor='"middle"',
+                            ))
+
+                        # 이동 경로
+                        if route_coords and len(route_coords) > 1:
+                            if status == "wander":
+                                path_color = [231, 76, 60]
+                            elif "park" in status:
+                                path_color = [46, 204, 113]
+                            elif "market" in status:
+                                path_color = [142, 68, 173]
+                            else:
+                                path_color = [52, 152, 219]
+
+                            # 전체 예정 경로 (점선 느낌, 연하게)
+                            full_path = [{"path": [[c[1], c[0]] for c in route_coords]}]
+                            layers.append(pdk.Layer(
+                                "PathLayer", data=full_path,
+                                get_path="path", get_width=3,
+                                get_color=path_color + [60],
+                                width_min_pixels=2,
+                                get_dash_array=[4, 4],
+                            ))
+
+                            # 이동 완료 구간 (진하게)
+                            traveled = [route_coords[0]]
+                            for i in range(1, len(route_coords)):
+                                coord = route_coords[i]
+                                dist_to_agent = ((coord[0] - agent_lat) ** 2 + (coord[1] - agent_lng) ** 2) ** 0.5
+                                if dist_to_agent < 0.0001:
+                                    traveled.append(coord)
+                                    break
+                                traveled.append(coord)
+                                if i < len(route_coords) - 1:
+                                    next_coord = route_coords[i + 1]
+                                    seg_len = ((next_coord[0] - coord[0]) ** 2 + (next_coord[1] - coord[1]) ** 2) ** 0.5
+                                    agent_dist = ((agent_lat - coord[0]) ** 2 + (agent_lng - coord[1]) ** 2) ** 0.5
+                                    if agent_dist < seg_len:
+                                        traveled.append((agent_lat, agent_lng))
+                                        break
+                            if traveled and traveled[-1] != (agent_lat, agent_lng):
+                                last = traveled[-1]
+                                if ((last[0] - agent_lat) ** 2 + (last[1] - agent_lng) ** 2) ** 0.5 > 0.00001:
+                                    traveled.append((agent_lat, agent_lng))
+
+                            if len(traveled) > 1:
+                                path_data = [{"path": [[c[1], c[0]] for c in traveled]}]
+                                layers.append(pdk.Layer(
+                                    "PathLayer", data=path_data,
+                                    get_path="path", get_width=5,
+                                    get_color=path_color + [220],
+                                    width_min_pixels=3,
+                                ))
+
+                            # 출발지/도착지 마커
+                            start_pt = route_coords[0]
+                            end_pt = route_coords[-1]
+                            endpoint_data = [
+                                {"lat": start_pt[0], "lng": start_pt[1], "label": "출발", "color": [100, 100, 100]},
+                                {"lat": end_pt[0], "lng": end_pt[1], "label": "도착", "color": path_color},
+                            ]
+                            layers.append(pdk.Layer(
+                                "ScatterplotLayer", data=endpoint_data,
+                                get_position='[lng, lat]', get_radius=15,
+                                get_fill_color='color', get_line_color=[255, 255, 255],
+                                line_width_min_pixels=2, stroked=True,
+                            ))
+                            layers.append(pdk.Layer(
+                                "TextLayer", data=endpoint_data,
+                                get_position='[lng, lat]', get_text='label',
+                                get_size=11, get_color=[60, 60, 60],
+                                get_pixel_offset='[0, -18]',
+                            ))
+
+                        # 방문 매장 라벨
+                        agent_visits_anim = visits_df[
+                            (visits_df['persona_id'] == selected_agent) &
+                            (visits_df['timestamp'].dt.date == anim_selected_date)
+                        ] if not visits_df.empty else pd.DataFrame()
+
+                        visited_labels = []
+                        if not agent_visits_anim.empty:
+                            for _, row in agent_visits_anim.iterrows():
+                                visit_hour = TIMESLOT_HOURS.get(row['time_slot'], 0)
+                                if visit_hour + 0.5 <= current_hour:
+                                    s_info = stores_dict.get(row['visited_store'], {})
+                                    if s_info:
+                                        slot_label = row['time_slot']
+                                        visited_labels.append({
+                                            "lat": s_info['lat'], "lng": s_info['lng'],
+                                            "icon": "🍴",
+                                            "name": row['visited_store'],
+                                            "detail": f"{slot_label} 방문",
+                                        })
+                        if visited_labels:
+                            # 매장 핀 마커 (빨간 원 + 흰 테두리)
+                            layers.append(pdk.Layer(
+                                "ScatterplotLayer", data=visited_labels,
+                                get_position='[lng, lat]', get_radius=30,
+                                get_fill_color=[220, 50, 50, 200],
+                                get_line_color=[255, 255, 255, 255],
+                                line_width_min_pixels=3, stroked=True, pickable=True,
+                            ))
+                            # 매장 아이콘 (📍 핀)
+                            layers.append(pdk.Layer(
+                                "TextLayer", data=visited_labels,
+                                get_position='[lng, lat]', get_text='icon',
+                                get_size=24, get_color=[255, 255, 255],
+                                get_text_anchor='"middle"',
+                                get_alignment_baseline='"center"',
+                            ))
+                            # 매장명 라벨 (위쪽, 배경 느낌)
+                            layers.append(pdk.Layer(
+                                "TextLayer", data=visited_labels,
+                                get_position='[lng, lat]', get_text='name',
+                                get_size=13, get_color=[220, 50, 50],
+                                get_pixel_offset='[0, -28]',
+                                get_text_anchor='"middle"',
+                                font_family='"Noto Sans KR", sans-serif',
+                            ))
+
+                        # 에이전트 마커 (사람 아이콘 + 상태)
+                        status_info = {
+                            "eating":       {"label": "식사 중",  "color": [231, 76, 60]},
+                            "cafe":         {"label": "카페",    "color": [155, 89, 182]},
+                            "wander":       {"label": "배회",    "color": [230, 126, 34]},
+                            "park":         {"label": "공원",    "color": [46, 204, 113]},
+                            "market":       {"label": "시장",    "color": [142, 68, 173]},
+                            "home":         {"label": "집",      "color": [52, 152, 219]},
+                            "work":         {"label": "출근",    "color": [44, 62, 80]},
+                            "idle":         {"label": "대기",    "color": [149, 165, 166]},
+                        }
+                        matched = {"label": "이동 중", "color": [52, 152, 219]}
+                        for key, info in status_info.items():
+                            if key in status:
+                                matched = info
+                                break
+                        if "moving" in status:
+                            matched = {"label": "이동 중", "color": [52, 152, 219]}
+
+                        agent_color = matched["color"]
+                        agent_data = [{"lat": agent_lat, "lng": agent_lng,
+                                       "emoji": "🧑",
+                                       "status_label": matched["label"]}]
+
+                        # 배경 원 (위치 강조, 펄스 느낌)
+                        layers.append(pdk.Layer(
+                            "ScatterplotLayer", data=agent_data,
+                            get_position='[lng, lat]', get_radius=60,
+                            get_fill_color=agent_color + [30],
+                            get_line_color=agent_color + [100],
+                            line_width_min_pixels=2, stroked=True,
+                        ))
+                        # 사람 내부 원 (진한 색)
+                        layers.append(pdk.Layer(
+                            "ScatterplotLayer", data=agent_data,
+                            get_position='[lng, lat]', get_radius=25,
+                            get_fill_color=agent_color + [220],
+                            get_line_color=[255, 255, 255, 255],
+                            line_width_min_pixels=3, stroked=True,
+                        ))
+                        # 사람 이모지 (크게)
+                        layers.append(pdk.Layer(
+                            "TextLayer", data=agent_data,
+                            get_position='[lng, lat]', get_text='emoji',
+                            get_size=32, get_color=[255, 255, 255],
+                            get_text_anchor='"middle"',
+                            get_alignment_baseline='"center"',
+                        ))
+                        # 상태 라벨 (아래쪽)
+                        layers.append(pdk.Layer(
+                            "TextLayer", data=agent_data,
+                            get_position='[lng, lat]', get_text='status_label',
+                            get_size=13, get_color=agent_color,
+                            get_pixel_offset='[0, 30]',
+                            get_text_anchor='"middle"',
+                            font_family='"Noto Sans KR", sans-serif',
+                        ))
+
+                        # 모든 포인트를 수집해서 바운딩 박스 계산
+                        all_lats = [agent_lat]
+                        all_lngs = [agent_lng]
+                        if route_coords:
+                            for c in route_coords:
+                                all_lats.append(c[0])
+                                all_lngs.append(c[1])
+                        for vl in visited_labels:
+                            all_lats.append(vl["lat"])
+                            all_lngs.append(vl["lng"])
+                        min_lat, max_lat = min(all_lats), max(all_lats)
+                        min_lng, max_lng = min(all_lngs), max(all_lngs)
+                        center_lat = (min_lat + max_lat) / 2
+                        center_lng = (min_lng + max_lng) / 2
+                        # 경로 범위에 따라 줌 레벨 결정
+                        lat_range = max_lat - min_lat
+                        lng_range = max_lng - min_lng
+                        spread = max(lat_range, lng_range)
+                        if spread < 0.001:
+                            zoom = 16.5
+                        elif spread < 0.005:
+                            zoom = 15.5
+                        elif spread < 0.01:
+                            zoom = 14.5
+                        elif spread < 0.02:
+                            zoom = 13.5
+                        else:
+                            zoom = 12.5
+                        view_state = pdk.ViewState(
+                            latitude=center_lat, longitude=center_lng,
+                            zoom=zoom, pitch=0,
+                        )
+                        deck = pdk.Deck(
+                            layers=layers,
+                            initial_view_state=view_state,
+                            map_style="light",
+                            tooltip={"text": "{name}"},
+                        )
+                        st.pydeck_chart(deck, height=500)
+                    else:
+                        st.info("이 시간에 에이전트 위치 데이터가 없습니다.")
+
+                with status_col:
+                    st.markdown("### 현재 상태")
+
+                    if status == "eating" and current_activity is not None:
+                        st.markdown(f'<div class="status-box status-eating"><h4>🍽️ 식사 중</h4><p><b>매장:</b> {current_activity["visited_store"]}</p><p><b>카테고리:</b> {current_activity["visited_category"]}</p></div>', unsafe_allow_html=True)
+                    elif status == "cafe":
+                        cafe_name = current_activity.get('name', '카페') if (current_activity and isinstance(current_activity, dict)) else '카페'
+                        st.markdown(f'<div class="status-box status-cafe"><h4>☕ 카페에서 휴식</h4><p><b>장소:</b> {cafe_name}</p></div>', unsafe_allow_html=True)
+                    elif status == "wander":
+                        st.markdown('<div class="status-box status-wander"><h4>🚶 배회 중</h4><p>망원동 거리를 걸으며 구경</p></div>', unsafe_allow_html=True)
+                    elif status == "park":
+                        st.markdown('<div class="status-box status-park"><h4>🌳 한강공원 산책</h4><p>망원한강공원에서 산책 중</p></div>', unsafe_allow_html=True)
+                    elif status == "market":
+                        st.markdown('<div class="status-box status-market"><h4>🛒 망원시장 장보기</h4><p>망원시장에서 장보기 중</p></div>', unsafe_allow_html=True)
+                    elif status == "home":
+                        st.markdown('<div class="status-box status-idle"><h4>🏠 집에서 휴식</h4><p>집에서 쉬는 중</p></div>', unsafe_allow_html=True)
+                    elif status == "work":
+                        st.markdown('<div class="status-box status-work"><h4>💼 회사에서 근무</h4><p>회사에서 일하는 중</p></div>', unsafe_allow_html=True)
+                    elif "moving" in status and current_activity is not None:
+                        if isinstance(current_activity, dict):
+                            dest = current_activity.get('visited_store') or current_activity.get('name', '?')
+                        elif hasattr(current_activity, 'get'):
+                            dest = current_activity.get('visited_store', '?')
+                        else:
+                            dest = "?"
+                        st.markdown(f'<div class="status-box status-moving"><h4>🚶 이동 중</h4><p><b>목적지:</b> {dest}</p></div>', unsafe_allow_html=True)
+                    else:
+                        st.markdown('<div class="status-box status-idle"><h4>🏠 대기 중</h4><p>집 또는 망원동 외부</p></div>', unsafe_allow_html=True)
+
+                    if step5_action:
+                        action_names = {
+                            "카페_가기": "☕ 카페 가기", "배회하기": "🚶 배회하기",
+                            "한강공원_산책": "🌳 한강공원 산책", "망원시장_장보기": "🛒 망원시장 장보기",
+                            "집에서_쉬기": "🏠 집에서 쉬기", "회사_가기": "💼 회사 가기"
+                        }
+                        st.info(f"**현재 행동:** {action_names.get(step5_action, step5_action)}")
+
+                    # 오늘 스케줄
+                    st.markdown("### 📅 오늘의 스케줄")
+                    day_data_anim = results_df[
+                        (results_df['persona_id'] == selected_agent) &
+                        (results_df['timestamp'].dt.date == anim_selected_date)
+                    ].sort_values('timestamp')
+
+                    for _, row in day_data_anim.iterrows():
+                        slot = row['time_slot']
+                        slot_hour = TIMESLOT_HOURS.get(slot, 0)
+                        is_past = slot_hour + 2 <= current_hour
+                        is_current = slot_hour <= current_hour < slot_hour + 2
+
+                        if row['decision'] == 'visit':
+                            icon = "▶️" if is_current else ("✅" if is_past else "⏳")
+                            st.markdown(f"**{icon} {slot} ({slot_hour}:00)** - {row['visited_store']}")
+                        else:
+                            icon = "⬜" if is_past else "⏳"
+                            st.markdown(f"**{icon} {slot} ({slot_hour}:00)** - 외부 식사")
+
+                # 자동 재생: sleep 후 전체 rerun (시간 증가는 상단에서 처리)
+                if st.session_state.anim_playing:
+                    time_module.sleep(0.5)
+                    st.rerun()
+
+            animation_fragment()
 
             # 에이전트 방문 로그 상세
             st.markdown("### 📋 방문 기록 상세")
