@@ -79,6 +79,12 @@ class StreetNetwork:
             simplify=self.config.simplify,
         )
 
+        # 한강 위 노드 제거 (lat < 37.550)
+        river_nodes = [n for n, d in self._graph.nodes(data=True) if d.get('y', 999) < 37.550]
+        if river_nodes:
+            self._graph.remove_nodes_from(river_nodes)
+            print(f"[StreetNetwork] Removed {len(river_nodes)} river nodes (lat < 37.550)")
+
         # Projected graph (for meter-based distance calculations)
         self._graph_proj = ox.project_graph(self._graph)
 
