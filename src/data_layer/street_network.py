@@ -16,7 +16,7 @@ from typing import Optional, Tuple, List, Dict, Any
 import osmnx as ox
 import networkx as nx
 import pandas as pd
-from shapely.geometry import LineString, Point
+from shapely.geometry import LineString
 from pyproj import Transformer
 
 
