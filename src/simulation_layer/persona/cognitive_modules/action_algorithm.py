@@ -296,15 +296,24 @@ class ActionAlgorithm:
         """
         affordable_stores = nearby_stores
 
-        # 카테고리 매칭 매장 우선
-        category_stores = [s for s in affordable_stores if category.lower() in s.category.lower()]
-        if not category_stores:
-            category_stores = affordable_stores
-
-        display_stores = category_stores
-
-        if not display_stores:
+        if not affordable_stores:
             return {"store_name": None, "reason": "주변에 적합한 매장 없음", "llm_failed": False}
+
+        # 매장 수가 많으면 (유동 에이전트) 검색 랭킹으로 선별
+        SEARCH_THRESHOLD = 30  # 30개 이상이면 검색 랭킹 적용
+        if len(affordable_stores) > SEARCH_THRESHOLD:
+            # Exploit-Explore: 상위 10 + 랜덤 5 = 15개
+            display_stores = self.global_store.search_ranked_stores(
+                category=category,
+                top_k=10,
+                explore_k=5,
+            )
+        else:
+            # 상주 에이전트: 카테고리 매칭 후 전체 사용
+            category_stores = [s for s in affordable_stores if category.lower() in (s.category or "").lower()]
+            if not category_stores:
+                category_stores = affordable_stores
+            display_stores = category_stores
 
         # 매장 순서 셔플 (LLM의 위치 편향 방지)
         display_stores = list(display_stores)

@@ -22,6 +22,8 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime
 import json
+import math
+import random
 import re
 from pathlib import Path
 import threading
@@ -280,6 +282,7 @@ class GlobalStore:
         - market_analysis, revenue_analysis, customer_analysis
         - review_metrics, top_keywords, critical_feedback, rag_context
         - raw_data_context.trend_history, metadata
+        - metadata.x, metadata.y (좌표)
         """
         if not json_dir.exists():
             return
@@ -295,11 +298,20 @@ class GlobalStore:
 
                 store_id = str(data.get("store_id", json_file.stem))
                 store_name = data.get("store_name", "Unknown")
-                category = data.get("category", "")
 
-                # 좌표 추출
+                # 카테고리: JSON category → metadata.sector
+                category = data.get("category", "")
+                if not category:
+                    metadata = data.get("metadata", {})
+                    category = metadata.get("sector", "")
+
+                # 좌표: JSON x,y → metadata.x,y
                 x = data.get("x")  # longitude
                 y = data.get("y")  # latitude
+                if not x or not y:
+                    metadata = data.get("metadata", {})
+                    x = metadata.get("x", "")
+                    y = metadata.get("y", "")
                 coordinates = (float(y), float(x)) if x and y else None
 
                 # 매장 찾기 또는 새로 생성
@@ -419,6 +431,64 @@ class GlobalStore:
                     nearby.append(store)
 
         return nearby
+
+    def search_ranked_stores(
+        self,
+        category: str = "",
+        agent_lat: float = 0.0,
+        agent_lng: float = 0.0,
+        top_k: int = 10,
+        explore_k: int = 5,
+    ) -> List[StoreRating]:
+        """
+        검색엔진 랭킹 기반 매장 선별 (Exploit-Explore).
+
+        유동 에이전트용: 네이버/카카오 맵 검색처럼 스코어링 후
+        상위 top_k(exploit) + 랜덤 explore_k(explore) = 15개 반환.
+
+        스코어링: 별점 + 에이전트평점 + 리뷰수 + 카테고리매칭 - 거리
+        """
+        from math import radians, cos, sin, asin, sqrt
+
+        def haversine(lat1, lon1, lat2, lon2):
+            R = 6371
+            lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
+            dlat = lat2 - lat1
+            dlon = lon2 - lon1
+            a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+            c = 2 * asin(sqrt(a))
+            return R * c
+
+        scored = []
+        for store in self.stores.values():
+            score = 0.0
+            # 별점 (0~5)
+            score += (store.star_rating or 0) * 1.5
+            # 에이전트 평점
+            if store.agent_rating_count > 0:
+                score += store.agent_avg_rating * 2.0
+            # 리뷰 수 (로그 스케일)
+            score += math.log1p(store.star_rating_count or 0) * 0.5
+            # 카테고리 매칭 보너스
+            if category and category.lower() in (store.category or "").lower():
+                score += 3.0
+            # 거리 페널티
+            if store.coordinates and agent_lat and agent_lng:
+                lat, lng = store.coordinates
+                dist = haversine(agent_lat, agent_lng, lat, lng)
+                score -= dist * 0.3
+            scored.append((score, store))
+
+        scored.sort(key=lambda x: -x[0])
+
+        # Exploit: 상위 top_k
+        top_stores = [s for _, s in scored[:top_k]]
+        # Explore: 나머지에서 랜덤 explore_k
+        remaining = [s for _, s in scored[top_k:]]
+        explore_count = min(explore_k, len(remaining))
+        explore_stores = random.sample(remaining, explore_count) if explore_count > 0 else []
+
+        return top_stores + explore_stores
 
     def add_agent_rating(
         self,
