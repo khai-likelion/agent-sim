@@ -17,7 +17,17 @@
 | 11 | Step5 직장인 선택지 구분 | 상주/유동만 분리, 직장인(1인·2인·4인 생베 겸직)은 별도 구분 없음 | 직장인 세그먼트 판별 + Step5 선택지 3분류 (상주/유동/직장인) | 미정 |
 | 12 | 아침 "이전 식사로 충분" 버그 | Step1 외출안함 사유가 아침에도 "이전 식사로 충분" 출력 | 아침/첫끼일 때는 해당 사유 제외 | **완료** |
 | 13 | 상주 에이전트 "적합한 매장 없음" 대량 발생 | 상주(R*) 에이전트 점심에 전원 "적합한 매장 없음"으로 외출 실패 — JSON에 x,y 좌표/category 누락 → 반경검색 결과 0개 | JSON에 stores.csv 좌표(metadata.x,y) + category 직접 삽입, stores.csv 런타임 의존성 제거 | **완료** |
-| 14 | 카페/주점 방문 불가 | destination_type이 항상 "식당" 고정 → Step2에 카페/주점 카테고리가 전달 안 됨 → 아침 커피, 저녁 술자리 선택 불가 | 시간대별 카테고리 풀 확장 (아침: +카페, 저녁/야식: +주점) → LLM이 페르소나 기반으로 자연 선택 | 미정 |
+| 14 | 카페/주점 방문 불가 | destination_type이 항상 "식당" 고정 → Step2에 카페/주점 카테고리가 전달 안 됨 → 아침 커피, 저녁 술자리 선택 불가 | `TIME_SLOT_CATEGORIES` 도입, destination_type 분기 제거 → LLM에 시간대별 전체 카테고리 풀 전달 | **완료** |
+| 15 | 한강 위 에이전트 노드 | OSM 반경 2000m에 한강 다리 도로 포함 → 에이전트가 한강 위를 걸어다님 | `load_graph()`에서 lat < 37.550 노드 제거 | **완료** |
+| 16 | 에이전트 추적 지도 UI | Folium 기반 + 색상 점만으로 에이전트/매장 구분 불가 | pydeck 전환 + 이모지 마커 + 텍스트 라벨 + @st.fragment 부분 렌더링 | **완료** |
+| 17 | 10개 매장 배치 시뮬레이션 | 매장별 수동 실행 필요 | `run_batch_10stores.py` — 10매장 순차 before/after 비교, 완료 건너뛰기, 3회 재시도 | **완료** |
+| 18 | 미사용 코드/설정 정리 | AreaSettings, 9개 SimulationSettings 필드, 5개 PathSettings 속성, 11개 .env 변수 등 미사용 | 전면 삭제 + requirements.txt 정리 (fastapi/uvicorn/geopandas 제거) | **완료** |
+| 19 | 대시보드 폴더 선택 | `data/output/` 루트의 단일 CSV만 로드 | 사이드바 드롭다운으로 before/after 결과 폴더 선택 | **완료** |
+| 20 | 시뮬 시작 날짜 KST 기준 | `datetime(2025, 2, 7)` 하드코딩 | 한국 시간 기준 가장 가까운 과거 금요일 자동 계산 | **완료** |
+| 21 | 에이전트 추적 슬라이더 | 슬라이더 클릭/드래그 시 시간 미반영, 자동재생 속도 과다 | `value` 직접 바인딩 + 속도 곡선 완화 (sleep 0.5s) | **완료** |
+| 22 | 지도 마커/뷰 개선 | 이모지만으로 에이전트/매장 구분 어려움, 경로 잘림 | 사람 마커(🧑+색 원) + 매장 핀(빨간 원+🍴) + 바운딩 박스 자동 줌 | **완료** |
+| 23 | 타겟 매장 방문 0건 | 돼지야(한식) 0건, 메가커피(커피) 0건 — Softmax 랭킹 편중 + 카페 카테고리 미선택 | 계층화 샘플링(상위60%+중위25%+하위15%) → 롱테일 매장도 LLM 후보 진입 | **완료** |
+| 24 | 유동 에이전트 좌표 [0,0] | home_location [0,0]이 유효값으로 처리 → 지도에서 엉뚱한 위치 표시 | entry_point fallback + `_is_valid_loc()` 체크 3중 적용 | **완료** |
 
 ---
 
@@ -559,6 +569,116 @@ Temperature별 비교 (한식 186개 → 20개 선택, 5,000회 몬테카를로)
 
 ---
 
+## 15. 한강 위 에이전트 노드
+
+### 현재 방식
+- **파일**: `src/data_layer/street_network.py`
+- OSMnx `graph_from_point(radius=2000)` → 반경 2km 내 모든 도로 네트워크 로드
+- 망원한강공원 남쪽 한강 다리(마포대교, 성산대교) 도로 노드가 포함됨
+
+### 문제점
+- 에이전트가 한강 위 다리 노드를 경유지로 사용 → 지도에서 한강 위를 걸어다니는 것처럼 표시
+- 실제 보행자는 다리 위를 걷지 않음
+
+### 최종 채택안
+**완료** — `load_graph()`에서 lat < 37.550 노드 제거
+
+```python
+river_nodes = [n for n, d in self._graph.nodes(data=True) if d.get('y', 999) < 37.550]
+if river_nodes:
+    self._graph.remove_nodes_from(river_nodes)
+```
+
+### 변경 파일
+- `src/data_layer/street_network.py`: `load_graph()` — OSM 그래프 로드 후 한강 위도 이하 노드 일괄 제거
+
+---
+
+## 16. 에이전트 추적 지도 UI 개선
+
+### 현재 방식
+- Folium 기반 지도, `st_folium()` 렌더링
+- 색상 원(CircleMarker)만으로 에이전트/매장/랜드마크 구분
+- 애니메이션 재생 시 `st.rerun()` → 전체 페이지 새로고침 발생
+
+### 문제점
+1. 색상 점이 무엇을 의미하는지 직관적으로 파악 불가
+2. 에이전트 상태(식사/카페/이동 등)를 점 색상만으로 표현 → 가독성 낮음
+3. `st.rerun()`이 전체 페이지를 재렌더링하여 차트/테이블까지 깜빡임
+
+### 최종 채택안
+**완료** — pydeck 전환 + 이모지 마커 + @st.fragment 부분 렌더링
+
+1. **pydeck(deck.gl) 전환**: WebGL 기반 고성능 렌더링, `st.pydeck_chart()` 사용
+2. **이모지 + 텍스트 라벨**:
+   - 랜드마크: `TextLayer` — `📍망원시장`, `📍망원역` 등
+   - 방문 매장: `ScatterplotLayer` + `TextLayer` — `🍽️매장명`
+   - 에이전트: `TextLayer` — 상태별 이모지 (🚶이동/🍽️식사/☕카페/🌳산책/🛒장보기/🏠집/💼회사)
+3. **`@st.fragment` 적용**: 애니메이션 영역만 분리하여 `st.rerun()` 시 해당 fragment만 재렌더링 → 나머지 대시보드는 깜빡이지 않음
+4. **컨트롤 UI 정리**: 프로필/컨트롤 분리, 날짜+재생/정지+배속을 한 줄에 배치
+
+### 변경 파일
+- `scripts/dashboard.py`:
+  - `import pydeck as pdk` 추가
+  - 에이전트 추적 섹션: Folium → pydeck (TextLayer, ScatterplotLayer, PathLayer)
+  - `@st.fragment`로 애니메이션 영역 분리
+- `requirements.txt`: `pydeck>=0.8.0` 추가
+
+---
+
+## 17. 10개 매장 배치 시뮬레이션
+
+### 배경
+10개 타겟 매장에 대해 각각 전략 적용 전/후 시뮬레이션 비교가 필요.
+
+### 최종 채택안
+**완료** — `run_batch_10stores.py` 배치 스크립트
+
+대상 매장: 돼지야, 망원부자부대찌개, 메가MGC커피 망원망리단길점, 반했닭옛날통닭 망원점, 오늘요거, 육장, 육회by유신 망원점, 전조, 정드린치킨 망원점, 크리머리
+
+처리 흐름 (매장당):
+1. 원본 JSON 백업
+2. Before 시뮬레이션 (160명, 7일, seed 42)
+3. StrategyBridge로 전략 적용 (X-Report MD 기반)
+4. After 시뮬레이션 (동일 조건)
+5. Before/After 비교 결과 출력
+6. 원본 JSON 복원
+
+기능:
+- **이어서 실행**: `visit_log.csv` 존재 시 해당 매장 건너뜀
+- **재시도**: 실패 시 30초 대기 후 최대 3회 재시도
+- **Windows cp949 대응**: stdout/stderr UTF-8 래핑으로 이모지 인코딩 에러 방지
+
+### 변경 파일
+- `scripts/run_batch_10stores.py` (신규)
+- `scripts/run_before_after_sim.py`: `--output-prefix` 인자 추가 → 매장별 폴더명 지정
+
+---
+
+## 18. 미사용 코드/설정 정리
+
+### 삭제 대상
+
+**config/settings.py**:
+- `AreaSettings` 클래스 전체 (area_code, quarter, lat/lng bounds, center_lat/lng)
+- `SimulationSettings`: agent_count, time_slots_per_day, simulation_days 등 9개 필드
+- `PathSettings`: population_json, agents_json 등 5개 속성
+- `Settings.area` 필드
+
+**.env**:
+- `AREA_*` 변수 6개, `SIM_AGENT_COUNT`, `SIM_TIME_SLOTS_PER_DAY`, `SIM_SIMULATION_DAYS`, `SIM_REPORT_RECEPTION_PROBABILITY`, `SIM_VISIT_THRESHOLD`
+
+**requirements.txt**:
+- `fastapi`, `uvicorn[standard]`, `geopandas` (어떤 .py에서도 import되지 않음)
+
+**src/data_layer/street_network.py**:
+- 미사용 `Point` import (shapely)
+
+### 변경 파일
+- `config/settings.py`, `.env`, `requirements.txt`, `src/data_layer/street_network.py`
+
+---
+
 ## 12. 아침 "이전 식사로 충분" 버그
 
 ### 현재 방식
@@ -730,5 +850,210 @@ available_categories = TIME_SLOT_CATEGORIES.get(time_slot, DESTINATION_CATEGORIE
   - 직장인 아침 → "카페" 또는 "베이커리" 선택 가능
 - Step2 프롬프트에 시간대별 힌트 추가 ("아침에는 카페/브런치도 고려하세요" 등)
 
+### 실측 근거 (10매장 배치 시뮬 결과)
+
+**메가MGC커피 망원망리단길점** (카테고리: `커피-음료`)
+- Before: 방문 0건 / After: 방문 0건
+- 전체 1,147건 방문 중 카페 카테고리 방문: **0건**
+- 방문 카테고리 분포: 한식 438, 일식 243, 양식 223, 중식 146, 치킨 95, 패스트푸드 2
+
+**돼지야** (카테고리: `한식음식점`)
+- Before: 방문 0건 / After: 방문 0건
+- 한식 매장이 438건 방문되었으나, 돼지야는 0건 → Softmax 랭킹에서 밀림 (별도 이슈 #23)
+
+**원인 분석:**
+- `action_algorithm.py` L720-723에서 `destination_type = "식당"` 하드코딩
+- `DESTINATION_TYPES` 딕셔너리를 정의해놓고 **한 번도 사용하지 않음**
+- Step2에 `DESTINATION_CATEGORIES["식당"]`만 전달 → LLM이 "카페"/"커피" 선택 불가
+- 결과적으로 커피-음료, 제과점, 호프-간이주점 카테고리 매장은 **구조적으로 방문 불가능**
+
 ### 최종 채택안
-미정
+**완료** — 개선안 A 채택: destination_type 분기 제거 → 전체 카테고리 풀 전달
+
+**채택한 개선안 A: destination_type 분기 제거 → 전체 카테고리 풀 전달**
+```python
+TIME_SLOT_CATEGORIES = {
+    "아침": DESTINATION_CATEGORIES["식당"] + DESTINATION_CATEGORIES["카페"],
+    "점심": DESTINATION_CATEGORIES["식당"] + DESTINATION_CATEGORIES["카페"],
+    "저녁": DESTINATION_CATEGORIES["식당"] + DESTINATION_CATEGORIES["주점"] + DESTINATION_CATEGORIES["카페"],
+    "야식": DESTINATION_CATEGORIES["식당"] + DESTINATION_CATEGORIES["주점"],
+}
+available_categories = TIME_SLOT_CATEGORIES.get(time_slot, DESTINATION_CATEGORIES["식당"])
+```
+- destination_type 개념 자체를 제거, Step2에 시간대별 전체 카테고리 풀 전달
+- LLM이 페르소나 기반으로 자연 선택 (Z세대 아침 → 카페, 가족 저녁 → 한식)
+- Step2 프롬프트에 시간대 힌트 추가 ("아침에는 카페/브런치도 고려하세요")
+
+**개선안 B: DESTINATION_TYPES 실제 사용 + 확률 기반 분기**
+```python
+dest_types = DESTINATION_TYPES.get(time_slot, ["식당"])
+destination_type = random.choice(dest_types)
+```
+- 기존 DESTINATION_TYPES 딕셔너리 활용, 랜덤으로 목적지 유형 선택
+- 장점: 변경 최소 (1줄 수정), 기존 Step2 프롬프트 그대로 사용
+- 단점: 카페/주점 선택 확률이 균등 → 비현실적 (아침에 카페:식당 = 1:1)
+
+**개선안 C: 가중 확률 기반 목적지 유형 선택**
+```python
+DESTINATION_WEIGHTS = {
+    "아침": {"식당": 0.6, "카페": 0.4},
+    "점심": {"식당": 0.75, "카페": 0.25},
+    "저녁": {"식당": 0.6, "주점": 0.25, "카페": 0.15},
+    "야식": {"식당": 0.5, "주점": 0.5},
+}
+weights = DESTINATION_WEIGHTS.get(time_slot, {"식당": 1.0})
+destination_type = random.choices(list(weights.keys()), list(weights.values()))[0]
+```
+- 시간대별 현실적 비율 반영
+- 장점: 가장 현실적인 방문 분포
+- 단점: 가중치 수치를 별도 검증 필요
+
+---
+
+## 23. 타겟 매장 방문 0건 (Softmax 랭킹 편중)
+
+### 현재 방식
+- Step3에서 반경 내 매장을 Softmax 가중 샘플링으로 20개 추출
+- LLM에 20개 후보를 보여주고 1개 선택
+
+### 문제점
+1. **돼지야**: 한식 카테고리이지만 같은 한식 438건 중 0건 → Softmax 랭킹에서 밀림
+   - 별점/리뷰 수/rag_context 품질이 상위 매장 대비 낮을 가능성
+   - 리뷰 수가 적으면 Softmax 점수 자체가 낮아 후보 20개에 진입 못함
+2. **메가MGC커피**: 카테고리 자체가 선택 안 됨 (이슈 #14)
+
+### 개선안
+
+**A: 타겟 매장 강제 후보 포함**
+- `target_store` 파라미터가 있으면 Step3 후보 20개에 타겟 매장을 항상 포함
+- 선택 여부는 LLM 판단에 맡김 (공정성 유지)
+- 가장 간단하고 효과적
+
+**B: Softmax 온도 조정**
+- 현재 temperature가 높으면 상위 매장에 과도하게 집중
+- temperature를 낮추면 하위 매장도 후보에 포함될 확률 증가
+- 전체 분포가 변하므로 부작용 검토 필요
+
+**C: 카테고리 내 최소 다양성 보장**
+- 같은 카테고리 내 매장을 클러스터링, 각 클러스터에서 최소 1개씩 후보 포함
+- 구현 복잡도 높음
+
+### 최종 채택안
+**완료** — 계층화 샘플링으로 전환
+
+기존 Softmax 비복원 추출 → **3계층 샘플링**:
+- 점수순 정렬 후 상위 1/3, 중위 1/3, 하위 1/3으로 분류
+- 상위 60% + 중위 25% + 하위 15% 비율로 추출
+- 각 계층 내에서는 Softmax 확률 비례 추출 유지
+- 롱테일 매장(돼지야 등)이 하위 계층에서 15% 확률로 LLM 후보에 진입
+
+### 변경 파일
+- `src/data_layer/global_store.py`: `search_ranked_stores()` 내부 샘플링 로직
+
+---
+
+## 24. 대시보드 에이전트 좌표 fallback
+
+### 현재 방식
+- 유동 에이전트의 `home_location`이 `[0.0, 0.0]`으로 저장됨
+- 대시보드에서 `if home_location:` → `[0,0]`은 truthy → 그대로 사용 → 아프리카 앞바다에 표시
+
+### 문제점
+- P007 등 유동 에이전트가 대기/집 상태일 때 지도에서 사라지거나 엉뚱한 위치에 표시
+- `entry_point` 좌표는 정상값이 있으나, 대시보드가 참조하지 않음
+
+### 최종 채택안
+**완료** — 3중 fallback 체인
+
+1. **에이전트 로딩 시**: `home_location`이 `[0,0]`이면 `entry_point` 사용, 없으면 `FLOATING_LOCATIONS` 랜덤 할당
+2. **get_agent_state 내부**: `[0,0]` 명시 체크 → `LANDMARKS["집"]` fallback
+3. **animation_fragment**: 호출 전 `agent_home` 보정 (entry_point → LANDMARKS 순)
+
+### 변경 파일
+- `scripts/dashboard.py`: `_is_valid_loc()` 헬퍼, 에이전트 로딩/get_agent_state/animation_fragment 3곳
+
+---
+
+## 19. 대시보드 폴더 선택
+
+### 현재 방식
+- `data/output/generative_simulation_result.csv` 단일 파일만 로드
+- before/after 결과 비교 불가
+
+### 최종 채택안
+**완료** — 사이드바 드롭다운으로 시뮬레이션 결과 폴더 선택
+
+구현 내용:
+1. `data/output/` 하위 폴더 중 `visit_log.csv`가 있는 폴더를 자동 탐색
+2. 사이드바 "결과 폴더" 드롭다운에 목록 표시
+3. 선택한 폴더의 `simulation_result.csv`, `visit_log.csv`, `agents_final.json` 로드
+4. 폴더 미선택 시 기존 루트 CSV 로드 (하위 호환)
+
+### 변경 파일
+- `scripts/dashboard.py`: `pathlib.Path` import, 사이드바 폴더 선택 UI, `load_simulation_data()` 분기
+
+---
+
+## 20. 시뮬 시작 날짜 KST 기준
+
+### 현재 방식
+- `start_date = datetime(2025, 2, 7)` 하드코딩
+- 시뮬 결과의 날짜가 항상 2025-02-07~13
+
+### 최종 채택안
+**완료** — 한국 시간(KST) 기준 가장 가까운 과거 금요일 자동 계산
+
+```python
+from datetime import datetime, timedelta, timezone
+kst = timezone(timedelta(hours=9))
+today_kst = datetime.now(kst).replace(tzinfo=None)
+days_since_friday = (today_kst.weekday() - 4) % 7
+start_date = (today_kst - timedelta(days=days_since_friday)).replace(hour=0, minute=0, second=0, microsecond=0)
+```
+
+### 변경 파일
+- `scripts/run_generative_simulation.py`: `start_date` 계산 로직 변경
+
+---
+
+## 21. 에이전트 추적 슬라이더 수정
+
+### 현재 방식
+- `key` 기반 슬라이더 + `on_change` 콜백 → fragment 내에서 동기화 실패
+- `st.rerun(scope="fragment")` → `StreamlitAPIException` 발생
+- `increment = speed * 0.05` → 배속 10에서 한 틱에 30분 점프 (과도)
+
+### 최종 채택안
+**완료** — `value` 파라미터 직접 바인딩 + 속도 완화
+
+1. **슬라이더**: `key` 대신 `value=st.session_state.current_hour` 직접 바인딩
+2. **동기화**: 슬라이더 반환값을 항상 `current_hour`에 대입 (콜백 불필요)
+3. **속도 완화**: `increment = 0.1 + (speed-1) * (0.4/59)` (배속1=6분/틱, 배속60=30분/틱)
+4. **sleep**: 0.1s → 0.5s
+
+### 변경 파일
+- `scripts/dashboard.py`: 슬라이더 생성/동기화 로직, sleep 시간, increment 계산식
+
+---
+
+## 22. 지도 마커/뷰 개선
+
+### 현재 방식
+- 에이전트: 상태별 이모지만 표시 → 작고 알아보기 어려움
+- 매장: 주황 원 + 🍴 → 에이전트와 구분 어려움
+- 뷰: 에이전트 위치 중심 zoom=15.5 고정 → 경로가 잘려서 안 보임
+
+### 최종 채택안
+**완료** — 사람 마커 + 매장 핀 + 바운딩 박스 자동 줌
+
+1. **에이전트 마커**: 🧑 사람 이모지 + 상태색 내부 원(r=25) + 외부 글로우 원(r=60) + 상태 라벨
+2. **매장 마커**: 빨간 핀(r=30, 흰 테두리) + 🍴 아이콘 + 매장명 라벨(빨간색, 13pt)
+3. **자동 줌**: 에이전트 + 경로 + 방문 매장 전체 좌표의 바운딩 박스 계산 → spread 기반 줌 레벨 자동 결정
+   - spread < 0.001 → zoom 16.5 (근거리)
+   - spread < 0.005 → zoom 15.5
+   - spread < 0.01 → zoom 14.5
+   - spread < 0.02 → zoom 13.5
+   - spread >= 0.02 → zoom 12.5
+
+### 변경 파일
+- `scripts/dashboard.py`: 에이전트/매장 레이어 재구성, ViewState 바운딩 박스 계산
