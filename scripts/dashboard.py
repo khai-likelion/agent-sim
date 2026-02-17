@@ -199,9 +199,17 @@ def load_simulation_data(sim_folder: str = ""):
     else:
         agents = []
 
-    # home_location이 없는 에이전트에 유형별 초기 위치 할당
+    # home_location이 없거나 [0,0]인 에이전트에 유형별 초기 위치 할당
+    def _is_valid_loc(loc):
+        return loc and loc != [0.0, 0.0] and loc != [0, 0]
+
     for agent in agents:
-        if not agent.get('home_location'):
+        if not _is_valid_loc(agent.get('home_location')):
+            # 유동 에이전트: entry_point 우선
+            ep = agent.get('entry_point')
+            if _is_valid_loc(ep):
+                agent['home_location'] = list(ep)
+                continue
             if agent.get('agent_type') == '유동':
                 loc = random.choice(list(FLOATING_LOCATIONS.values()))
                 agent['home_location'] = list(loc)
@@ -480,7 +488,7 @@ def get_agent_state(results_df, stores_dict, G, cafe_stores, current_date, curre
     speed_seed = hash(persona_id) if persona_id else hash(segment)
     walking_speed = get_walking_speed(segment, seed=speed_seed)
 
-    if home_location:
+    if home_location and home_location != [0.0, 0.0] and home_location != [0, 0]:
         home_lat, home_lng = home_location[0], home_location[1]
     else:
         home_lat, home_lng = LANDMARKS["집"]["lat"], LANDMARKS["집"]["lng"]
@@ -1391,8 +1399,14 @@ def main():
                     unsafe_allow_html=True
                 )
 
-                # 에이전트 상태 계산
-                agent_home = agent_info.get('home_location', None)
+                # 에이전트 상태 계산 (home_location [0,0] → entry_point fallback)
+                agent_home = agent_info.get('home_location')
+                if not agent_home or agent_home == [0.0, 0.0] or agent_home == [0, 0]:
+                    ep = agent_info.get('entry_point')
+                    if ep and ep != [0.0, 0.0]:
+                        agent_home = ep
+                    else:
+                        agent_home = [LANDMARKS["집"]["lat"], LANDMARKS["집"]["lng"]]
                 agent_lat, agent_lng, status, current_activity, route_coords, step5_action = get_agent_state(
                     results_df[results_df['persona_id'] == selected_agent],
                     stores_dict, G_anim, cafe_stores, anim_selected_date, current_hour,
@@ -1404,57 +1418,98 @@ def main():
 
                 with map_col:
                     if agent_lat and agent_lng:
-                        layers = []
+                        # 상태별 이모지/색상 결정
+                        status_info = {
+                            "eating":  {"emoji": "🍽️", "label": "식사 중", "color": "red"},
+                            "cafe":    {"emoji": "☕",  "label": "카페",   "color": "purple"},
+                            "wander":  {"emoji": "🚶",  "label": "배회",   "color": "orange"},
+                            "park":    {"emoji": "🌳",  "label": "공원",   "color": "green"},
+                            "market":  {"emoji": "🛒",  "label": "시장",   "color": "purple"},
+                            "home":    {"emoji": "🏠",  "label": "집",     "color": "blue"},
+                            "work":    {"emoji": "💼",  "label": "출근",   "color": "darkblue"},
+                            "idle":    {"emoji": "🏠",  "label": "대기",   "color": "gray"},
+                        }
+                        matched = {"emoji": "🚶", "label": "이동 중", "color": "blue"}
+                        for key, info in status_info.items():
+                            if key in status:
+                                matched = info
+                                break
+                        if "moving" in status:
+                            matched = {"emoji": "🚶", "label": "이동 중", "color": "blue"}
 
-                        # 랜드마크 (아이콘 + 라벨)
-                        lm_data = []
-                        lm_icons = {"한강공원": "🌊", "망원시장": "🏪", "집": None, "회사": "🏢"}
+                        # 바운딩 박스 계산 → 줌/중심
+                        all_lats = [agent_lat]
+                        all_lngs = [agent_lng]
+                        if route_coords:
+                            for c in route_coords:
+                                all_lats.append(c[0])
+                                all_lngs.append(c[1])
+
+                        # 방문 매장
+                        agent_visits_anim = visits_df[
+                            (visits_df['persona_id'] == selected_agent) &
+                            (visits_df['timestamp'].dt.date == anim_selected_date)
+                        ] if not visits_df.empty else pd.DataFrame()
+                        visited_stores_list = []
+                        if not agent_visits_anim.empty:
+                            for _, row in agent_visits_anim.iterrows():
+                                visit_hour = TIMESLOT_HOURS.get(row['time_slot'], 0)
+                                if visit_hour + 0.5 <= current_hour:
+                                    s_info = stores_dict.get(row['visited_store'], {})
+                                    if s_info:
+                                        visited_stores_list.append({
+                                            "lat": s_info['lat'], "lng": s_info['lng'],
+                                            "name": row['visited_store'],
+                                            "slot": row['time_slot'],
+                                        })
+                                        all_lats.append(s_info['lat'])
+                                        all_lngs.append(s_info['lng'])
+
+                        min_lat, max_lat = min(all_lats), max(all_lats)
+                        min_lng, max_lng = min(all_lngs), max(all_lngs)
+                        center_lat = (min_lat + max_lat) / 2
+                        center_lng = (min_lng + max_lng) / 2
+                        spread = max(max_lat - min_lat, max_lng - min_lng)
+                        if not route_coords and len(visited_stores_list) == 0:
+                            zoom = 15
+                        elif spread < 0.001:
+                            zoom = 16
+                        elif spread < 0.005:
+                            zoom = 15
+                        elif spread < 0.01:
+                            zoom = 14
+                        else:
+                            zoom = 13
+
+                        m = folium.Map(location=[center_lat, center_lng], zoom_start=zoom, tiles='cartodbpositron')
+
+                        # 랜드마크
+                        lm_icons = {"한강공원": "🌊", "망원시장": "🏪", "회사": "🏢"}
                         for k, v in LANDMARKS.items():
                             icon = lm_icons.get(k)
-                            if icon is None:
+                            if not icon:
                                 continue
-                            lm_data.append({
-                                "lat": v["lat"], "lng": v["lng"],
-                                "icon": icon, "name": v['name'],
-                            })
-                        if lm_data:
-                            layers.append(pdk.Layer(
-                                "TextLayer", data=lm_data,
-                                get_position='[lng, lat]', get_text='icon',
-                                get_size=28, get_color=[0, 0, 0],
-                                get_text_anchor='"middle"',
-                                get_alignment_baseline='"center"',
-                            ))
-                            layers.append(pdk.Layer(
-                                "TextLayer", data=lm_data,
-                                get_position='[lng, lat]', get_text='name',
-                                get_size=11, get_color=[80, 80, 80],
-                                get_pixel_offset='[0, 22]',
-                                get_text_anchor='"middle"',
-                            ))
+                            folium.Marker(
+                                [v["lat"], v["lng"]],
+                                icon=folium.DivIcon(html=f'<div style="font-size:16px;text-align:center">{icon}<br><span style="font-size:9px;color:#666">{v["name"]}</span></div>', icon_size=(60, 36), icon_anchor=(30, 18)),
+                            ).add_to(m)
 
                         # 이동 경로
                         if route_coords and len(route_coords) > 1:
-                            if status == "wander":
-                                path_color = [231, 76, 60]
-                            elif "park" in status:
-                                path_color = [46, 204, 113]
+                            color = {"wander": "red", "park": "green", "market": "purple"}.get(status, "blue") if "park" not in status else "green"
+                            if "park" in status:
+                                color = "green"
+                            elif status == "wander":
+                                color = "red"
                             elif "market" in status:
-                                path_color = [142, 68, 173]
+                                color = "purple"
                             else:
-                                path_color = [52, 152, 219]
+                                color = "blue"
 
-                            # 전체 예정 경로 (점선 느낌, 연하게)
-                            full_path = [{"path": [[c[1], c[0]] for c in route_coords]}]
-                            layers.append(pdk.Layer(
-                                "PathLayer", data=full_path,
-                                get_path="path", get_width=3,
-                                get_color=path_color + [60],
-                                width_min_pixels=2,
-                                get_dash_array=[4, 4],
-                            ))
+                            # 전체 예정 경로 (연하게)
+                            folium.PolyLine(route_coords, color=color, weight=2, opacity=0.3, dash_array='6').add_to(m)
 
-                            # 이동 완료 구간 (진하게)
+                            # 이동 완료 구간
                             traveled = [route_coords[0]]
                             for i in range(1, len(route_coords)):
                                 coord = route_coords[i]
@@ -1474,180 +1529,29 @@ def main():
                                 last = traveled[-1]
                                 if ((last[0] - agent_lat) ** 2 + (last[1] - agent_lng) ** 2) ** 0.5 > 0.00001:
                                     traveled.append((agent_lat, agent_lng))
-
                             if len(traveled) > 1:
-                                path_data = [{"path": [[c[1], c[0]] for c in traveled]}]
-                                layers.append(pdk.Layer(
-                                    "PathLayer", data=path_data,
-                                    get_path="path", get_width=5,
-                                    get_color=path_color + [220],
-                                    width_min_pixels=3,
-                                ))
+                                folium.PolyLine(traveled, color=color, weight=4, opacity=0.9).add_to(m)
 
-                            # 출발지/도착지 마커
-                            start_pt = route_coords[0]
-                            end_pt = route_coords[-1]
-                            endpoint_data = [
-                                {"lat": start_pt[0], "lng": start_pt[1], "label": "출발", "color": [100, 100, 100]},
-                                {"lat": end_pt[0], "lng": end_pt[1], "label": "도착", "color": path_color},
-                            ]
-                            layers.append(pdk.Layer(
-                                "ScatterplotLayer", data=endpoint_data,
-                                get_position='[lng, lat]', get_radius=15,
-                                get_fill_color='color', get_line_color=[255, 255, 255],
-                                line_width_min_pixels=2, stroked=True,
-                            ))
-                            layers.append(pdk.Layer(
-                                "TextLayer", data=endpoint_data,
-                                get_position='[lng, lat]', get_text='label',
-                                get_size=11, get_color=[60, 60, 60],
-                                get_pixel_offset='[0, -18]',
-                            ))
+                        # 방문 매장 마커 (이모지)
+                        for vs in visited_stores_list:
+                            folium.Marker(
+                                [vs["lat"], vs["lng"]],
+                                icon=folium.DivIcon(
+                                    html=f'<div style="font-size:20px;text-align:center">🍴<br><span style="font-size:10px;color:#c0392b;font-weight:bold;white-space:nowrap">{vs["name"]}</span></div>',
+                                    icon_size=(120, 40), icon_anchor=(60, 20)),
+                                tooltip=f'{vs["name"]} ({vs["slot"]})',
+                            ).add_to(m)
 
-                        # 방문 매장 라벨
-                        agent_visits_anim = visits_df[
-                            (visits_df['persona_id'] == selected_agent) &
-                            (visits_df['timestamp'].dt.date == anim_selected_date)
-                        ] if not visits_df.empty else pd.DataFrame()
+                        # 에이전트 마커 (큰 이모지)
+                        folium.Marker(
+                            [agent_lat, agent_lng],
+                            icon=folium.DivIcon(
+                                html=f'<div style="font-size:28px;text-align:center;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3))">{matched["emoji"]}</div>',
+                                icon_size=(40, 40), icon_anchor=(20, 20)),
+                            tooltip=f'{matched["emoji"]} {matched["label"]}',
+                        ).add_to(m)
 
-                        visited_labels = []
-                        if not agent_visits_anim.empty:
-                            for _, row in agent_visits_anim.iterrows():
-                                visit_hour = TIMESLOT_HOURS.get(row['time_slot'], 0)
-                                if visit_hour + 0.5 <= current_hour:
-                                    s_info = stores_dict.get(row['visited_store'], {})
-                                    if s_info:
-                                        slot_label = row['time_slot']
-                                        visited_labels.append({
-                                            "lat": s_info['lat'], "lng": s_info['lng'],
-                                            "icon": "🍴",
-                                            "name": row['visited_store'],
-                                            "detail": f"{slot_label} 방문",
-                                        })
-                        if visited_labels:
-                            # 매장 핀 마커 (빨간 원 + 흰 테두리)
-                            layers.append(pdk.Layer(
-                                "ScatterplotLayer", data=visited_labels,
-                                get_position='[lng, lat]', get_radius=30,
-                                get_fill_color=[220, 50, 50, 200],
-                                get_line_color=[255, 255, 255, 255],
-                                line_width_min_pixels=3, stroked=True, pickable=True,
-                            ))
-                            # 매장 아이콘 (📍 핀)
-                            layers.append(pdk.Layer(
-                                "TextLayer", data=visited_labels,
-                                get_position='[lng, lat]', get_text='icon',
-                                get_size=24, get_color=[255, 255, 255],
-                                get_text_anchor='"middle"',
-                                get_alignment_baseline='"center"',
-                            ))
-                            # 매장명 라벨 (위쪽, 배경 느낌)
-                            layers.append(pdk.Layer(
-                                "TextLayer", data=visited_labels,
-                                get_position='[lng, lat]', get_text='name',
-                                get_size=13, get_color=[220, 50, 50],
-                                get_pixel_offset='[0, -28]',
-                                get_text_anchor='"middle"',
-                                font_family='"Noto Sans KR", sans-serif',
-                            ))
-
-                        # 에이전트 마커 (사람 아이콘 + 상태)
-                        status_info = {
-                            "eating":       {"label": "식사 중",  "color": [231, 76, 60]},
-                            "cafe":         {"label": "카페",    "color": [155, 89, 182]},
-                            "wander":       {"label": "배회",    "color": [230, 126, 34]},
-                            "park":         {"label": "공원",    "color": [46, 204, 113]},
-                            "market":       {"label": "시장",    "color": [142, 68, 173]},
-                            "home":         {"label": "집",      "color": [52, 152, 219]},
-                            "work":         {"label": "출근",    "color": [44, 62, 80]},
-                            "idle":         {"label": "대기",    "color": [149, 165, 166]},
-                        }
-                        matched = {"label": "이동 중", "color": [52, 152, 219]}
-                        for key, info in status_info.items():
-                            if key in status:
-                                matched = info
-                                break
-                        if "moving" in status:
-                            matched = {"label": "이동 중", "color": [52, 152, 219]}
-
-                        agent_color = matched["color"]
-                        agent_data = [{"lat": agent_lat, "lng": agent_lng,
-                                       "emoji": "🧑",
-                                       "status_label": matched["label"]}]
-
-                        # 배경 원 (위치 강조, 펄스 느낌)
-                        layers.append(pdk.Layer(
-                            "ScatterplotLayer", data=agent_data,
-                            get_position='[lng, lat]', get_radius=60,
-                            get_fill_color=agent_color + [30],
-                            get_line_color=agent_color + [100],
-                            line_width_min_pixels=2, stroked=True,
-                        ))
-                        # 사람 내부 원 (진한 색)
-                        layers.append(pdk.Layer(
-                            "ScatterplotLayer", data=agent_data,
-                            get_position='[lng, lat]', get_radius=25,
-                            get_fill_color=agent_color + [220],
-                            get_line_color=[255, 255, 255, 255],
-                            line_width_min_pixels=3, stroked=True,
-                        ))
-                        # 사람 이모지 (크게)
-                        layers.append(pdk.Layer(
-                            "TextLayer", data=agent_data,
-                            get_position='[lng, lat]', get_text='emoji',
-                            get_size=32, get_color=[255, 255, 255],
-                            get_text_anchor='"middle"',
-                            get_alignment_baseline='"center"',
-                        ))
-                        # 상태 라벨 (아래쪽)
-                        layers.append(pdk.Layer(
-                            "TextLayer", data=agent_data,
-                            get_position='[lng, lat]', get_text='status_label',
-                            get_size=13, get_color=agent_color,
-                            get_pixel_offset='[0, 30]',
-                            get_text_anchor='"middle"',
-                            font_family='"Noto Sans KR", sans-serif',
-                        ))
-
-                        # 모든 포인트를 수집해서 바운딩 박스 계산
-                        all_lats = [agent_lat]
-                        all_lngs = [agent_lng]
-                        if route_coords:
-                            for c in route_coords:
-                                all_lats.append(c[0])
-                                all_lngs.append(c[1])
-                        for vl in visited_labels:
-                            all_lats.append(vl["lat"])
-                            all_lngs.append(vl["lng"])
-                        min_lat, max_lat = min(all_lats), max(all_lats)
-                        min_lng, max_lng = min(all_lngs), max(all_lngs)
-                        center_lat = (min_lat + max_lat) / 2
-                        center_lng = (min_lng + max_lng) / 2
-                        # 경로 범위에 따라 줌 레벨 결정
-                        lat_range = max_lat - min_lat
-                        lng_range = max_lng - min_lng
-                        spread = max(lat_range, lng_range)
-                        if spread < 0.001:
-                            zoom = 16.5
-                        elif spread < 0.005:
-                            zoom = 15.5
-                        elif spread < 0.01:
-                            zoom = 14.5
-                        elif spread < 0.02:
-                            zoom = 13.5
-                        else:
-                            zoom = 12.5
-                        view_state = pdk.ViewState(
-                            latitude=center_lat, longitude=center_lng,
-                            zoom=zoom, pitch=0,
-                        )
-                        deck = pdk.Deck(
-                            layers=layers,
-                            initial_view_state=view_state,
-                            map_style="light",
-                            tooltip={"text": "{name}"},
-                        )
-                        st.pydeck_chart(deck, height=500)
+                        st_folium(m, width=700, height=500, key="anim_map")
                     else:
                         st.info("이 시간에 에이전트 위치 데이터가 없습니다.")
 
