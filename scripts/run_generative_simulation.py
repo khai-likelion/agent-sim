@@ -22,6 +22,8 @@ from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
 
 import pandas as pd
+import time as time_module
+from tqdm import tqdm
 
 # 기본 시드 (개선 전/후 비교 시 동일 에이전트 구성 보장)
 DEFAULT_SEED = 42
@@ -392,6 +394,7 @@ async def run_simulation(
     - 현실보다 24배 빠름 (1분 현실 = 24분 시뮬레이션)
     - 하루 24시간 시뮬레이션
     """
+    sim_start_time = time_module.perf_counter()
     print(f"\n[3/4] 시뮬레이션 실행 중...")
     print(f"  타겟 매장: {target_store}")
     print(f"  시간 배속: {TIME_SPEED_MULTIPLIER}x")
@@ -426,7 +429,9 @@ async def run_simulation(
     # 에이전트 초기 위치 딕셔너리
     agent_locations = {}
 
-    for day_idx in range(days):
+    day_pbar = tqdm(range(days), desc="전체 진행", unit="day", position=0)
+    for day_idx in day_pbar:
+        day_start_time = time_module.perf_counter()
         current_date = start_date + timedelta(days=day_idx)
         weekday = WEEKDAYS[current_date.weekday()]
 
@@ -466,8 +471,9 @@ async def run_simulation(
         # 오늘 활동할 에이전트 = 상주(전원) + 유동(샘플링)
         daily_agents = resident_agents + daily_floating
 
-        print(f"\n  === Day {day_idx + 1}/{days}: {current_date.strftime('%Y-%m-%d')} ({weekday}요일) ===")
-        print(f"      활동 에이전트: {len(daily_agents)}명 (상주 {len(resident_agents)} + 유동 {len(daily_floating)})")
+        day_pbar.set_description(f"Day {day_idx+1}/{days} ({weekday})")
+        tqdm.write(f"\n  === Day {day_idx + 1}/{days}: {current_date.strftime('%Y-%m-%d')} ({weekday}요일) ===")
+        tqdm.write(f"      활동 에이전트: {len(daily_agents)}명 (상주 {len(resident_agents)} + 유동 {len(daily_floating)})")
 
         # 전체 진행률 계산용
         total_day_slots = len(daily_agents) * len(TIME_SLOTS)
@@ -496,9 +502,9 @@ async def run_simulation(
             # 이전 타임슬롯에서 쌓인 평점을 GlobalStore에 반영
             flushed = global_store.flush_pending_ratings()
             if flushed > 0:
-                print(f"      평점 반영: {flushed}건")
+                tqdm.write(f"      평점 반영: {flushed}건")
 
-            print(f"    [{slot_name}] {slot_time.strftime('%H:%M')} - 에이전트 {len(daily_agents)}명 병렬 의사결정 중...")
+            tqdm.write(f"    [{slot_name}] {slot_time.strftime('%H:%M')} - 에이전트 {len(daily_agents)}명 병렬 의사결정 중...")
 
             # 타임슬롯 내 모든 에이전트의 의사결정을 동시에 실행.
             # - 에이전트 간: asyncio.gather()로 병렬 실행 (LLM 응답 대기 중 다른 에이전트 요청 전송)
@@ -509,17 +515,20 @@ async def run_simulation(
             ]
             task_outputs = await asyncio.gather(*tasks, return_exceptions=True)
 
-            for agent, output in zip(daily_agents, task_outputs):
+            slot_pbar = tqdm(
+                zip(daily_agents, task_outputs),
+                total=len(daily_agents),
+                desc=f"  {slot_name}",
+                unit="agent",
+                position=1,
+                leave=False,
+            )
+            for agent, output in slot_pbar:
                 day_processed += 1
-
-                # 진행 상황 출력 (10% 단위)
-                if day_processed % max(1, total_day_slots // 10) == 0:
-                    pct = day_processed / total_day_slots * 100
-                    print(f"      Day {day_idx+1} 진행: {day_processed}/{total_day_slots} ({pct:.0f}%)")
 
                 # gather의 예외 또는 스킵(None) 처리
                 if isinstance(output, Exception):
-                    print(f"      [경고] 에이전트 {agent.persona_id} 오류: {output}")
+                    tqdm.write(f"      [경고] 에이전트 {agent.persona_id} 오류: {output}")
                     continue
                 if output is None:
                     continue
@@ -552,6 +561,10 @@ async def run_simulation(
                 }
                 results.append(record)
 
+        # 하루 종료: 소요시간 출력
+        day_elapsed = time_module.perf_counter() - day_start_time
+        tqdm.write(f"      Day {day_idx+1} 완료: {day_elapsed:.1f}초 ({day_elapsed/60:.1f}분)")
+
         # 하루 종료: 오늘 방문한 유동 에이전트 기록 (다음 날 재방문 풀)
         today_visitors = set()
         for rec in results:
@@ -561,12 +574,16 @@ async def run_simulation(
             a for a in daily_floating if a.id in today_visitors
         ]
         if run_simulation._prev_day_visitors:
-            print(f"      재방문 풀: 유동 {len(run_simulation._prev_day_visitors)}명 (내일 {REVISIT_RATE*100:.0f}% 우선 포함)")
+            tqdm.write(f"      재방문 풀: 유동 {len(run_simulation._prev_day_visitors)}명 (내일 {REVISIT_RATE*100:.0f}% 우선 포함)")
 
     # 마지막 타임슬롯의 평점 반영
     flushed = global_store.flush_pending_ratings()
     if flushed > 0:
-        print(f"      마지막 평점 반영: {flushed}건")
+        tqdm.write(f"      마지막 평점 반영: {flushed}건")
+
+    day_pbar.close()
+    sim_elapsed = time_module.perf_counter() - sim_start_time
+    print(f"\n  시뮬레이션 완료: 총 {sim_elapsed:.1f}초 ({sim_elapsed/60:.1f}분)")
 
     return pd.DataFrame(results)
 
