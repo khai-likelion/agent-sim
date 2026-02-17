@@ -1043,15 +1043,31 @@ def create_map_with_routes(visits_df, stores_df, agents, selected_date=None,
         '유동_가족모임형_2인': '#3498db', '유동_가족모임형_4인': '#2980b9',
     }
 
-    # 에이전트의 마지막 기록 좌표 사용 (시뮬레이션 결과 기반)
+    # 에이전트 위치: 시뮬레이션 좌표 우선, 없으면 랜덤 fallback
+    random.seed(42)
+    lat_min, lat_max = 37.552, 37.562
+    lon_min, lon_max = 126.895, 126.911
+
     agent_locations = {}
+    for agent in agents:
+        agent_name = agent['persona_id']
+        segment = agent['segment']
+        # 기본값: 랜덤 좌표
+        if '상주' in segment:
+            lat = random.uniform(lat_min + 0.003, lat_max - 0.002)
+            lon = random.uniform(lon_min + 0.003, lon_max - 0.005)
+        else:
+            lat = random.uniform(lat_min + 0.001, lat_max - 0.001)
+            lon = random.uniform(lon_min + 0.005, lon_max - 0.002)
+        agent_locations[agent_name] = (lat, lon)
+
+    # 시뮬레이션 결과가 있으면 실제 좌표로 덮어쓰기
     if results_df is not None and not results_df.empty:
         for agent in agents:
             agent_name = agent['persona_id']
             agent_rows = results_df[results_df['persona_id'] == agent_name]
             if agent_rows.empty:
                 continue
-            # 가장 최근 유효 좌표 사용
             valid = agent_rows.dropna(subset=['agent_lat', 'agent_lng'])
             if not valid.empty:
                 last = valid.iloc[-1]
