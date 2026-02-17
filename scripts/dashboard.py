@@ -16,7 +16,6 @@ from pathlib import Path
 from datetime import datetime, timedelta
 import folium
 from streamlit_folium import st_folium
-import pydeck as pdk
 import random
 import networkx as nx
 import osmnx as ox
@@ -87,82 +86,246 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# CSS 스타일
+# CSS 스타일 — Tailwind-inspired 모던 디자인 시스템
 st.markdown("""
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
+    /* ── 글로벌 리셋 + 폰트 ── */
+    .stApp {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background: #f8fafc;
+    }
+
+    /* ── 사이드바: 다크 슬레이트 ── */
+    section[data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #0f172a 0%, #1e293b 60%, #0f172a 100%);
+        border-right: 1px solid rgba(255,255,255,0.06);
+    }
+    section[data-testid="stSidebar"] * { color: #cbd5e1 !important; }
+    section[data-testid="stSidebar"] .stSelectbox label,
+    section[data-testid="stSidebar"] .stRadio label {
+        color: #64748b !important; font-size: 0.7rem; text-transform: uppercase;
+        letter-spacing: 0.08em; font-weight: 600;
+    }
+    section[data-testid="stSidebar"] h1,
+    section[data-testid="stSidebar"] h2,
+    section[data-testid="stSidebar"] h3 { color: #f1f5f9 !important; }
+
+    /* ── 메트릭 카드 ── */
     .metric-card {
-        background-color: #f8f9fa;
-        border-radius: 10px;
-        padding: 20px;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 20px 24px;
         text-align: center;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
+        transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
+        position: relative;
+        overflow: hidden;
+    }
+    .metric-card::before {
+        content: '';
+        position: absolute; top: 0; left: 0; right: 0; height: 3px;
+        background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
+    }
+    .metric-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px -5px rgba(59,130,246,0.12), 0 4px 10px rgba(0,0,0,0.04);
+        border-color: #bfdbfe;
     }
     .metric-value {
         font-size: 2.5rem;
-        font-weight: bold;
-        color: #1f77b4;
+        font-weight: 800;
+        background: linear-gradient(135deg, #1e40af, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        line-height: 1.1;
+        font-family: 'JetBrains Mono', monospace;
     }
     .metric-label {
-        font-size: 1rem;
-        color: #666;
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-top: 6px;
     }
-    .main-header {
-        font-size: 2rem;
-        font-weight: bold;
-        margin-bottom: 1rem;
-    }
+
+    /* ── 시간 디스플레이 ── */
     .time-display {
         font-size: 3rem;
         font-weight: 700;
         text-align: center;
-        font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace;
-        color: #1a1a2e;
+        font-family: 'JetBrains Mono', monospace;
+        color: #0f172a;
         padding: 12px 20px;
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        border-radius: 12px;
-        margin-bottom: 16px;
-        border: 1px solid #dee2e6;
-        letter-spacing: 2px;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        margin-bottom: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        letter-spacing: 6px;
+        position: relative;
     }
+    .time-display .time-period {
+        font-size: 0.9rem; color: #94a3b8; margin-left: 8px;
+        letter-spacing: 0.05em; font-weight: 500;
+    }
+
+    /* ── 플레이어 컨트롤 바 ── */
+    .player-bar {
+        display: flex; align-items: center; gap: 8px;
+        background: white; border: 1px solid #e2e8f0;
+        border-radius: 14px; padding: 10px 16px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        margin-bottom: 12px;
+    }
+
+    /* ── 상태 박스 ── */
     .status-box {
         padding: 16px 20px;
         border-radius: 12px;
         margin: 8px 0;
-        border: 1px solid rgba(0,0,0,0.06);
-        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        border: 1px solid transparent;
+        position: relative;
+        overflow: hidden;
     }
-    .status-box h4 { margin: 0 0 6px 0; font-size: 1.1rem; }
-    .status-box p { margin: 2px 0; font-size: 0.9rem; color: #444; }
+    .status-box::before {
+        content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 3px;
+    }
+    .status-box h4 {
+        margin: 0 0 6px 0; font-size: 0.95rem; font-weight: 600;
+        letter-spacing: -0.01em;
+    }
+    .status-box p {
+        margin: 2px 0; font-size: 0.82rem; color: #64748b; line-height: 1.6;
+    }
     .status-eating {
-        background: linear-gradient(135deg, #d4edda, #c3e6cb);
-        border-left: 4px solid #28a745;
+        background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+        border-color: #bbf7d0;
     }
+    .status-eating::before { background: #22c55e; }
     .status-cafe {
-        background: linear-gradient(135deg, #fff3cd, #ffeeba);
-        border-left: 4px solid #ffc107;
+        background: linear-gradient(135deg, #fffbeb, #fef3c7);
+        border-color: #fde68a;
     }
+    .status-cafe::before { background: #f59e0b; }
     .status-idle {
-        background: linear-gradient(135deg, #e9ecef, #dee2e6);
-        border-left: 4px solid #6c757d;
+        background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+        border-color: #e2e8f0;
     }
+    .status-idle::before { background: #94a3b8; }
     .status-moving {
-        background: linear-gradient(135deg, #cce5ff, #b8daff);
-        border-left: 4px solid #007bff;
+        background: linear-gradient(135deg, #eff6ff, #dbeafe);
+        border-color: #bfdbfe;
     }
+    .status-moving::before { background: #3b82f6; }
     .status-wander {
-        background: linear-gradient(135deg, #f8d7da, #f5c6cb);
-        border-left: 4px solid #dc3545;
+        background: linear-gradient(135deg, #fff7ed, #ffedd5);
+        border-color: #fed7aa;
     }
+    .status-wander::before { background: #f97316; }
     .status-park {
-        background: linear-gradient(135deg, #d1e7dd, #c3dfd1);
-        border-left: 4px solid #198754;
+        background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+        border-color: #a7f3d0;
     }
+    .status-park::before { background: #10b981; }
     .status-market {
-        background: linear-gradient(135deg, #e2d5f1, #d6c5e8);
-        border-left: 4px solid #6f42c1;
+        background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+        border-color: #c4b5fd;
     }
+    .status-market::before { background: #8b5cf6; }
     .status-work {
-        background: linear-gradient(135deg, #d1ecf1, #bee5eb);
-        border-left: 4px solid #17a2b8;
+        background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+        border-color: #bae6fd;
+    }
+    .status-work::before { background: #0ea5e9; }
+
+    /* ── 프로필 뱃지 ── */
+    .profile-badge {
+        display: inline-flex; align-items: center; gap: 6px;
+        background: #eff6ff; color: #1e40af;
+        padding: 5px 14px; border-radius: 20px;
+        font-size: 0.78rem; font-weight: 600;
+        border: 1px solid #bfdbfe;
+    }
+
+    /* ── 스케줄 타임라인 ── */
+    .schedule-item {
+        display: flex; align-items: center; gap: 12px;
+        padding: 10px 14px; border-radius: 10px;
+        margin: 3px 0; font-size: 0.85rem;
+        transition: all 0.15s cubic-bezier(0.4,0,0.2,1);
+        border: 1px solid transparent;
+    }
+    .schedule-item:hover { background: #f8fafc; border-color: #e2e8f0; }
+    .schedule-current {
+        background: #eff6ff !important; border: 1px solid #bfdbfe !important;
+        font-weight: 600;
+    }
+    .schedule-past { color: #cbd5e1; }
+    .schedule-future { color: #334155; }
+
+    /* ── 탭: 세그먼트 컨트롤 스타일 ── */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 2px; background: #f1f5f9; border-radius: 12px; padding: 4px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        border-radius: 10px; padding: 8px 20px;
+        font-weight: 500; font-size: 0.85rem;
+    }
+    .stTabs [aria-selected="true"] {
+        background: white !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important;
+    }
+
+    /* ── 헤더 타이포그래피 ── */
+    h1 { letter-spacing: -0.03em; font-weight: 800; color: #0f172a; }
+    h2 { letter-spacing: -0.02em; font-weight: 700; color: #1e293b; }
+    h3 { font-weight: 600; font-size: 1.1rem; color: #334155; letter-spacing: -0.01em; }
+
+    /* ── 버튼: 모던 필 + 아웃라인 ── */
+    .stButton > button {
+        border-radius: 10px; font-weight: 600; font-size: 0.82rem;
+        border: 1px solid #e2e8f0; background: white; color: #334155;
+        transition: all 0.15s cubic-bezier(0.4,0,0.2,1);
+        padding: 8px 16px;
+    }
+    .stButton > button:hover {
+        background: #f8fafc; border-color: #3b82f6;
+        color: #1e40af; box-shadow: 0 2px 8px rgba(59,130,246,0.12);
+    }
+    .stButton > button:active {
+        transform: scale(0.98); background: #eff6ff;
+    }
+
+    /* ── 슬라이더 커스텀 ── */
+    .stSlider > div > div > div > div {
+        background: linear-gradient(90deg, #3b82f6, #8b5cf6) !important;
+    }
+    .stSlider [data-baseweb="slider"] [role="slider"] {
+        background: white !important; border: 2px solid #3b82f6 !important;
+        box-shadow: 0 2px 6px rgba(59,130,246,0.25) !important;
+        width: 20px !important; height: 20px !important;
+    }
+
+    /* ── Folium 지도 컨테이너 ── */
+    iframe[title="streamlit_folium.st_folium"] {
+        border-radius: 14px !important;
+        border: 1px solid #e2e8f0 !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.06) !important;
+    }
+
+    /* ── 셀렉트박스 ── */
+    .stSelectbox > div > div {
+        border-radius: 10px !important;
+        border-color: #e2e8f0 !important;
+    }
+
+    /* ── expander ── */
+    .streamlit-expanderHeader {
+        font-weight: 600; font-size: 0.88rem;
+        border-radius: 10px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -721,7 +884,7 @@ def create_animated_agent_map(results_df, visits_df, stores_df, agent_name, agen
     else:
         center_lat, center_lng = 37.5565, 126.9029
 
-    m = folium.Map(location=[center_lat, center_lng], zoom_start=15)
+    m = folium.Map(location=[center_lat, center_lng], zoom_start=15, tiles='cartodbpositron')
 
     # 색상 설정
     SEGMENT_COLORS = {
@@ -889,7 +1052,7 @@ def create_agent_trajectory_map(results_df, visits_df, stores_df, agent_name, ag
     else:
         center_lat, center_lng = 37.5565, 126.9029
 
-    m = folium.Map(location=[center_lat, center_lng], zoom_start=15)
+    m = folium.Map(location=[center_lat, center_lng], zoom_start=15, tiles='cartodbpositron')
 
     # 세그먼트별 색상
     SEGMENT_COLORS = {
@@ -1033,7 +1196,7 @@ def create_map_with_routes(visits_df, stores_df, agents, selected_date=None,
                            results_df=None):
     """Folium 지도 생성 (에이전트 위치 & 방문 현황)"""
     center_lat, center_lon = 37.5565, 126.9029
-    m = folium.Map(location=[center_lat, center_lon], zoom_start=16)
+    m = folium.Map(location=[center_lat, center_lon], zoom_start=16, tiles='cartodbpositron')
 
     # 날짜 필터링
     if selected_date is not None:
@@ -1122,13 +1285,17 @@ def create_map_with_routes(visits_df, stores_df, agents, selected_date=None,
             count = visit_counts.get(store_name, 0)
 
             if count > 0:
+                # 방문 횟수에 비례한 크기 (최소 5, 최대 14)
+                r = min(14, max(5, 3 + count * 0.8))
                 folium.CircleMarker(
                     location=[lat, lon],
-                    radius=5,
-                    color='blue',
+                    radius=r,
+                    color='#3b82f6',
                     fill=True,
-                    fill_opacity=0.7,
-                    popup=f"{store_name}<br>방문: {count}회",
+                    fill_color='#3b82f6',
+                    fill_opacity=0.55,
+                    weight=1.5,
+                    popup=f"<b>{store_name}</b><br>방문 {count}회",
                     tooltip=f"{store_name}: {count}회"
                 ).add_to(m)
 
@@ -1142,7 +1309,7 @@ def main():
         if d.is_dir() and (d / "visit_log.csv").exists():
             sim_folders.append(d.name)
 
-    st.sidebar.title("시뮬레이션 결과")
+    st.sidebar.markdown("### SIMULATION")
     selected_sim = st.sidebar.selectbox(
         "결과 폴더", sim_folders, index=0,
         help="before/after 비교 시뮬레이션 결과를 선택하세요"
@@ -1154,8 +1321,8 @@ def main():
     cafe_stores = load_cafe_stores()
 
     # 사이드바 - 필터
-    st.sidebar.title("필터")
     st.sidebar.markdown("---")
+    st.sidebar.markdown("### FILTERS")
 
     # 날짜 선택
     if not visits_df.empty:
@@ -1186,7 +1353,7 @@ def main():
 
     # 매장 필터
     st.sidebar.markdown("---")
-    st.sidebar.subheader("매장 필터")
+    st.sidebar.markdown("### STORE")
 
     if not visits_df.empty:
         all_stores = ["전체"] + sorted(visits_df['visited_store'].unique())
@@ -1199,7 +1366,7 @@ def main():
 
     # 에이전트 선택 (개별 추적용)
     st.sidebar.markdown("---")
-    st.sidebar.subheader("🔍 에이전트 추적")
+    st.sidebar.markdown("### AGENT TRACKING")
 
     if agents and not results_df.empty:
         agent_names = ["전체"] + sorted([a['persona_id'] for a in agents])
@@ -1214,26 +1381,28 @@ def main():
 
     # 전체 진행 상황
     st.sidebar.markdown("---")
-    st.sidebar.subheader("전체 진행 상황")
+    st.sidebar.markdown("### OVERVIEW")
 
     if not results_df.empty:
         total_events = len(results_df)
         total_visits = len(visits_df)
-        st.sidebar.markdown(f"진행: **{total_events}** 건")
-        st.sidebar.markdown(f"방문: **{total_visits}** 건")
+        st.sidebar.markdown(f"이벤트 **{total_events:,}**건 · 방문 **{total_visits:,}**건")
 
-    # 메인 콘텐츠
-    st.markdown("## 🗺️ 망원동 에이전트 시뮬레이션 대시보드")
+    # 메인 콘텐츠 — 헤더
+    sim_label = f" — {sim_folder}" if sim_folder else ""
+    st.markdown(f"## 망원동 에이전트 시뮬레이션{sim_label}")
 
-    # 현황 카드
+    # 날짜/필터 컨텍스트
+    ctx_parts = []
     if selected_date:
-        st.markdown(f"### 📅 {selected_date} 현황")
+        ctx_parts.append(f"{selected_date}")
     else:
-        st.markdown("### 📅 전체 기간 현황")
-
+        ctx_parts.append("전체 기간")
     if store_filter != "전체":
-        st.markdown(f"**🔍 필터: {store_filter}**")
+        ctx_parts.append(f"{store_filter}")
+    st.caption(" · ".join(ctx_parts))
 
+    # 메트릭 카드
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
@@ -1241,34 +1410,34 @@ def main():
             active_agents = filtered_visits['persona_id'].nunique()
         else:
             active_agents = len(agents)
-        st.metric("활동에이전트", f"{active_agents}")
+        st.markdown(f'<div class="metric-card"><div class="metric-value">{active_agents}</div><div class="metric-label">에이전트</div></div>', unsafe_allow_html=True)
 
     with col2:
         total_visits = len(filtered_visits)
-        st.metric("총방문횟수", f"{total_visits}")
+        st.markdown(f'<div class="metric-card"><div class="metric-value">{total_visits:,}</div><div class="metric-label">총 방문</div></div>', unsafe_allow_html=True)
 
     with col3:
         if not filtered_visits.empty:
             unique_stores = filtered_visits['visited_store'].nunique()
         else:
             unique_stores = 0
-        st.metric("방문 업체수", f"{unique_stores}")
+        st.markdown(f'<div class="metric-card"><div class="metric-value">{unique_stores}</div><div class="metric-label">방문 업체</div></div>', unsafe_allow_html=True)
 
     with col4:
         if not filtered_results.empty and len(filtered_results) > 0:
             conversion_rate = len(filtered_visits) / len(filtered_results) * 100
         else:
             conversion_rate = 0
-        st.metric("전환율", f"{conversion_rate:.1f}%")
+        st.markdown(f'<div class="metric-card"><div class="metric-value">{conversion_rate:.1f}%</div><div class="metric-label">전환율</div></div>', unsafe_allow_html=True)
 
-    st.markdown("---")
+    st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 
     # ==================== 전체 보기: 방문 현황 지도 + 매장 평점 ====================
     if selected_agent == "전체":
         col_map, col_ratings = st.columns([2, 1])
 
         with col_map:
-            st.markdown("### 🗺️ 방문 현황 지도")
+            st.markdown("### 방문 현황")
             if not filtered_visits.empty and not stores_df.empty:
                 m = create_map_with_routes(filtered_visits, stores_df, agents,
                                            selected_date=selected_date,
@@ -1355,17 +1524,17 @@ def main():
                 )
 
                 # 컨트롤 바: ⏮ ▶/⏸ ⏭ | 배속
-                btn_cols = st.columns([1, 1, 1, 3])
-                if btn_cols[0].button("⏮ 처음", key="anim_start", use_container_width=True):
+                ctrl_cols = st.columns([1, 1, 1, 4])
+                if ctrl_cols[0].button("⏮", key="anim_start", use_container_width=True, help="처음으로"):
                     st.session_state.current_hour = 6.0
                     st.session_state.anim_playing = False
-                play_label = "⏸ 정지" if st.session_state.anim_playing else "▶ 재생"
-                if btn_cols[1].button(play_label, key="anim_play", use_container_width=True):
+                play_icon = "⏸" if st.session_state.anim_playing else "▶"
+                if ctrl_cols[1].button(play_icon, key="anim_play", use_container_width=True, help="재생/정지"):
                     st.session_state.anim_playing = not st.session_state.anim_playing
-                if btn_cols[2].button("⏭ 끝", key="anim_end", use_container_width=True):
+                if ctrl_cols[2].button("⏭", key="anim_end", use_container_width=True, help="끝으로"):
                     st.session_state.current_hour = 24.0
                     st.session_state.anim_playing = False
-                speed = btn_cols[3].slider("배속", 1, 60, 10, 1, key="anim_speed", label_visibility="collapsed")
+                speed = ctrl_cols[3].slider("배속", 1, 60, 10, 1, key="anim_speed", label_visibility="collapsed")
 
                 # 자동 재생: 슬라이더 값을 직접 업데이트
                 if st.session_state.anim_playing:
@@ -1392,10 +1561,22 @@ def main():
                 remaining = (current_hour - hours) * 60
                 minutes = int(remaining)
                 seconds = int((remaining - minutes) * 60)
-                time_period = "오전" if hours < 12 else "오후"
+                time_period = "AM" if hours < 12 else "PM"
+                # 현재 타임슬롯 판별
+                if current_hour < 10:
+                    slot_label = "MORNING"
+                elif current_hour < 15:
+                    slot_label = "LUNCH"
+                elif current_hour < 20:
+                    slot_label = "DINNER"
+                else:
+                    slot_label = "LATE NIGHT"
                 st.markdown(
-                    f'<div class="time-display">{hours:02d}:{minutes:02d}:{seconds:02d}'
-                    f'<span style="font-size:1.2rem; color:#888; margin-left:10px;">{time_period}</span></div>',
+                    f'<div class="time-display">'
+                    f'{hours:02d}<span style="opacity:0.4">:</span>{minutes:02d}<span style="opacity:0.4">:</span>{seconds:02d}'
+                    f'<span class="time-period">{time_period}</span>'
+                    f'<div style="font-size:0.65rem;color:#94a3b8;letter-spacing:0.15em;margin-top:2px;font-weight:600">{slot_label}</div>'
+                    f'</div>',
                     unsafe_allow_html=True
                 )
 
@@ -1461,6 +1642,7 @@ def main():
                                             "lat": s_info['lat'], "lng": s_info['lng'],
                                             "name": row['visited_store'],
                                             "slot": row['time_slot'],
+                                            "category": row.get('visited_category', s_info.get('category', '')),
                                         })
                                         all_lats.append(s_info['lat'])
                                         all_lngs.append(s_info['lng'])
@@ -1481,9 +1663,25 @@ def main():
                         else:
                             zoom = 13
 
-                        m = folium.Map(location=[center_lat, center_lng], zoom_start=zoom, tiles='cartodbpositron')
+                        m = folium.Map(
+                            location=[center_lat, center_lng], zoom_start=zoom,
+                            tiles='cartodbpositron',
+                            control_scale=True,
+                        )
 
-                        # 랜드마크
+                        # 경로 색상 매핑
+                        route_colors = {
+                            "eating": "#ef4444", "cafe": "#f59e0b", "wander": "#f97316",
+                            "park": "#10b981", "market": "#8b5cf6", "home": "#6b7280",
+                            "work": "#0ea5e9", "moving": "#3b82f6", "idle": "#94a3b8",
+                        }
+                        route_color = "#3b82f6"
+                        for key, col in route_colors.items():
+                            if key in status:
+                                route_color = col
+                                break
+
+                        # 랜드마크 (미니멀 핀)
                         lm_icons = {"한강공원": "🌊", "망원시장": "🏪", "회사": "🏢"}
                         for k, v in LANDMARKS.items():
                             icon = lm_icons.get(k)
@@ -1491,25 +1689,19 @@ def main():
                                 continue
                             folium.Marker(
                                 [v["lat"], v["lng"]],
-                                icon=folium.DivIcon(html=f'<div style="font-size:16px;text-align:center">{icon}<br><span style="font-size:9px;color:#666">{v["name"]}</span></div>', icon_size=(60, 36), icon_anchor=(30, 18)),
+                                icon=folium.DivIcon(
+                                    html=f'<div style="display:flex;flex-direction:column;align-items:center;gap:1px">'
+                                         f'<span style="font-size:14px;filter:grayscale(0.3)">{icon}</span>'
+                                         f'<span style="font-size:8px;color:#94a3b8;font-weight:500;font-family:Inter,sans-serif;white-space:nowrap">{v["name"]}</span></div>',
+                                    icon_size=(70, 32), icon_anchor=(35, 16)),
                             ).add_to(m)
 
-                        # 이동 경로
+                        # 이동 경로 (그라데이션 느낌)
                         if route_coords and len(route_coords) > 1:
-                            color = {"wander": "red", "park": "green", "market": "purple"}.get(status, "blue") if "park" not in status else "green"
-                            if "park" in status:
-                                color = "green"
-                            elif status == "wander":
-                                color = "red"
-                            elif "market" in status:
-                                color = "purple"
-                            else:
-                                color = "blue"
+                            # 전체 예정 경로 (점선)
+                            folium.PolyLine(route_coords, color=route_color, weight=2, opacity=0.2, dash_array='8 6').add_to(m)
 
-                            # 전체 예정 경로 (연하게)
-                            folium.PolyLine(route_coords, color=color, weight=2, opacity=0.3, dash_array='6').add_to(m)
-
-                            # 이동 완료 구간
+                            # 이동 완료 구간 (실선)
                             traveled = [route_coords[0]]
                             for i in range(1, len(route_coords)):
                                 coord = route_coords[i]
@@ -1530,28 +1722,49 @@ def main():
                                 if ((last[0] - agent_lat) ** 2 + (last[1] - agent_lng) ** 2) ** 0.5 > 0.00001:
                                     traveled.append((agent_lat, agent_lng))
                             if len(traveled) > 1:
-                                folium.PolyLine(traveled, color=color, weight=4, opacity=0.9).add_to(m)
+                                folium.PolyLine(traveled, color=route_color, weight=3.5, opacity=0.85).add_to(m)
 
-                        # 방문 매장 마커 (이모지)
+                        # 방문 매장 마커 (깔끔한 핀 + 라벨)
+                        store_cat_icons = {"한식": "🍚", "양식": "🍝", "일식": "🍣", "중식": "🥟",
+                                           "커피": "☕", "호프": "🍺", "치킨": "🍗", "제과": "🥐", "패스트": "🍔"}
                         for vs in visited_stores_list:
+                            s_icon = "📍"
+                            cat = vs.get("category", "")
+                            for key, ico in store_cat_icons.items():
+                                if key in cat:
+                                    s_icon = ico
+                                    break
                             folium.Marker(
                                 [vs["lat"], vs["lng"]],
                                 icon=folium.DivIcon(
-                                    html=f'<div style="font-size:20px;text-align:center">🍴<br><span style="font-size:10px;color:#c0392b;font-weight:bold;white-space:nowrap">{vs["name"]}</span></div>',
-                                    icon_size=(120, 40), icon_anchor=(60, 20)),
+                                    html=f'<div style="display:flex;flex-direction:column;align-items:center;gap:0">'
+                                         f'<div style="width:28px;height:28px;border-radius:50%;background:white;border:2px solid #ef4444;'
+                                         f'display:flex;align-items:center;justify-content:center;font-size:14px;'
+                                         f'box-shadow:0 2px 8px rgba(239,68,68,0.3)">{s_icon}</div>'
+                                         f'<span style="font-size:9px;color:#1e293b;font-weight:600;font-family:Inter,sans-serif;'
+                                         f'white-space:nowrap;background:rgba(255,255,255,0.9);padding:1px 5px;border-radius:4px;'
+                                         f'margin-top:2px;box-shadow:0 1px 2px rgba(0,0,0,0.08)">{vs["name"]}</span></div>',
+                                    icon_size=(100, 46), icon_anchor=(50, 23)),
                                 tooltip=f'{vs["name"]} ({vs["slot"]})',
                             ).add_to(m)
 
-                        # 에이전트 마커 (큰 이모지)
+                        # 에이전트 마커 (원형 아바타 + 상태 이모지)
+                        agent_color = route_color
                         folium.Marker(
                             [agent_lat, agent_lng],
                             icon=folium.DivIcon(
-                                html=f'<div style="font-size:28px;text-align:center;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3))">{matched["emoji"]}</div>',
-                                icon_size=(40, 40), icon_anchor=(20, 20)),
+                                html=f'<div style="position:relative;display:flex;align-items:center;justify-content:center">'
+                                     f'<div style="width:36px;height:36px;border-radius:50%;background:{agent_color};'
+                                     f'display:flex;align-items:center;justify-content:center;font-size:18px;'
+                                     f'box-shadow:0 3px 12px {agent_color}55,0 0 0 3px white;'
+                                     f'animation:pulse 2s infinite">{matched["emoji"]}</div></div>'
+                                     f'<style>@keyframes pulse{{0%,100%{{box-shadow:0 3px 12px {agent_color}55,0 0 0 3px white}}'
+                                     f'50%{{box-shadow:0 3px 16px {agent_color}88,0 0 0 5px white}}}}</style>',
+                                icon_size=(42, 42), icon_anchor=(21, 21)),
                             tooltip=f'{matched["emoji"]} {matched["label"]}',
                         ).add_to(m)
 
-                        st_folium(m, width=700, height=500, key="anim_map")
+                        st_folium(m, width=None, height=480, key="anim_map", returned_objects=[])
                     else:
                         st.info("이 시간에 에이전트 위치 데이터가 없습니다.")
 
@@ -1592,25 +1805,42 @@ def main():
                         }
                         st.info(f"**현재 행동:** {action_names.get(step5_action, step5_action)}")
 
-                    # 오늘 스케줄
-                    st.markdown("### 📅 오늘의 스케줄")
+                    # 오늘 스케줄 (타임라인 스타일)
+                    st.markdown("### 오늘의 타임라인")
                     day_data_anim = results_df[
                         (results_df['persona_id'] == selected_agent) &
                         (results_df['timestamp'].dt.date == anim_selected_date)
                     ].sort_values('timestamp')
 
+                    slot_icons = {"아침": "🌅", "점심": "☀️", "저녁": "🌆", "야식": "🌙"}
                     for _, row in day_data_anim.iterrows():
                         slot = row['time_slot']
                         slot_hour = TIMESLOT_HOURS.get(slot, 0)
                         is_past = slot_hour + 2 <= current_hour
                         is_current = slot_hour <= current_hour < slot_hour + 2
+                        s_icon = slot_icons.get(slot, "⏰")
+
+                        if is_current:
+                            css_cls = "schedule-current"
+                        elif is_past:
+                            css_cls = "schedule-past"
+                        else:
+                            css_cls = "schedule-future"
 
                         if row['decision'] == 'visit':
-                            icon = "▶️" if is_current else ("✅" if is_past else "⏳")
-                            st.markdown(f"**{icon} {slot} ({slot_hour}:00)** - {row['visited_store']}")
+                            indicator = "●" if is_current else ("✓" if is_past else "○")
+                            label = row['visited_store']
                         else:
-                            icon = "⬜" if is_past else "⏳"
-                            st.markdown(f"**{icon} {slot} ({slot_hour}:00)** - 외부 식사")
+                            indicator = "●" if is_current else ("–" if is_past else "○")
+                            label = "외출 안 함"
+
+                        st.markdown(
+                            f'<div class="schedule-item {css_cls}">'
+                            f'<span style="font-size:0.75rem;width:16px;text-align:center">{indicator}</span>'
+                            f'<span style="font-size:0.75rem;color:#94a3b8;min-width:32px">{slot_hour}:00</span>'
+                            f'{s_icon} <span style="font-weight:500">{label}</span></div>',
+                            unsafe_allow_html=True
+                        )
 
                 # 자동 재생: sleep 후 전체 rerun (시간 증가는 상단에서 처리)
                 if st.session_state.anim_playing:
