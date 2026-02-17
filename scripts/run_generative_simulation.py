@@ -102,13 +102,23 @@ def estimate_simulation(agent_count: int, days: int = 7, time_slots: int = 4,
 
     total_llm_calls = step1_calls + step2_calls + step3_calls + step4_calls
 
-    # GPT-4o-mini 비용 계산 (2024년 기준)
-    # Input: $0.15 / 1M tokens, Output: $0.6 / 1M tokens
-    # 평균 프롬프트 ~500 tokens, 응답 ~100 tokens
+    # LLM 비용 계산 (provider별 가격)
+    # Gemini 2.0 Flash: 무료 또는 매우 저렴
+    # GPT-4o-mini: Input $0.15/1M, Output $0.60/1M
     avg_input_tokens = 500
     avg_output_tokens = 100
-    input_cost_per_million = 0.15
-    output_cost_per_million = 0.60
+
+    # 설정에서 provider 확인
+    from config import get_settings
+    llm_settings = get_settings().llm
+    if llm_settings.provider == "gemini":
+        # Gemini 2.0 Flash는 무료 tier 또는 매우 저렴
+        input_cost_per_million = 0.0  # 무료 tier
+        output_cost_per_million = 0.0
+    else:
+        # OpenAI GPT-4o-mini 기준
+        input_cost_per_million = 0.15
+        output_cost_per_million = 0.60
 
     total_input_tokens = total_llm_calls * avg_input_tokens
     total_output_tokens = total_llm_calls * avg_output_tokens
@@ -162,11 +172,19 @@ def print_estimates(estimates: Dict[str, Any]):
     print(f"  Step 4 (평가): {calls['step4']:,}회")
     print(f"  총 호출: {calls['total']:,}회")
     print()
+    # LLM 모델 정보
+    from config import get_settings
+    llm_settings = get_settings().llm
+    model_name = f"{llm_settings.provider.upper()}/{llm_settings.model_name}"
+
     cost = estimates["estimated_cost_usd"]
-    print(f"예상 비용 (GPT-4o-mini):")
-    print(f"  Input: ${cost['input']:.4f}")
-    print(f"  Output: ${cost['output']:.4f}")
-    print(f"  Total: ${cost['total']:.4f} (약 {cost['total'] * 1400:.0f}원)")
+    print(f"예상 비용 ({model_name}):")
+    if llm_settings.provider == "gemini":
+        print(f"  Gemini 무료 tier 사용 시: $0.00")
+    else:
+        print(f"  Input: ${cost['input']:.4f}")
+        print(f"  Output: ${cost['output']:.4f}")
+        print(f"  Total: ${cost['total']:.4f} (약 {cost['total'] * 1400:.0f}원)")
     print()
     print(f"예상 소요 시간: 약 {estimates['estimated_time_minutes']:.1f}분")
     print("=" * 60)
@@ -329,7 +347,7 @@ async def agent_task(
         tags_str = " ".join(f"#{t}" for t in tags) if tags else ""
         reason = result.get("reason", "")
         reason_short = reason[:40] + "..." if len(reason) > 40 else reason
-        print(f"  [A{agent.id:>3}] {agent.name[:5]:5} | {slot_name} | "
+        print(f"  [{agent.persona_id}] {slot_name} | "
               f"방문: {store}({category}) | 별점:{rating}/5 {tags_str}")
         if comment:
             print(f"         리뷰: {comment[:60]}{'...' if len(comment)>60 else ''}")
@@ -337,9 +355,9 @@ async def agent_task(
         step2 = steps.get("step2", {})
         reason = result.get("reason", step2.get("reason", ""))
         reason_short = reason[:40] + "..." if len(reason) > 40 else reason
-        print(f"  [A{agent.id:>3}] {agent.name[:5]:5} | {slot_name} | 외출안함 | {reason_short}")
+        print(f"  [{agent.persona_id}] {slot_name} | 외출안함 | {reason_short}")
     elif decision == "llm_failed":
-        print(f"  [A{agent.id:>3}] {agent.name[:5]:5} | {slot_name} | LLM오류")
+        print(f"  [{agent.persona_id}] {slot_name} | LLM오류")
 
     return {
         "agent": agent,
@@ -354,7 +372,7 @@ async def run_simulation(
     global_store: GlobalStore,
     settings,
     days: int = 7,
-    target_store: str = "류진",
+    target_store: str = "정드린치킨",
     max_concurrent_llm_calls: int = 10,
 ) -> pd.DataFrame:
     """
@@ -603,8 +621,8 @@ async def async_main():
     parser.add_argument(
         "--agents",
         type=int,
-        default=96,
-        help="생성할 에이전트 수 (기본: 96, 최대: 99)",
+        default=160,
+        help="생성할 에이전트 수 (기본: 160, 최대: 160)",
     )
     parser.add_argument(
         "--days",
@@ -615,8 +633,8 @@ async def async_main():
     parser.add_argument(
         "--target-store",
         type=str,
-        default="류진",
-        help="추적할 타겟 매장 이름 (기본: 류진)",
+        default="정드린치킨",
+        help="추적할 타겟 매장 이름 (기본: 정드린치킨)",
     )
     parser.add_argument(
         "--dry-run",
