@@ -135,7 +135,7 @@ def compare_results(before_visit_df, after_visit_df, target_store: str):
 
 async def main():
     parser = argparse.ArgumentParser(description="전략 전/후 비교 시뮬레이션")
-    parser.add_argument("--agents", type=int, default=96, help="에이전트 수 (기본: 96)")
+    parser.add_argument("--agents", type=int, default=160, help="에이전트 수 (기본: 160)")
     parser.add_argument("--days", type=int, default=7, help="시뮬레이션 기간 (기본: 7일)")
     parser.add_argument("--target-store", type=str, default="돼지야", help="분석 대상 매장")
     parser.add_argument("--report", type=str,
@@ -199,7 +199,7 @@ async def main():
     results_before = await run_simulation(
         agents_before, global_store_before, settings, args.days,
         target_store=args.target_store,
-        max_concurrent_llm_calls=5,
+        max_concurrent_llm_calls=20,
     )
 
     before_visit_df = save_results_to(
@@ -251,7 +251,7 @@ async def main():
     results_after = await run_simulation(
         agents_after, global_store_after, settings, args.days,
         target_store=args.target_store,
-        max_concurrent_llm_calls=5,
+        max_concurrent_llm_calls=20,
     )
 
     after_visit_df = save_results_to(
