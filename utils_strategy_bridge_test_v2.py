@@ -8,11 +8,18 @@ X-Report 전략을 기존 store JSON에 반영하여 새로운 상태 생성
 """
 
 import os
+import sys
+import io
 import json
 import re
 import copy
 import asyncio
 from difflib import SequenceMatcher
+
+# Windows cp949 이모지 인코딩 에러 방지
+if sys.stdout and sys.stdout.encoding and sys.stdout.encoding.lower() != 'utf-8':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 from typing import Dict, List, Any, Optional, Tuple
 from openai import AsyncOpenAI
 from dotenv import load_dotenv
