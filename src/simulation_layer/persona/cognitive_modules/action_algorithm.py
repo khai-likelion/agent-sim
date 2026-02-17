@@ -222,12 +222,19 @@ class ActionAlgorithm:
             }
             reason = reasons.get(time_slot, "외식")
         else:
-            reasons_skip = [
-                "배가 안 고픔",
-                "이전 식사로 충분",
-                "집에서 해결",
-                "이 시간에는 안 먹음",
-            ]
+            if time_slot == "아침" or meals_today == 0:
+                reasons_skip = [
+                    "배가 안 고픔",
+                    "집에서 해결",
+                    "이 시간에는 안 먹음",
+                ]
+            else:
+                reasons_skip = [
+                    "배가 안 고픔",
+                    "이전 식사로 충분",
+                    "집에서 해결",
+                    "이 시간에는 안 먹음",
+                ]
             reason = random.choice(reasons_skip)
 
         return {"eat_in_mangwon": eat_out, "reason": reason}
