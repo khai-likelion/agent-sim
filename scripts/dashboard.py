@@ -221,16 +221,25 @@ def load_simulation_data():
             try:
                 with open(json_file, 'r', encoding='utf-8') as f:
                     data = json.load(f)
-                    if data and len(data) > 0:
+                    # dict 형식 (신규) 또는 list 형식 (구형) 모두 지원
+                    if isinstance(data, dict):
+                        store = data
+                    elif isinstance(data, list) and len(data) > 0:
                         store = data[0]
-                        stores_list.append({
-                            '장소명': store.get('store_name', ''),
-                            'x': store.get('x', 0),
-                            'y': store.get('y', 0),
-                            '카테고리': store.get('category', ''),
-                            'address': store.get('address', ''),
-                            'store_id': store.get('store_id', '')
-                        })
+                    else:
+                        continue
+                    # 좌표: 최상위 x/y 또는 metadata.x/y
+                    meta = store.get('metadata', {}) or {}
+                    x = store.get('x') or meta.get('x') or 0
+                    y = store.get('y') or meta.get('y') or 0
+                    stores_list.append({
+                        '장소명': store.get('store_name', ''),
+                        'x': float(x) if x else 0,
+                        'y': float(y) if y else 0,
+                        '카테고리': store.get('category', '') or meta.get('sector', ''),
+                        'address': store.get('address', '') or meta.get('area', ''),
+                        'store_id': store.get('store_id', '')
+                    })
             except Exception:
                 continue
         stores_df = pd.DataFrame(stores_list) if stores_list else pd.DataFrame()
