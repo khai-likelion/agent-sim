@@ -5,16 +5,19 @@
 | # | 항목 | 현재 방식 | 개선안 | 최종 채택안 |
 |---|------|----------|--------|------------|
 | 1 | 리뷰 멘트 다양성 | Step4 프롬프트가 "한줄 평가"만 지시 → 전원 동일한 키워드 재조합 | 페르소나 말투 지정 + 관점 분산 + 구체적 경험 유도 | **완료** (tone_instruction + focus_aspect + comment 규칙) |
-| 2 | 4끼 전부 외식 | 매 타임슬롯마다 Step1 호출, memory_context에 당일 식사 이력 없음 | A. Step1 확률기반 전환 + B. memory_context에 당일 식사 이력 추가 | **A+B 완료** |
+| 2 | 4끼 전부 외식 | Step1이 확률 기반(BASE_EATING_OUT_PROB) + memory_context에 당일 식사 이력 없음 | Step1 프롬프트 선택지 강화 + memory_context에 당일 식사 이력 추가 | **완료** (프롬프트 수정 + 당일 식사 이력 memory_context 통합) |
 | 3 | 유동 초기위치/시작시간 | FLOATING_LOCATIONS → home_location 저장, 아침부터 전원 활동 | entry_point 분리 + entry_time_slot 도입 + "집에서_쉬기" → "망원동 떠나기" | **완료** |
-| 4 | LLM 모델 선택 | GPT-4o-mini (고정) | Gemini 2.0 Flash (33% 저렴, 성능 우위, 속도 40% 빠름) | 미정 |
-| 5 | 유동인구 교체 비율 | 매일 113명 중 53명 랜덤 샘플링 (고정) | 요일별 차등(평일 40/주말 70) + 재방문율 30% | 미정 |
-| 6 | 상주인구 초기위치 | 주거유형별 3좌표 고정 (아파트3, 빌라3, 주택3) | 고정 좌표를 중심점으로 반경 100~200m 랜덤 오프셋 | 미정 |
-| 7 | 시뮬레이션 속도 | 순차 호출 (호출당 1.5s, 7일 약 2시간 51분) | asyncio 병렬 5~10개 동시 호출 (7일 약 21~34분) | 미정 |
-| 8 | 유동 매장 선택 최적화 | 720개 전체 매장을 LLM에 전달 → positional bias + 토큰 낭비 | 검색엔진 랭킹(exploit 10 + explore 5) → 15개만 LLM에 전달 | 미정 |
-| 9 | 매장/에이전트 좌표 불일치 | 대시보드 지도에서 좌표가 남동쪽으로 밀림 (상주가 공원에, 유동이 망원 바깥에 표시) | 하드코딩 좌표를 실제 지도와 대조 검증 + OSM 중심점 보정 | 미정 |
+| 4 | LLM 모델 선택 | GPT-4o-mini (고정) | Gemini 2.0 Flash (33% 저렴, 성능 우위, 속도 25% 빠름) | **완료** (provider 라우팅 + Gemini 전환) |
+| 5 | 유동인구 교체 비율 | 매일 113명 중 53명 랜덤 샘플링 (고정) | 요일별 차등(평일 51/주말 58, 인구DB 비율 1.14배) + 재방문율 10% | **완료** |
+| 6 | 상주인구 초기위치 | 주거유형별 3좌표 고정 (아파트3, 빌라3, 주택3) | 고정 좌표를 중심점으로 반경 150m 랜덤 오프셋 | **완료** |
+| 7 | 시뮬레이션 속도 | 순차 호출 (호출당 1.5s, 7일 약 2시간 51분) | asyncio 병렬 호출 (Semaphore 동시 제한) | **완료** (asyncio.gather + Semaphore) |
+| 8 | 유동 매장 선택 최적화 | 720개 전체 매장을 LLM에 전달 → positional bias + 롱테일 매장 0방문 | 카테고리 선필터 + candidate_stores + 리뷰 캡/가중치 완화 + Softmax 가중 샘플링(T=0.5) | **완료** (5차 개선: 돼지야 후보 포함율 0.7%→10.8%, 인기/롱테일 갭 8.8x→3.8x) |
+| 9 | 매장/에이전트 좌표 불일치 | 개요 지도에서 에이전트 위치를 `random.uniform()`으로 생성 → 비현실적 위치 표시 | `results_df`의 실제 시뮬레이션 좌표(`agent_lat`/`agent_lng`) 사용 | **완료** |
 | 10 | 과거 경험 기반 의사결정 | Step2는 recent_categories만, Step3는 recent_stores만 → 평점/코멘트 없음 | memory_context 통합 (오늘 식사 + 과거 평점 + 코멘트) + 유도 문구 | **완료** |
 | 11 | Step5 직장인 선택지 구분 | 상주/유동만 분리, 직장인(1인·2인·4인 생베 겸직)은 별도 구분 없음 | 직장인 세그먼트 판별 + Step5 선택지 3분류 (상주/유동/직장인) | 미정 |
+| 12 | 아침 "이전 식사로 충분" 버그 | Step1 외출안함 사유가 아침에도 "이전 식사로 충분" 출력 | 아침/첫끼일 때는 해당 사유 제외 | **완료** |
+| 13 | 상주 에이전트 "적합한 매장 없음" 대량 발생 | 상주(R*) 에이전트 점심에 전원 "적합한 매장 없음"으로 외출 실패 — JSON에 x,y 좌표/category 누락 → 반경검색 결과 0개 | JSON에 stores.csv 좌표(metadata.x,y) + category 직접 삽입, stores.csv 런타임 의존성 제거 | **완료** |
+| 14 | 카페/주점 방문 불가 | destination_type이 항상 "식당" 고정 → Step2에 카페/주점 카테고리가 전달 안 됨 → 아침 커피, 저녁 술자리 선택 불가 | 시간대별 카테고리 풀 확장 (아침: +카페, 저녁/야식: +주점) → LLM이 페르소나 기반으로 자연 선택 | 미정 |
 
 ---
 
@@ -31,51 +34,72 @@
 2. 매장 정보가 동일 — 모든 에이전트가 같은 키워드를 보고 같은 포인트 언급
 3. 리뷰 다양성 유도 없음 — "한줄 평가"라는 짧은 지시가 전부
 
-### 개선안
-- **말투 지정**: "당신의 세대와 성격에 맞는 말투로 작성 (Z세대면 ~ㅋㅋ, X세대면 정중체)"
-- **관점 분산**: 랜덤으로 관점 하나를 넘김 (맛/가격/분위기/서비스/메뉴구성 중)
-- **구체적 경험 유도**: "구체적으로 무엇을 먹었고 어떤 점이 좋았/아쉬웠는지"
-- **리뷰 확률 도입**: 페르소나별 리뷰 작성 확률 차등 (Z세대 높게, X세대 낮게)
-
 ### 최종 채택안
-미정
+**완료** — 세대별 말투 지정 + 평가 관점 랜덤 분산 + 구체적 경험 유도
+
+구현 내용:
+1. **말투 지정 (`tone_instruction`)**: 세대별 차별화
+   - Z세대: "존나, 개꿀맛, ㅋ, 이모티콘 등 친구한테 말하듯이 솔직하고 짧게"
+   - Y세대(밀레니얼): "적당히 트렌디하면서도 정보성 있게"
+   - X세대: "점잖으면서도 꼼꼼하게 분석하듯이"
+   - S세대(시니어): "구체적이고 진중하게"
+2. **평가 관점 분산 (`focus_aspect`)**: 맛/퀄리티, 가성비, 매장 분위기/인테리어, 직원 서비스/친절도, 매장 청결/위생, 특색있는 메뉴 중 랜덤 1개 선택
+3. **comment 작성 규칙**: 키워드 나열 금지, 구체적 상황/감정 유도, 예시 3개 제공
+4. **평가 항목 개편**: 맛/가성비/분위기 3개 → 종합 만족도(rating) 1개 + 주요 장점 태그(selected_tags) 0~2개
+
+### 변경 파일
+- `src/ai_layer/prompts/step4_evaluate.txt`: 프롬프트 전면 개편 (tone_instruction, focus_aspect, comment 규칙, rating 단일화)
+- `src/simulation_layer/persona/cognitive_modules/action_algorithm.py`: Step4 호출 시 세대별 tone_instruction 생성 + focus_aspects 랜덤 선택
 
 ---
 
 ## 2. 4끼 전부 외식
 
 ### 현재 방식
-- **파일**: `src/ai_layer/prompts/step1_destination.txt`, `scripts/run_generative_simulation.py`
-- 매 타임슬롯(아침/점심/저녁/야식)마다 무조건 Step1 LLM 호출
-- Step1 프롬프트가 "식사를 어디서 할지"만 물음 → "안 먹는다" 선택지가 약함
-- `memory_context`에 당일 식사 이력이 없어서 LLM이 "이미 몇 끼 먹었는지" 모름
-- **결과**: 상주든 유동이든 4끼 모두 외식하는 비현실적 패턴
+- **파일**: `src/simulation_layer/persona/cognitive_modules/action_algorithm.py` (Step1)
+- Step1이 **확률 기반**으로 동작 (`BASE_EATING_OUT_PROB`: 아침 40%, 점심 70%, 저녁 60%, 야식 20%)
+- 식사 횟수 보정: 2끼→확률 절반, 3끼 이상→확률 10%로 감소, 주말 15% 보너스
+- memory_context에 당일 식사 이력이 없어서 LLM(Step2/Step3)이 "이미 몇 끼 먹었는지" 모름
+- **결과**: 확률 보정만으로는 4끼 연속 외식이 여전히 발생, LLM이 이전 식사를 고려하지 못함
 
 ### 개선안 (2가지 병행)
 
-**A. Step1 프롬프트 수정** (완료)
+**A. Step1 프롬프트 선택지 강화** (완료)
+- "안 먹는다" 선택지를 명확하게 3가지로 분리
+- 현실적 판단 유도문 추가 ("대부분의 사람은 하루 2~3끼")
+- 시간대별 외식 경향 참고 수치 제공
+
 ```
 질문: 이 시간대에 외식을 할지 결정하세요.
-- 망원동 내 매장에서 식사한다
-- 이 시간대에는 먹지 않는다 (배가 안 고픔, 이전 식사로 충분, 다이어트 중 등)
-- 망원동 밖에서 해결한다 (집밥, 편의점, 배달 등)
+1. 망원동 내 매장에서 식사한다
+2. 이 시간대에는 먹지 않는다 (배가 안 고픔, 이전 식사로 충분, 다이어트 중 등)
+3. 망원동 밖에서 해결한다 (집밥, 편의점, 배달 등)
 
-현실적으로 판단하세요. 대부분의 사람은 하루 2~3끼를 먹고, 4끼를 모두 외식하는 경우는 극히 드뭅니다.
+시간대별 외식 경향: 아침(~40%), 점심(~70%), 저녁(~60%), 야식(~20%)
 ```
 
-**B. memory_context에 당일 식사 이력 추가** (필요)
-- `run_generative_simulation.py`에서 에이전트별 당일 식사 횟수 추적
-- Step1 호출 시 memory_context에 포함:
+**B. memory_context에 당일 식사 이력 추가** (완료)
+- `agent.get_meals_today(current_date)`로 당일 식사 횟수/매장 추적
+- Step1 호출 시 `memory_context`에 오늘 식사 기록 포함
+- Step2/Step3에도 동일한 `memory_context` 전달 → LLM이 이전 식사를 고려하여 업종/매장 선택
+
 ```
-오늘의 식사 기록:
-- 아침(07:00): 망원동 OO식당에서 식사함
-- 점심(12:00): 아직 안 먹음
-(현재 오늘 1끼 외식 완료)
+오늘의 식사 기록 (현재 1끼 외식 완료):
+  - 12:00 류진 (한식)
+
+당신의 과거 경험:
+  - 류진 (한식): 좋음 → "국물이 진해서 좋았음"
 ```
-- 프롬프트만으로는 불충분 — LLM이 이전 타임슬롯 결정을 모르기 때문
 
 ### 최종 채택안
-미정
+**완료** — Step1 프롬프트 선택지 강화 + memory_context 당일 식사 이력 통합
+
+> 참고: Step1 자체는 확률 기반(`BASE_EATING_OUT_PROB`)이 유지되지만, 프롬프트를 통해 LLM이 참고할 수 있는 시간대별 경향과 현실적 판단 유도문을 추가했고, Step2/Step3에서 memory_context로 당일 식사 이력을 전달하여 전체적으로 4끼 외식을 억제함.
+
+### 변경 파일
+- `src/ai_layer/prompts/step1_destination.txt`: 선택지 3가지 분리 + 현실적 판단 유도문 + 시간대별 외식 경향 수치
+- `src/simulation_layer/persona/agent.py`: `get_meals_today()` 메서드, `get_memory_context(current_date)` 메서드
+- `src/simulation_layer/persona/cognitive_modules/action_algorithm.py`: Step1에서 식사 횟수 보정, Step2/Step3에 `memory_context` 전달
 
 ---
 
@@ -88,36 +112,16 @@
 - Step5 "집에서_쉬기" → `home_location`(=정류장) 좌표로 이동
 - **결과**: 유동이 정류장을 집으로 인식, 아침부터 무조건 활동
 
-### 개선안
-1. **`home_location` → `entry_point` 분리**
-   - 유동 에이전트는 `home_location` 제거, `entry_point` (진입 지점) 사용
-   - 진입 지점별 페르소나 가중치: 망원역(직장인↑), 한강공원(데이트↑), 시장(생활형↑)
-
-2. **`entry_time_slot` 속성 추가**
-   - 세그먼트별 진입 시간 차등: 직장인→점심, 데이트족→저녁, 관광→아침
-   - entry_time_slot 이전 타임슬롯은 스킵
-
-3. **Step5 선택지를 유형별로 분리**
-
-   **상주 에이전트:**
-   - 집에서_쉬기: 집으로 돌아가서 휴식
-   - 카페_가기: 근처 카페에서 시간 보내기
-   - 한강공원_산책: 망원한강공원에서 산책
-   - 망원시장_장보기: 망원시장에서 장보기
-   - 배회하기: 망원동 거리를 걸으며 구경하기
-
-   **유동 에이전트:**
-   - 카페_가기: 근처 카페에서 시간 보내기
-   - 한강공원_산책: 망원한강공원에서 산책
-   - 망원시장_장보기: 망원시장에서 장보기
-   - 배회하기: 망원동 거리를 걸으며 구경하기
-   - 망원동_떠나기: 망원동에서 퇴장 (이후 타임슬롯 스킵)
-
-   > 유동에게는 "집에서_쉬기" 선택지 자체를 제거하고, 대신 "망원동_떠나기"를 추가.
-   > 떠나기 선택 시 해당 일 시뮬레이션에서 퇴장.
-
 ### 최종 채택안
 **완료** — entry_point 분리 + entry_time_slot(세그먼트별) + Step5 유형별 선택지 + 망원동_떠나기
+
+구현 내용:
+1. **`home_location` → `entry_point` 분리**: 유동 에이전트는 `entry_point` (진입 지점) 사용, 진입 지점별 페르소나 가중치
+2. **`entry_time_slot` 속성**: 세그먼트별 진입 시간 차등 (직장인→점심, 데이트족→저녁, 관광→아침), entry_time_slot 이전 타임슬롯은 스킵
+3. **Step5 선택지 유형별 분리**:
+   - 상주: 집에서_쉬기, 카페_가기, 한강공원_산책, 망원시장_장보기, 배회하기
+   - 유동: 카페_가기, 한강공원_산책, 망원시장_장보기, 배회하기, 망원동_떠나기
+   - 유동 "망원동_떠나기" 선택 시 해당 일 시뮬레이션에서 퇴장
 
 ### 변경 파일
 - `src/simulation_layer/persona/agent.py`: `entry_point`, `entry_time_slot`, `left_mangwon` 필드 추가, `load_personas_from_md()`에서 유동 에이전트 초기화 로직 분리
@@ -134,7 +138,7 @@
 - Input: $0.15/1M tokens, Output: $0.60/1M tokens
 - MMLU Pro: 63.1%, MATH: 70.2%
 
-### 개선안: Gemini 2.0 Flash
+### 벤치마크 비교
 
 | 항목 | GPT-4o-mini | Gemini 2.0 Flash |
 |------|-------------|------------------|
@@ -144,11 +148,20 @@
 | MMLU Pro | 63.1% | 77.6% (+14.5p) |
 | MATH | 70.2% | 90.9% (+20.7p) |
 | TTFT | ~0.35s | ~0.34s |
-| 7일 시뮬 예상시간 (순차) | ~2시간 51분 | ~1시간 43분 |
-| 7일 시뮬 예상시간 (병렬5) | ~34분 | ~21분 |
 
 ### 최종 채택안
-미정
+**완료** — Gemini 2.0 Flash 전환 + 멀티 프로바이더 라우팅
+
+구현 내용:
+1. **provider 라우팅**: `.env`의 `LLM_PROVIDER` 설정으로 gemini/openai/groq/deepseek/sambanova 전환 가능
+2. **Gemini Flash 기본 설정**: `LLM_PROVIDER=gemini`, `LLM_MODEL_NAME=gemini-2.0-flash`
+3. **비용 계산 개선**: provider별 비용 계산 (Gemini 무료 tier 반영), 모델명 출력
+
+### 변경 파일
+- `src/ai_layer/llm_client.py`: Gemini API 호출 지원 (OpenAI-compatible endpoint 라우팅)
+- `config/settings.py`: `LLM_PROVIDER`, `LLM_MODEL_NAME` 환경변수 로드
+- `scripts/run_generative_simulation.py`: provider별 비용 계산 + 모델명 표시
+- `.env`: Gemini 설정 기본값
 
 ---
 
@@ -158,13 +171,32 @@
 - **파일**: `scripts/run_generative_simulation.py` (DAILY_FLOATING_AGENT_COUNT = 53)
 - 매일 113명 중 53명 랜덤 샘플링 (요일 무관 고정)
 
-### 개선안
-- **요일별 차등**: 평일 40명 / 주말 70명
-- **재방문율 30%**: 전날 방문한 53명 중 ~16명은 다음날도 포함, 나머지 새로운 에이전트
-- 룰베이스로 `daily_floating_count` 요일 딕셔너리 + `previous_day_visitors` 추적
+### 인구 DB 근거
+| 요일 | 유동인구 | 비율 | 에이전트 수 |
+|------|---------|------|-----------|
+| 월 | 932,211 | 13.5% | 51 |
+| 화 | 944,557 | 13.6% | 51 |
+| 수 | 963,659 | 13.9% | 51 |
+| 목 | 954,774 | 13.8% | 51 |
+| 금 | 963,558 | 13.9% | 51 |
+| **토** | **1,081,679** | **15.6%** | **58** |
+| **일** | **1,085,810** | **15.7%** | **58** |
 
 ### 최종 채택안
-미정
+**완료** — 인구DB 비율 기반 요일별 차등 + 재방문율 10% + 전날 방문자 추적
+
+구현 내용:
+- `DAILY_FLOATING_COUNT_BY_DAY` 딕셔너리 (평일 51 / 주말 58, 인구DB 비율 1.14배)
+- `REVISIT_RATE = 0.10`
+- 매일 샘플링 시 전날 방문 유동 에이전트 10% 우선 포함
+- 하루 종료 시 `_prev_day_visitors` 기록 (다음 날 재방문 풀)
+
+### 변경 파일
+- `scripts/run_generative_simulation.py`:
+  - `DAILY_FLOATING_COUNT_BY_DAY` 딕셔너리 (평일 51 / 주말 58, 인구DB 비율 1.14배)
+  - `REVISIT_RATE = 0.10`
+  - 매일 샘플링 시 전날 방문 유동 에이전트 10% 우선 포함
+  - 하루 종료 시 `_prev_day_visitors` 기록 (다음 날 재방문 풀)
 
 ---
 
@@ -172,22 +204,46 @@
 
 ### 현재 방식
 - **파일**: `src/simulation_layer/persona/agent.py` (RESIDENT_LOCATIONS)
-- 주거유형별 좌표 3개씩 고정 (아파트 3곳, 빌라 3곳, 주택 3곳)
-- 같은 유형이면 같은 3좌표 중 하나에 몰림
+- 주거유형별 고정 좌표 3개씩 (아파트1~3, 빌라1~3, 주택1~3 = 총 9개 점)
+- 에이전트 생성 시 `random.choice`로 3개 중 1개 배정 → `home_location`에 저장
 
-### 개선안
-- 기존 고정 좌표를 **클러스터 중심점**으로 사용
-- 반경 100~200m 내 랜덤 오프셋 적용
+### 문제점
+상주 47명의 주거유형별 분포:
+- 아파트: 19명 → 3좌표 중 랜덤 → 좌표당 평균 6~7명
+- 빌라: 10명 → 3좌표 중 랜덤 → 좌표당 평균 3~4명
+- 주택: 18명 → 3좌표 중 랜덤 → 좌표당 평균 6명
+
+같은 좌표에 배정된 6~7명이 **정확히 동일한 위도/경도**에서 시작함.
+같은 위치 → 같은 반경 800m 검색 결과 → 같은 매장 후보 → 비슷한 선택 → **다양성 저하**
+
+예) 아파트1 (37.558682, 126.898706)에 7명이 겹침
+→ 7명 모두 동일한 매장 리스트를 받음 → LLM 선택도 유사해짐
+
+### 최종 채택안
+**완료** — 구역 중심점 + 반경 150m 랜덤 오프셋
+
+```
+아파트1 중심점 (37.558682, 126.898706)
+  ├─ R001: +80m 북동 → (37.55940, 126.89930)
+  ├─ R002: +120m 남서 → (37.55760, 126.89770)
+  ├─ R003: +45m 동 → (37.55868, 126.89920)
+  └─ ... (각각 다른 위치)
+```
+
 ```python
 offset_m = random.uniform(0, 150)
 angle = random.uniform(0, 2 * math.pi)
 dlat = (offset_m * math.cos(angle)) / 111320
 dlng = (offset_m * math.sin(angle)) / (111320 * math.cos(math.radians(base_lat)))
+home = (base_lat + dlat, base_lng + dlng)
 ```
-- RESIDENT_LOCATIONS 구조 그대로 유지, 코드 변경 최소
 
-### 최종 채택안
-미정
+### 변경 파일
+- `src/simulation_layer/persona/agent.py`:
+  - `import math` 추가
+  - `RESIDENT_OFFSET_RADIUS_M = 150` 상수
+  - `_apply_location_offset()` 헬퍼 함수
+  - 아파트/빌라/주택/기본 좌표 배정 시 `_apply_location_offset()` 적용
 
 ---
 
@@ -198,84 +254,240 @@ dlng = (offset_m * math.sin(angle)) / (111320 * math.cos(math.radians(base_lat))
 - rate_limit_delay = 0.5s
 - 7일 시뮬레이션 약 2시간 51분
 
-### 개선안
-- `asyncio` 기반 병렬 호출 (동시 5~10개)
-- Gemini Flash로 전환 시 호출당 ~0.9s
-- **예상 소요시간**: 병렬 5개 + Gemini = **약 21분**
-
 ### 최종 채택안
-미정
+**완료** — asyncio.gather 병렬 실행 + Semaphore 동시 호출 제한
+
+구현 내용:
+1. **asyncio.Semaphore**: 동시 LLM 호출 수를 제한하여 API rate limit 대응 (기본 5개)
+2. **asyncio.gather**: 에이전트별 의사결정 코루틴을 동시에 실행, LLM 응답 대기 중 다른 에이전트 요청 전송
+3. **전략 적용 전/후 비교**: 동일 시드로 재현 가능한 비교 시뮬레이션 (`run_before_after_sim.py`)
+4. **StrategyBridge Gemini API 지원**: OpenAI-compatible endpoint 활용
+
+### 변경 파일
+- `scripts/run_generative_simulation.py`: `async def run_simulation()`, `asyncio.Semaphore`, `asyncio.gather` 적용
+- `scripts/run_before_after_sim.py`: 전략 전/후 비교 시뮬레이션 스크립트 (신규)
+- `src/simulation_layer/persona/cognitive_modules/action_algorithm.py`: async 메서드 구조 유지
+- `config/settings.py`: max_concurrent_llm_calls 설정
 
 ---
 
 ## 8. 유동 매장 선택 최적화 (Step3)
 
-### 현재 방식
-- **파일**: `scripts/run_generative_simulation.py:394-395`, `src/simulation_layer/persona/cognitive_modules/action_algorithm.py:229`
-- 유동 에이전트는 `nearby_stores = list(global_store.stores.values())` → 720개 전체 매장을 LLM에 전달
-- 720개 × ~250자 = ~180K자 → GPT-4o-mini 128K 토큰 한계에 근접
-- LLM은 긴 리스트에서 앞쪽 항목에 편향 (positional bias)
-- `random.shuffle`로 순서를 섞어도 720개를 진정으로 비교하는 건 불가능
-- **결과**: 모내 11회, 장터국밥 9회 같은 특정 매장 집중 현상
+### 배경
 
-### 왜 반경 제한은 안 되나
-- 유동은 네이버/카카오 맵 **검색**으로 찾아가는 사람
-- 물리적 거리가 아닌 검색 랭킹 기반으로 매장을 발견함
-- 반경 제한은 상주에게만 적합
+유동 에이전트의 매장 선택 흐름:
 
-### 개선안: 검색엔진 랭킹 + Exploit-Explore
-1. Step2에서 업종 선택 → 해당 업종만 필터 (이미 구현됨)
-2. 스코어링: 평점 × 리뷰수 × 거리 × 카테고리 매칭
-3. **상위 10개(랭킹) + 랜덤 5개(탐색)** = 15개만 LLM에 전달
-4. LLM이 페르소나 기반으로 최종 선택
-
-```python
-def search_rank(store, query_category, agent_location):
-    score = 0
-    score += store.agent_taste_score * 2     # 평점
-    score += store.agent_rating_count * 0.5  # 리뷰 수
-    score -= distance_km * 0.3               # 거리
-    if query_category in store.category:
-        score += 3                           # 카테고리 일치 보너스
-    return score
-
-ranked = sort_by_score(stores)
-top10 = ranked[:10]                          # 랭킹 상위 (exploit)
-random5 = random.sample(ranked[10:], 5)      # 나머지에서 랜덤 (explore)
-candidates = top10 + random5
+```
+[Step2] LLM이 업종 선택 (예: "한식")
+    ↓
+[검색 랭킹] 720개 전체 매장 → 후보 N개로 축소
+    ↓
+[Step3] LLM이 후보 N개 중 1개 매장 선택
 ```
 
-### 부익부 빈익빈 방지
-- 랜덤 5개 슬롯 → 미방문 매장에 노출 기회 제공
-- 에이전트 평점이 실시간 누적 → 랭킹이 매일 변동
-- LLM이 페르소나 기반 선택 → 같은 15개를 봐도 다른 매장 선택
+유동 에이전트는 외부인이므로 물리적 반경이 아닌 **검색 랭킹** 기반으로 매장을 필터링합니다. 상주 에이전트만 반경 제한을 적용합니다.
+
+**핵심 문제**: 랭킹으로 720개 → 15개로 축소하는 과정에서, 별점은 높지만 리뷰가 적은 **롱테일 매장**(별점 ≥4.0, 리뷰 ≤15건)이 후보에 포함되지 못합니다. 롱테일 매장은 전체의 35~54%를 차지합니다.
+
+---
+
+### 기존 방식 (v1)의 문제점
+
+**파일**: `action_algorithm.py`, `global_store.py`
+
+기존에는 720개 전체 매장 목록을 그대로 LLM에 전달했습니다.
+
+- 720개 × ~250자 = ~180K자 → 토큰 한계에 근접
+- LLM은 긴 리스트에서 앞쪽 항목을 선호하는 경향이 있음 (positional bias)
+- **결과**: 모내 11회, 장터국밥 9회 등 특정 매장에 방문이 집중
+
+---
+
+### 1차 개선 — Exploit-Explore 검색 랭킹 도입
+
+스코어링 기반 랭킹으로 720개 → 15개로 축소:
+- 점수 공식: `별점 × 1.5 + 에이전트평점 × 2.0 + log(리뷰수) × 0.5 + 카테고리보너스(+3.0) - 거리 × 0.3`
+- **Exploit**: 점수 상위 10개 (인기매장 보장)
+- **Explore**: 나머지에서 랜덤 5개 (다양성 확보)
+
+#### 1차 후 문제: 돼지야 0방문
+
+7일/160명 시뮬레이션에서 타겟 매장 **돼지야**(별점 4.5, 리뷰 10건)가 양쪽 모두 0방문.
+돼지야는 전체 720개 중 79위 → exploit(상위 10개)에 진입 불가, explore 확률 = 5/710 = **0.7%**.
+
+근본 원인:
+1. **카테고리가 필터가 아닌 보너스(+3.0)** → 비한식 고별점 매장과도 경쟁
+2. **리뷰 수 가중치 과도** → 리뷰 10건 vs 100건 점수 차이가 별점 차이의 3.7배
+3. **explore_k=5로 확률 부족** → 710개 중 5개 = 0.7%
+
+추가 발견: **상주 에이전트 반경 필터 무시 버그** — `search_ranked_stores()`가 `nearby_stores` 파라미터를 무시하고 전역 `self.stores`를 검색. 0.8km 반경 제한이 실제로 동작하지 않음.
+
+---
+
+### 2차 개선 — 카테고리 선필터 + candidate_stores + explore_k 증가
+
+변경 내용:
+1. 카테고리를 보너스(+3.0) → **선필터**로 변경 (한식 검색 시 한식끼리만 경쟁)
+2. `candidate_stores` 파라미터 추가 (상주 반경 필터 버그 수정)
+3. explore_k: 5 → 10
+
+| 지표 | 기존 | 2차 후 |
+|------|------|-------|
+| 검색 대상 | 전체 720개 | 한식 186개 |
+| 돼지야 순위 | 79/720 | 79/186 |
+| explore 확률 | 5/710 = 0.7% | 10/176 = **5.7%** |
+
+#### 2차 후 문제: 순위 변화 없음
+
+한식 186개 내에서 돼지야 순위가 여전히 79위. 리뷰 수 가중치(`log1p × 0.5`)가 높아 리뷰 100건+ 매장이 상위 독점.
+
+---
+
+### 3차 개선 — 리뷰 수 가중치 완화 + 캡
+
+변경: 리뷰 수 50건 캡 + 가중치 0.5 → 0.3
+
+```python
+capped_reviews = min(store.star_rating_count or 0, 50)
+score += math.log1p(capped_reviews) * 0.3
+```
+
+| 매장 | 변경 전 | 변경 후 | 점수 차이 |
+|------|--------|--------|---------|
+| 송정 (별점 4.7, 리뷰 100건) | 9.36 | 8.23 | -1.13 |
+| 돼지야 (별점 4.5, 리뷰 10건) | 7.95 | 7.47 | -0.48 |
+| **두 매장 간 격차** | **1.41** | **0.76** | **46% 축소** |
+
+돼지야 순위: 79위 → **74위** (소폭 개선)
+
+#### 3차 후 문제: top-10 진입 불가
+
+한식 상위 10개 점수 범위 8.20~8.51, 돼지야 7.47 → 0.73점 부족. 고정 순위 기반이면 매번 같은 top-10만 노출되어 다양성 부족.
+
+---
+
+### 4차 개선 — 점수 지터(노이즈) + exploit/explore 비율 조정
+
+매 호출마다 가우시안 노이즈를 추가하여 순위를 흔들어 롱테일 매장의 top-k 진입 기회를 만듦.
+
+```python
+score += random.gauss(0, 0.8)   # σ=0.8
+top_k = 7; explore_k = 13       # 10+5 → 7+13 = 20개
+```
+
+몬테카를로 시뮬레이션 결과 (10,000회):
+
+| 설정 | 돼지야 후보 포함율 | 7일 기대 방문 |
+|------|----------------|-------------|
+| 기존 (top10+exp5, σ=0) | 0.7% | ~0.2회 |
+| σ=0.8, top7+exp13 | **9.6%** | **~2.1회** |
+
+#### 4차 후 문제: 인기매장 안정성 붕괴
+
+σ=0.8이 점수 범위(상위 매장 간 차이 ~0.5점) 대비 너무 커서 exploit이 사실상 랜덤화됨.
+
+| 매장 | σ=0 잔류율 | σ=0.8 잔류율 |
+|------|----------|------------|
+| 망원동 막국수 (1위) | 99%+ | **26.9%** |
+| 송정 (2위) | 99%+ | **15.7%** |
+
+**exploit-explore 구조의 근본적 한계**: "상위 N개 고정 / 나머지 랜덤" 이분법 → 노이즈를 키우면 exploit이 무너지고, 줄이면 explore 매장이 안 보임. 인기/비인기 갭 = **8.8배** (63% vs 7.2%).
+
+---
+
+### 5차 개선 (최종) — Softmax 가중 확률 샘플링
+
+exploit/explore 이분법을 폐기하고, **Softmax 확률 비례 비복원 추출**로 전환.
+
+- 기존: 상위 N개 고정 포함 + 나머지 랜덤 → 포함 여부가 0% or 100%
+- 변경: 모든 매장이 점수에 비례한 확률로 추출 → 연속적 확률 분포
+
+```python
+# 점수를 Softmax 확률로 변환 (temperature = 0.5)
+exp_scores = [exp((score - max_score) / temperature) for score in scores]
+probs = [e / sum(exp_scores) for e in exp_scores]
+
+# 확률 비례 비복원 추출 (20개)
+selected = weighted_sample_without_replacement(stores, probs, k=20)
+```
+
+**Temperature(T)**: T↓ = 인기매장 집중, T↑ = 균등 분포
+
+Temperature별 비교 (한식 186개 → 20개 선택, 5,000회 몬테카를로):
+
+| 방식 | 인기매장(top5) 포함율 | 돼지야 포함율 | 인기/롱테일 갭 |
+|------|---------------------|-------------|-------------|
+| 4차 (exploit-explore) | 63.0% | 7.2% | 8.8배 |
+| Softmax T=0.3 | 55.9% | 5.5% | 10.2배 |
+| **Softmax T=0.5 (채택)** | **40.7%** | **10.8%** | **3.8배** |
+| Softmax T=0.8 | 29.9% | 12.0% | 2.5배 |
+| Softmax T=1.0 | 26.1% | 12.4% | 2.1배 |
+
+**T=0.5 선택 근거**:
+- 인기매장 개별 포함율 60~80% → 충분한 노출 빈도
+- 롱테일 매장 포함율 0.7% → 10.8% (15배 향상)
+- 인기/롱테일 갭 8.8배 → 3.8배 (57% 축소)
+- 저평점 매장(별점 ≤3.0) 포함율 0.0% → 품질 하한선 유지
+
+#### 카테고리별 일반화 검증
+
+| 카테고리 | 매장수 | 롱테일 비율 | 기존 포함율 | 개선 후 | 개선배수 |
+|---------|-------|-----------|----------|--------|---------|
+| 한식 | 186 | 66개 (35%) | 0.7% | 11.2% | **16x** |
+| 커피/음료 | 178 | 91개 (51%) | 0.7% | 11.2% | **16x** |
+| 호프/주점 | 102 | 55개 (54%) | 0.7% | 19.2% | **28x** |
+| 양식 | 69 | 33개 (48%) | 0.7% | 26.8% | **38x** |
+| 일식 | 49 | 18개 (37%) | 0.7% | 37.7% | **54x** |
+
+매장 수가 적은 카테고리일수록 효과가 큽니다 (분모가 작으니 각 매장의 확률이 더 높아짐).
+
+---
 
 ### 최종 채택안
-미정
+
+**완료** — 카테고리 선필터 + candidate_stores + 리뷰 캡/가중치 완화 + Softmax 가중 샘플링(T=0.5, 20개)
+
+| 항목 | v1 (기존) | v6 (최종) |
+|------|-----------|-----------|
+| 카테고리 처리 | 보너스(+3.0) | 선필터 (같은 업종끼리만 경쟁) |
+| 상주 반경 검색 | 전역 DB 검색 (버그) | `candidate_stores` 전달 (반경 내만) |
+| 리뷰 가중치 | `log1p(reviews) × 0.5` | `log1p(min(reviews,50)) × 0.3` |
+| 선택 방식 | exploit 10 + explore 5 (고정) | Softmax T=0.5 가중 샘플링 (20개) |
+| 인기/롱테일 갭 | 8.8x | **3.8x** |
+| 돼지야 후보 포함율 | 0.7% | **10.8%** (×15) |
+| 돼지야 7일 기대 방문 | ~0.2회 | **~2.3회** (×12) |
+
+### 변경 파일
+- `src/data_layer/global_store.py`: `search_ranked_stores()` 전면 리팩토링 — 카테고리 선필터, `candidate_stores` 파라미터, 리뷰 캡/가중치 완화, Softmax 가중 샘플링
+- `src/simulation_layer/persona/cognitive_modules/action_algorithm.py`: Step3에서 `candidate_stores=affordable_stores` 전달
 
 ---
 
 ## 9. 매장/에이전트 좌표 불일치
 
 ### 현재 방식
-- **파일**: `src/simulation_layer/persona/agent.py` (FLOATING_LOCATIONS, RESIDENT_LOCATIONS)
-- 대시보드 지도에서 전체 좌표가 **남동쪽으로 밀려있음**
-  - 상주 에이전트가 공원 위에 표시됨
-  - 유동 에이전트가 망원동 바깥에 표시됨
-  - 매장, 집, 역, 정류장 좌표가 전체적으로 우하향
+- **파일**: `scripts/dashboard.py` (`create_map_with_routes`)
+- 대시보드 지도에서 상주 에이전트가 공원 위에 표시되고, 유동 에이전트가 망원동 바깥에 표시됨
 
-### 원인 추정
-- `FLOATING_LOCATIONS`, `RESIDENT_LOCATIONS`의 하드코딩 좌표가 실제 위치와 불일치
-- OSM 네트워크 중심점 계산이 매장 좌표 기반인데, 매장 좌표 자체가 밀려있을 가능성
-- 좌표계 변환 오류 또는 데이터 수집 시 오프셋 발생
-
-### 개선안
-- `FLOATING_LOCATIONS`, `RESIDENT_LOCATIONS` 좌표를 구글맵/카카오맵 실제 좌표와 1:1 대조 검증
-- 매장 데이터(`split_by_store_id`)의 좌표도 샘플 검증
-- 전체적으로 일정한 오프셋이면 보정값 한 번에 적용
+### 원인 분석
+1. **개요 지도 에이전트 위치가 랜덤 생성** (핵심 원인)
+   - `create_map_with_routes()`에서 에이전트 위치를 `random.uniform()`으로 생성
+   - 시뮬레이션의 실제 `agent_lat`/`agent_lng` 좌표를 사용하지 않음
+   - 결과: 에이전트가 공원, 망원동 바깥 등 비현실적 위치에 표시
+2. **좌표 매핑/하드코딩은 정상**
+   - 매장 데이터: WGS84 좌표 (x=경도, y=위도), 대시보드에서 `[y, x]` = `[lat, lng]`으로 올바르게 사용
+   - 하드코딩 좌표 검증: 망원역 (37.5560, 126.9101) = 실제 좌표와 일치
+   - OSM 좌표 변환: `Transformer(EPSG:4326 ↔ projected)` 정상 동작
 
 ### 최종 채택안
-미정
+**완료** — `create_map_with_routes()`에 `results_df` 파라미터 추가, 시뮬레이션 결과의 실제 좌표 사용
+
+- 랜덤 좌표를 fallback 초기값으로 유지 (시뮬레이션 데이터 없을 때 대비)
+- `results_df`가 있으면 각 에이전트의 마지막 기록 좌표(`agent_lat`, `agent_lng`)로 덮어쓰기
+- 시뮬레이션 데이터가 없거나 특정 에이전트 좌표가 누락돼도 마커가 항상 표시됨
+
+### 변경 파일
+- `scripts/dashboard.py`: `create_map_with_routes()` — 랜덤 fallback + 시뮬레이션 좌표 우선 적용
 
 ---
 
@@ -287,7 +499,10 @@ candidates = top10 + random5
 - LLM이 "이전에 여기 가서 별로였다" 같은 판단 불가능
 - **결과**: 과거 경험과 무관하게 매번 새로운 판단 → 불만족했던 매장 재방문, 만족했던 매장 무시
 
-### 개선안: memory_context 통합 + 코멘트 포함 (완료)
+### 최종 채택안
+**완료** — memory_context 통합 (오늘 식사 + 과거 방문 + 평점 + 코멘트) + 프롬프트 유도 문구
+
+구현 내용:
 
 | Step | 변경 전 | 변경 후 |
 |------|---------|---------|
@@ -310,13 +525,10 @@ candidates = top10 + random5
 - Step3: "과거에 방문했던 매장이 있다면, 만족했으면 재방문하고 불만족했으면 피하세요. 단, 항상 같은 곳만 가지 말고 새로운 매장도 탐색하세요."
 
 ### 변경 파일
-- `src/simulation_layer/persona/agent.py`: `VisitRecord`에 `comment` 필드, `get_memory_context`에 코멘트 표시
+- `src/simulation_layer/persona/agent.py`: `VisitRecord`에 `comment` 필드, `get_memory_context(current_date)` 메서드
 - `src/simulation_layer/persona/cognitive_modules/action_algorithm.py`: Step2/Step3에 `memory_context` 전달
-- `src/ai_layer/prompts/step2_category.txt`: `memory_context` + 유도 문구
-- `src/ai_layer/prompts/step3_store.txt`: `memory_context` + 유도 문구
-
-### 최종 채택안
-완료
+- `src/ai_layer/prompts/step2_category.txt`: `{memory_context}` 변수 + 유도 문구
+- `src/ai_layer/prompts/step3_store.txt`: `{memory_context}` 변수 + 유도 문구
 
 ---
 
@@ -341,6 +553,182 @@ candidates = top10 + random5
 
 > 직장인 판별: 페르소나 세그먼트에 "직장인" 태그가 있거나, entry_point가 망원역이면서 entry_time_slot이 점심인 경우 등으로 판별
 > 직장인은 상주/유동 어디에든 속할 수 있으므로, 기존 분류 위에 오버라이드하는 방식
+
+### 최종 채택안
+미정
+
+---
+
+## 12. 아침 "이전 식사로 충분" 버그
+
+### 현재 방식
+- **파일**: `src/simulation_layer/persona/cognitive_modules/action_algorithm.py` (Step1)
+- Step1에서 외출 안 함 사유를 랜덤 선택: "배가 안 고픔", "이전 식사로 충분", "집에서 해결", "이 시간에는 안 먹음"
+- 시간대/식사 횟수와 무관하게 동일한 사유 풀에서 선택
+
+### 문제점
+- **아침**인데 "이전 식사로 충분" 출력 → 아침은 그날 첫 끼니인데 이전 식사가 있을 수 없음
+- **첫 끼니**(meals_today == 0)인데 "이전 식사로 충분" → 오늘 아무것도 안 먹었는데 이전 식사가 충분하다는 모순
+
+### 최종 채택안
+**완료** — 아침 또는 첫끼일 때 "이전 식사로 충분" 사유 제외
+
+```python
+if time_slot == "아침" or meals_today == 0:
+    reasons_skip = [
+        "배가 안 고픔",
+        "집에서 해결",
+        "이 시간에는 안 먹음",
+    ]
+else:
+    reasons_skip = [
+        "배가 안 고픔",
+        "이전 식사로 충분",
+        "집에서 해결",
+        "이 시간에는 안 먹음",
+    ]
+```
+
+### 변경 파일
+- `src/simulation_layer/persona/cognitive_modules/action_algorithm.py`: Step1 `step1_eat_in_mangwon()` 내 사유 선택 분기 추가
+
+---
+
+## 13. 상주 에이전트 "적합한 매장 없음" 대량 발생
+
+### 현재 방식
+- **파일**: `src/data_layer/global_store.py`
+- 상주 에이전트는 `home_location` 반경 800m 이내 매장만 후보로 검색
+- 매장 데이터는 `split_by_store_id/` 디렉토리의 JSON 파일에서 로드
+- 좌표(`x`, `y`)와 카테고리(`category`)가 JSON 최상위에 없으면 검색 불가
+
+### 문제점
+
+**A. JSON 좌표/카테고리 누락**
+- JSON 파일에 `x`, `y` 좌표가 최상위가 아닌 `metadata.x`, `metadata.y`에만 존재
+- `category` 필드도 최상위에 없고 `metadata.sector`에만 존재
+- 반경 검색 시 좌표가 없는 매장은 거리 계산 불가 → 후보에서 제외
+- **결과**: 상주(R*) 에이전트 점심에 전원 "적합한 매장 없음"으로 외출 실패
+
+**B. 카테고리 명칭 불일치** (Step3 매장 필터링)
+- Step2 LLM이 선택하는 카테고리와 JSON 실제 카테고리 명칭이 다름
+- 매칭 코드가 `category.lower() in s.category.lower()` (부분 문자열)이라 식당류는 우연히 통과
+- 카페/디저트/베이커리는 매칭 실패 → fallback으로 전체 매장 사용 (필터링 무의미)
+
+| Step2 LLM 선택값 | JSON 실제 카테고리 | `in` 매칭 |
+|---|---|---|
+| "한식" | "한식음식점" | O (부분 문자열) |
+| "양식" | "양식음식점" | O |
+| "카페" | "커피-음료" | **X** |
+| "디저트" | "제과점" | **X** |
+| "베이커리" | "제과점" | **X** |
+
+### 최종 채택안
+**완료** — A. JSON metadata fallback + B. CATEGORY_ALIAS 매핑 테이블
+
+**A. JSON 로딩 시 `metadata.x,y` + `metadata.sector` fallback**
+
+```python
+# 카테고리: JSON category → metadata.sector
+category = data.get("category", "")
+if not category:
+    metadata = data.get("metadata", {})
+    category = metadata.get("sector", "")
+
+# 좌표: JSON x,y → metadata.x,y
+x = data.get("x")  # longitude
+y = data.get("y")  # latitude
+if not x or not y:
+    metadata = data.get("metadata", {})
+    x = metadata.get("x")
+    y = metadata.get("y")
+```
+
+**B. CATEGORY_ALIAS + match_category() 헬퍼 함수**
+
+```python
+CATEGORY_ALIAS = {
+    "카페": "커피-음료", "커피": "커피-음료",
+    "디저트": "제과점", "베이커리": "제과점", "브런치": "양식음식점",
+    "이자카야": "호프-간이주점", "포차": "호프-간이주점",
+    "와인바": "호프-간이주점", "술집": "호프-간이주점",
+    "막걸리": "호프-간이주점", "칵테일바": "호프-간이주점",
+}
+
+def match_category(query: str, store_category: str) -> bool:
+    """1차: 부분 문자열 매칭, 2차: CATEGORY_ALIAS 변환 후 매칭"""
+    q = query.lower()
+    sc = (store_category or "").lower()
+    if q in sc:
+        return True
+    alias = CATEGORY_ALIAS.get(query, "").lower()
+    if alias and alias in sc:
+        return True
+    return False
+```
+
+- 기존 `category.lower() in s.category.lower()` → `match_category()` 로 전부 교체
+- global_store.py 4곳 + action_algorithm.py 1곳 = 총 5곳 적용
+
+### 변경 파일
+- `src/data_layer/global_store.py`:
+  - `load_from_json_dir()`: metadata fallback 로직
+  - `CATEGORY_ALIAS` 딕셔너리 + `match_category()` 헬퍼 함수 추가
+  - `search_ranked_stores()`, `get_stores_by_category()`, `get_stores_in_budget()`, `get_top_stores_by_agent_rating()`: match_category() 적용
+- `src/simulation_layer/persona/cognitive_modules/action_algorithm.py`: Step3 카테고리 필터링에 match_category() 적용
+
+---
+
+## 14. 카페/주점 방문 불가
+
+### 현재 방식
+- **파일**: `src/simulation_layer/persona/cognitive_modules/action_algorithm.py` (720~723행)
+- `destination_type`이 항상 `"식당"`으로 고정
+- `DESTINATION_CATEGORIES`에 카페/주점 카테고리가 정의되어 있지만, Step2에 전달되지 않음
+
+```python
+# 현재 코드 (720~723행)
+destination_type = "식당"  # 기본값
+if time_slot in ["저녁", "야식"]:
+    destination_type = "식당"  # 저녁/야식은 식당 위주
+```
+
+### 문제점
+1. `DESTINATION_CATEGORIES`에 카페(카페, 커피, 디저트, 베이커리, 브런치)와 주점(호프, 이자카야, 포차 등)이 정의되어 있음
+2. 하지만 `destination_type = "식당"` 고정이라 Step2에 식당 카테고리만 전달됨
+- **결과**: 아침 커피, 저녁 술자리 등 현실적인 선택이 불가능
+
+> 카테고리 명칭 불일치 문제(LLM 선택값 vs JSON 카테고리)는 #13에서 `CATEGORY_ALIAS` + `match_category()`로 해결 완료
+
+### 개선안: destination_type 분기 제거 → 전체 카테고리를 Step2에 전달
+
+현재 흐름:
+```
+destination_type = "식당" (고정) → DESTINATION_CATEGORIES["식당"]만 Step2에 전달
+```
+
+개선 흐름:
+```
+시간대별 available_categories를 직접 구성 → Step2에 전달 → LLM이 페르소나 기반으로 선택
+```
+
+```python
+# 시간대별 카테고리 풀 구성
+TIME_SLOT_CATEGORIES = {
+    "아침": DESTINATION_CATEGORIES["식당"] + DESTINATION_CATEGORIES["카페"],
+    "점심": DESTINATION_CATEGORIES["식당"] + DESTINATION_CATEGORIES["카페"],
+    "저녁": DESTINATION_CATEGORIES["식당"] + DESTINATION_CATEGORIES["주점"],
+    "야식": DESTINATION_CATEGORIES["식당"] + DESTINATION_CATEGORIES["주점"],
+}
+available_categories = TIME_SLOT_CATEGORIES.get(time_slot, DESTINATION_CATEGORIES["식당"])
+```
+
+- 확률로 destination_type을 정하지 않고, 시간대에 맞는 **전체 카테고리 풀**을 LLM에 넘김
+- LLM이 페르소나(세대, 동행, 취향)를 보고 자연스럽게 선택
+  - Z세대 1인 야식 → "호프" 또는 "이자카야" 선택 가능
+  - 가족단위 저녁 → "한식" 또는 "양식" 선택 (주점은 자연 회피)
+  - 직장인 아침 → "카페" 또는 "베이커리" 선택 가능
+- Step2 프롬프트에 시간대별 힌트 추가 ("아침에는 카페/브런치도 고려하세요" 등)
 
 ### 최종 채택안
 미정
