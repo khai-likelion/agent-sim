@@ -58,8 +58,15 @@ WALKING_SPEED_MS = 1.4
 STORE_RECOGNITION_RADIUS_KM = 3.0        # 유동 에이전트
 RESIDENT_STORE_RADIUS_KM = 0.8           # 상주 에이전트 (800m)
 
-# 유동 에이전트 일일 활동 수 (113명 중 53명만 매일 활동)
-DAILY_FLOATING_AGENT_COUNT = 53
+# 유동 에이전트 일일 활동 수 (요일별 차등 — 인구_DB.json 비율 기반)
+# 실제 비율: 월13.5% 화13.6% 수13.9% 목13.8% 금13.9% 토15.6% 일15.7%
+# 주간 평균 53명 유지 → 평일 51, 주말 58 (비율 1.14배)
+DAILY_FLOATING_COUNT_BY_DAY = {
+    "월": 51, "화": 51, "수": 51, "목": 51, "금": 51,
+    "토": 58, "일": 58,
+}
+DAILY_FLOATING_AGENT_COUNT = 53  # 기본값 (fallback)
+REVISIT_RATE = 0.10  # 재방문율: 전날 방문자 중 10% 다음날 포함
 
 # OSM 네트워크 설정 (서울 강남역 주변 기준)
 DEFAULT_NETWORK_CENTER_LAT = 37.4980
@@ -398,7 +405,7 @@ async def run_simulation(
     resident_agents = [a for a in agents if a.is_resident]
     floating_agents = [a for a in agents if a.is_floating]
     print(f"\n  상주 에이전트: {len(resident_agents)}명 (매일 활동)")
-    print(f"  유동 에이전트: {len(floating_agents)}명 (매일 {DAILY_FLOATING_AGENT_COUNT}명 샘플링)")
+    print(f"  유동 에이전트: {len(floating_agents)}명 (요일별 차등: 평일 {DAILY_FLOATING_COUNT_BY_DAY['월']} / 금 {DAILY_FLOATING_COUNT_BY_DAY['금']} / 주말 {DAILY_FLOATING_COUNT_BY_DAY['토']}명)")
 
     # Semaphore: 동시에 실행되는 LLM 호출 수를 제한 (API rate limit 대응)
     semaphore = asyncio.Semaphore(max_concurrent_llm_calls)
@@ -423,9 +430,22 @@ async def run_simulation(
         current_date = start_date + timedelta(days=day_idx)
         weekday = WEEKDAYS[current_date.weekday()]
 
-        # 매일 유동 에이전트 53명 랜덤 샘플링
-        daily_floating_count = min(DAILY_FLOATING_AGENT_COUNT, len(floating_agents))
-        daily_floating = random.sample(floating_agents, daily_floating_count)
+        # 요일별 유동 에이전트 수 차등 + 재방문율 적용
+        base_count = DAILY_FLOATING_COUNT_BY_DAY.get(weekday, DAILY_FLOATING_AGENT_COUNT)
+        daily_floating_count = min(base_count, len(floating_agents))
+
+        # 재방문: 전날 방문자 중 일부를 우선 포함
+        revisit_agents = []
+        if day_idx > 0 and hasattr(run_simulation, '_prev_day_visitors'):
+            prev_visitors = run_simulation._prev_day_visitors
+            revisit_count = max(1, int(len(prev_visitors) * REVISIT_RATE))
+            revisit_agents = random.sample(prev_visitors, min(revisit_count, len(prev_visitors)))
+
+        # 나머지는 새로운 에이전트에서 샘플링
+        remaining_pool = [a for a in floating_agents if a not in revisit_agents]
+        new_count = daily_floating_count - len(revisit_agents)
+        new_agents = random.sample(remaining_pool, min(new_count, len(remaining_pool)))
+        daily_floating = revisit_agents + new_agents
 
         # 유동 에이전트: 매일 초기화 (entry_point에서 시작, left_mangwon 리셋)
         for agent in daily_floating:
@@ -531,6 +551,17 @@ async def run_simulation(
                     "nearby_store_count": output["nearby_store_count"],
                 }
                 results.append(record)
+
+        # 하루 종료: 오늘 방문한 유동 에이전트 기록 (다음 날 재방문 풀)
+        today_visitors = set()
+        for rec in results:
+            if rec.get("decision") == "visit" and rec.get("timestamp", "").startswith(current_date.strftime("%Y-%m-%d")):
+                today_visitors.add(rec["agent_id"])
+        run_simulation._prev_day_visitors = [
+            a for a in daily_floating if a.id in today_visitors
+        ]
+        if run_simulation._prev_day_visitors:
+            print(f"      재방문 풀: 유동 {len(run_simulation._prev_day_visitors)}명 (내일 {REVISIT_RATE*100:.0f}% 우선 포함)")
 
     # 마지막 타임슬롯의 평점 반영
     flushed = global_store.flush_pending_ratings()
