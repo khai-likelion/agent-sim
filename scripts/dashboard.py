@@ -1012,7 +1012,8 @@ def create_agent_trajectory_map(results_df, visits_df, stores_df, agent_name, ag
 
 
 def create_map_with_routes(visits_df, stores_df, agents, selected_date=None,
-                           store_filter=None, show_routes=False, G=None):
+                           store_filter=None, show_routes=False, G=None,
+                           results_df=None):
     """Folium 지도 생성 (에이전트 위치 & 방문 현황)"""
     center_lat, center_lon = 37.5565, 126.9029
     m = folium.Map(location=[center_lat, center_lon], zoom_start=16)
@@ -1042,21 +1043,19 @@ def create_map_with_routes(visits_df, stores_df, agents, selected_date=None,
         '유동_가족모임형_2인': '#3498db', '유동_가족모임형_4인': '#2980b9',
     }
 
-    # 에이전트 위치 생성 (일관된 시드)
-    random.seed(42)
-    lat_min, lat_max = 37.552, 37.562
-    lon_min, lon_max = 126.895, 126.911
-
+    # 에이전트의 마지막 기록 좌표 사용 (시뮬레이션 결과 기반)
     agent_locations = {}
-    for agent in agents:
-        segment = agent['segment']
-        if '상주' in segment:
-            lat = random.uniform(lat_min + 0.003, lat_max - 0.002)
-            lon = random.uniform(lon_min + 0.003, lon_max - 0.005)
-        else:
-            lat = random.uniform(lat_min + 0.001, lat_max - 0.001)
-            lon = random.uniform(lon_min + 0.005, lon_max - 0.002)
-        agent_locations[agent['persona_id']] = (lat, lon)
+    if results_df is not None and not results_df.empty:
+        for agent in agents:
+            agent_name = agent['persona_id']
+            agent_rows = results_df[results_df['persona_id'] == agent_name]
+            if agent_rows.empty:
+                continue
+            # 가장 최근 유효 좌표 사용
+            valid = agent_rows.dropna(subset=['agent_lat', 'agent_lng'])
+            if not valid.empty:
+                last = valid.iloc[-1]
+                agent_locations[agent_name] = (last['agent_lat'], last['agent_lng'])
 
     # 방문한 에이전트 마커 표시
     visited_agents = set(visits_filtered['persona_id'].unique()) if not visits_filtered.empty else set()
@@ -1227,7 +1226,8 @@ def main():
             if not filtered_visits.empty and not stores_df.empty:
                 m = create_map_with_routes(filtered_visits, stores_df, agents,
                                            selected_date=selected_date,
-                                           store_filter=store_filter)
+                                           store_filter=store_filter,
+                                           results_df=filtered_results)
                 st_folium(m, width=700, height=500, key="overview_map")
             else:
                 st.info("지도를 표시할 데이터가 없습니다.")
