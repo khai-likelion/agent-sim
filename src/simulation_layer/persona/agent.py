@@ -5,6 +5,7 @@ md 파일의 '#### P001 / ... ~ ---' 단위가 에이전트 하나.
 자연어 페르소나가 LLM 의사결정의 유일한 근거.
 """
 
+import math
 import random
 import re
 from dataclasses import dataclass, field, asdict
@@ -41,6 +42,17 @@ RESIDENT_LOCATIONS = {
         {"lat": 37.552770, "lng": 126.905787},  # 주택3
     ],
 }
+
+RESIDENT_OFFSET_RADIUS_M = 150  # 구역 중심점 기준 최대 오프셋 반경 (미터)
+
+
+def _apply_location_offset(base_lat: float, base_lng: float, max_radius_m: float = RESIDENT_OFFSET_RADIUS_M) -> Tuple[float, float]:
+    """구역 중심 좌표에 랜덤 오프셋을 적용해 에이전트마다 다른 위치 부여."""
+    offset_m = random.uniform(0, max_radius_m)
+    angle = random.uniform(0, 2 * math.pi)
+    dlat = (offset_m * math.cos(angle)) / 111320
+    dlng = (offset_m * math.sin(angle)) / (111320 * math.cos(math.radians(base_lat)))
+    return (base_lat + dlat, base_lng + dlng)
 
 
 @dataclass
@@ -261,19 +273,19 @@ def load_personas_from_md(
             else:  # 생활베이스형
                 entry_time_slot = random.choice(["아침", "점심", "저녁"])  # 자유
         elif attrs["agent_type"] == "상주" and attrs["group_type"] == "가족모임형" and attrs["group_size"] == 4:
-            # 상주 + 가족모임형 + 4인 → 아파트1~3 중 랜덤
+            # 상주 + 가족모임형 + 4인 → 아파트1~3 중 랜덤 + 오프셋
             loc = random.choice(RESIDENT_LOCATIONS["아파트"])
-            home = (loc["lat"], loc["lng"])
+            home = _apply_location_offset(loc["lat"], loc["lng"])
         elif attrs["agent_type"] == "상주" and attrs.get("housing_type") == "단독·연립(주택)":
-            # 상주 + 단독·연립(주택) → 주택1~3 중 랜덤
+            # 상주 + 단독·연립(주택) → 주택1~3 중 랜덤 + 오프셋
             loc = random.choice(RESIDENT_LOCATIONS["주택"])
-            home = (loc["lat"], loc["lng"])
+            home = _apply_location_offset(loc["lat"], loc["lng"])
         elif attrs["agent_type"] == "상주" and attrs.get("housing_type") == "다세대(빌라)":
-            # 상주 + 다세대(빌라) → 빌라1~3 중 랜덤
+            # 상주 + 다세대(빌라) → 빌라1~3 중 랜덤 + 오프셋
             loc = random.choice(RESIDENT_LOCATIONS["빌라"])
-            home = (loc["lat"], loc["lng"])
+            home = _apply_location_offset(loc["lat"], loc["lng"])
         else:
-            home = (37.5565, 126.9029)  # 상주 에이전트 기본 위치
+            home = _apply_location_offset(37.5565, 126.9029)  # 상주 에이전트 기본 위치 + 오프셋
 
         agents.append(GenerativeAgent(
             id=len(agents) + 1,
