@@ -3,18 +3,20 @@ h3>=3.7.0
 pydantic>=2.0.0
 pydantic-settings>=2.0.0
 python-dotenv>=1.0.0
-fastapi>=0.104.0
-uvicorn[standard]>=0.24.0
 
-# OSMnx-based street network (Agent_Street approach)
+# OSMnx street network
 osmnx>=1.9.0
 networkx>=3.0
 shapely>=2.0.0
 pyproj>=3.6.0
-folium>=0.15.0
+
+# Dashboard
 streamlit>=1.30.0
+folium>=0.15.0
 streamlit-folium>=0.20.0
+pydeck>=0.8.0
 plotly>=5.0.0
-openai>=1.0.0
+
+# Simulation
 tqdm>=4.60.0
-geopandas>=0.14.0
+openai>=1.0.0
