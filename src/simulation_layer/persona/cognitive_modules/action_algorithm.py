@@ -299,14 +299,14 @@ class ActionAlgorithm:
         if not affordable_stores:
             return {"store_name": None, "reason": "주변에 적합한 매장 없음", "llm_failed": False}
 
-        # 매장 수가 많으면 (유동 에이전트) 검색 랭킹으로 선별
+        # 매장 수가 많으면 검색 랭킹으로 선별
         SEARCH_THRESHOLD = 30  # 30개 이상이면 검색 랭킹 적용
         if len(affordable_stores) > SEARCH_THRESHOLD:
-            # Exploit-Explore: 상위 10 + 랜덤 5 = 15개
+            # Softmax 가중 샘플링: 카테고리 선필터 → 점수 비례 20개 추출
             display_stores = self.global_store.search_ranked_stores(
                 category=category,
-                top_k=10,
-                explore_k=5,
+                sample_k=20,
+                candidate_stores=affordable_stores,
             )
         else:
             # 상주 에이전트: 카테고리 매칭 후 전체 사용

@@ -469,18 +469,28 @@ class GlobalStore:
         category: str = "",
         agent_lat: float = 0.0,
         agent_lng: float = 0.0,
-        top_k: int = 10,
-        explore_k: int = 5,
+        sample_k: int = 20,
+        temperature: float = 0.5,
+        candidate_stores: Optional[List["StoreRating"]] = None,
     ) -> List[StoreRating]:
         """
-        검색엔진 랭킹 기반 매장 선별 (Exploit-Explore).
+        Softmax 가중 확률 샘플링 기반 매장 선별.
 
-        유동 에이전트용: 네이버/카카오 맵 검색처럼 스코어링 후
-        상위 top_k(exploit) + 랜덤 explore_k(explore) = 15개 반환.
+        카테고리 선필터 → 스코어링 → Softmax 확률 비례 비복원 추출.
+        인기매장은 높은 확률로, 롱테일 매장도 일정 확률로 선택됨.
 
-        스코어링: 별점 + 에이전트평점 + 리뷰수 + 카테고리매칭 - 거리
+        개선 이력:
+        - v1: 전체 매장 + 카테고리 보너스 + exploit 10/explore 5
+        - v2 (1차): 카테고리 선필터 + candidate_stores + explore_k 증가
+        - v3 (2차): 리뷰 수 캡(50건) + 가중치 완화 (0.5→0.3)
+        - v4 (3차): 점수 지터(σ=0.8) → 인기매장 잔류율 급락 문제
+        - v5 (4차): exploit/explore 비율 조정 → 인기/비인기 갭 여전
+        - v6 (5차): Softmax 가중 샘플링 (T=0.5)으로 자연스러운 분포
+
+        스코어링: 별점×1.5 + 에이전트평점×2.0 + min(리뷰,50)로그×0.3 - 거리×0.3
+        선택: softmax(score / T) 확률 비례 비복원 추출
         """
-        from math import radians, cos, sin, asin, sqrt
+        from math import radians, cos, sin, asin, sqrt, exp
 
         def haversine(lat1, lon1, lat2, lon2):
             R = 6371
@@ -491,36 +501,52 @@ class GlobalStore:
             c = 2 * asin(sqrt(a))
             return R * c
 
-        scored = []
-        for store in self.stores.values():
+        # 검색 대상: candidate_stores가 있으면 해당 목록, 없으면 전체
+        pool = candidate_stores if candidate_stores is not None else list(self.stores.values())
+
+        # 카테고리 선필터링
+        if category:
+            category_pool = [s for s in pool if match_category(category, s.category)]
+            if len(category_pool) >= 5:
+                pool = category_pool
+
+        # 스코어링
+        scores = []
+        for store in pool:
             score = 0.0
-            # 별점 (0~5)
             score += (store.star_rating or 0) * 1.5
-            # 에이전트 평점
             if store.agent_rating_count > 0:
                 score += store.agent_avg_rating * 2.0
-            # 리뷰 수 (로그 스케일)
-            score += math.log1p(store.star_rating_count or 0) * 0.5
-            # 카테고리 매칭 보너스
-            if category and match_category(category, store.category):
-                score += 3.0
-            # 거리 페널티
+            capped_reviews = min(store.star_rating_count or 0, 50)
+            score += math.log1p(capped_reviews) * 0.3
             if store.coordinates and agent_lat and agent_lng:
                 lat, lng = store.coordinates
                 dist = haversine(agent_lat, agent_lng, lat, lng)
                 score -= dist * 0.3
-            scored.append((score, store))
+            scores.append(score)
 
-        scored.sort(key=lambda x: -x[0])
+        # Softmax 확률 계산
+        if not scores:
+            return []
+        max_score = max(scores)
+        exp_scores = [exp((s - max_score) / temperature) for s in scores]
+        total_exp = sum(exp_scores)
+        probs = [e / total_exp for e in exp_scores]
 
-        # Exploit: 상위 top_k
-        top_stores = [s for _, s in scored[:top_k]]
-        # Explore: 나머지에서 랜덤 explore_k
-        remaining = [s for _, s in scored[top_k:]]
-        explore_count = min(explore_k, len(remaining))
-        explore_stores = random.sample(remaining, explore_count) if explore_count > 0 else []
+        # 비복원 가중 추출 (sample_k개)
+        k = min(sample_k, len(pool))
+        indices = list(range(len(pool)))
+        weights = list(probs)
+        selected = []
+        for _ in range(k):
+            total_w = sum(weights)
+            norm_weights = [w / total_w for w in weights]
+            chosen = random.choices(range(len(indices)), weights=norm_weights, k=1)[0]
+            selected.append(pool[indices[chosen]])
+            indices.pop(chosen)
+            weights.pop(chosen)
 
-        return top_stores + explore_stores
+        return selected
 
     def add_agent_rating(
         self,
