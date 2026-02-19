@@ -798,7 +798,7 @@ async def async_main():
     results_df = await run_simulation(
         agents, global_store, settings, days,
         target_store=args.target_store,
-        max_concurrent_llm_calls=5,
+        max_concurrent_llm_calls=20,
     )
     save_results(results_df, global_store, agents, settings)
 
