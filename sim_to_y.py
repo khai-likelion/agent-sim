@@ -284,7 +284,7 @@ class ComparisonReportGenerator:
         """
         if not isinstance(generation, str) or not generation.startswith("혼합"):
             return generation
-        sc = special_condition or ""
+        sc = "" if pd.isna(special_condition) else str(special_condition)
         s_label  = "S"       if "S포함"  in sc else "S미포함"
         z1_label = "Z1"      if "Z1포함" in sc else "Z1미포함"
         return f"혼합({s_label}, {z1_label})"
