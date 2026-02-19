@@ -320,7 +320,11 @@ def load_personas_from_json(
         json_path = Path(__file__).parent / "personas_160.json"
 
     with open(json_path, encoding="utf-8") as f:
-        raw_list = json.load(f)
+        data = json.load(f)
+
+    raw_list = data.get("personas", data) if isinstance(data, dict) else data
+    if not isinstance(raw_list, list):
+        raw_list = []
 
     agents: List[GenerativeAgent] = []
     for attrs in raw_list:
