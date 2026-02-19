@@ -1,7 +1,8 @@
 # 에이전트 설정 가이드 — 설정·이유 한눈에
 
 `agent-decision-flow.md`(의사결정 흐름)와 `agent-upgrade-summary.md`(고도화 내용)를 통합하여  
-**각 설정이 왜 그렇게 되어 있는지**를 한눈에 파악할 수 있는 레퍼런스 문서입니다.
+**각 설정이 왜 그렇게 되어 있는지**를 한눈에 파악할 수 있는 레퍼런스 문서입니다.  
+▶ 토글을 클릭하면 실제 반영된 코드를 펼쳐볼 수 있습니다.
 
 ---
 
@@ -40,6 +41,35 @@
 | **고도화 #** | #2, #10 |
 | **참고** | `agent.get_memory_context(current_date)`, `get_meals_today()` |
 
+<details>
+<summary>▶ 코드: get_memory_context</summary>
+
+```python
+# agent.py
+def get_memory_context(self, current_date: str = "") -> str:
+    lines = []
+    if current_date:
+        today_meals = self.get_meals_today(current_date)
+        if today_meals:
+            lines.append(f"오늘의 식사 기록 (현재 {len(today_meals)}끼 외식 완료):")
+            for v in today_meals:
+                time_part = v.visit_datetime[11:16] if len(v.visit_datetime) > 16 else ""
+                lines.append(f"  - {time_part} {v.store_name} ({v.category})")
+        else:
+            lines.append("오늘의 식사 기록: 아직 없음")
+        lines.append("")
+    rating_text = {1: "매우별로", 2: "별로", 3: "보통", 4: "좋음", 5: "매우좋음"}
+    lines.append("당신의 과거 경험:")
+    for v in self.recent_history[-5:]:
+        line = f"  - {v.store_name} ({v.category}): {rating_text.get(v.taste_rating, '?')}"
+        if v.comment:
+            line += f' → "{v.comment}"'
+        lines.append(line)
+    return "\n".join(lines)
+```
+
+</details>
+
 ### 1.3 아침 "이전 식사로 충분" 사유 제외
 
 | 항목 | 내용 |
@@ -47,6 +77,15 @@
 | **설정** | 아침 또는 `meals_today == 0`일 때 `reasons_skip`에서 "이전 식사로 충분" 제외 |
 | **설정 이유** | 아침은 그날 첫 끼니인데 이전 식사가 있을 수 없음 — 모순 방지 |
 | **고도화 #** | #12 |
+
+<details>
+<summary>▶ 설명: 프롬프트 유도</summary>
+
+Step 1은 LLM 순수 의사결정으로 전환됨. 프롬프트 `step1_destination.txt`에 선택지로  
+`2. 이 시간대에는 먹지 않는다 (배가 안 고픔, 이전 식사로 충분, 다이어트 중 등)`를 포함하고,  
+LLM이 "아침 + 첫 끼" 맥락에서 "이전 식사로 충분"을 비현실적이라 스스로 회피하도록 유도함.
+
+</details>
 
 ### 1.4 Step 5 루프 (매장 방문 행동 → Step 3→4→5 반복)
 
@@ -58,6 +97,26 @@
 | **고도화 #** | #25 |
 | **참고** | `STORE_VISIT_ACTIONS = {"카페_가기": "커피-음료"}`, `MAX_VISIT_LOOP = 3` |
 
+<details>
+<summary>▶ 코드: STORE_VISIT_ACTIONS + 루프</summary>
+
+```python
+# action_algorithm.py
+STORE_VISIT_ACTIONS = {"카페_가기": "커피-음료"}
+MAX_VISIT_LOOP = 3
+
+for _loop_i in range(self.MAX_VISIT_LOOP):
+    step5 = await self.step5_next_action(agent, ..., session_visits, ...)
+    action = step5.get("action", "")
+    if action not in self.STORE_VISIT_ACTIONS:
+        break
+    loop_category = self.STORE_VISIT_ACTIONS[action]
+    step3_loop = await self.step3_store_selection(agent, loop_category, ...)
+    step4_loop = await self.step4_evaluate_and_feedback(...)
+```
+
+</details>
+
 ### 1.5 session_activity (Step 5 맥락)
 
 | 항목 | 내용 |
@@ -68,6 +127,27 @@
 | **고도화 #** | #26 |
 | **참고** | `이번 시간대 활동: 1. 스시요리하루(일식) 방문 -> 4/5 2. 딥블루레이크(커피-음료) 방문 -> 5/5` |
 
+<details>
+<summary>▶ 코드: session_visits → session_activity</summary>
+
+```python
+# action_algorithm.py
+if session_visits:
+    activity_lines = []
+    for i, v in enumerate(session_visits, 1):
+        store = v.get("visited_store", "?")
+        cat = v.get("visited_category", "")
+        rating = v.get("rating", "")
+        rating_str = f" -> {rating}/5" if rating else ""
+        activity_lines.append(f"  {i}. {store}({cat}) 방문{rating_str}")
+    session_activity = "\n".join(activity_lines)
+    # + [고려사항] warnings ...
+else:
+    session_activity = "  (아직 활동 없음)"
+```
+
+</details>
+
 ### 1.6 [고려사항] 동적 경고 (카테고리 중복)
 
 | 항목 | 내용 |
@@ -77,6 +157,25 @@
 | **설정 이유** | "비현실적이지만 이유가 있으면 가능" — LLM 판단에 위임, 기계적 제약 완화 |
 | **고도화 #** | #27 |
 | **참고** | 커피 1회 → "방금 카페 다녀왔습니다... 가능합니다", 2회+ → "이미 N번... 부자연스럽습니다" |
+
+<details>
+<summary>▶ 코드: [고려사항] 동적 경고 주입</summary>
+
+```python
+# action_algorithm.py
+from collections import Counter
+cat_counts = Counter(visited_categories)
+warnings = []
+for cat, count in cat_counts.items():
+    if count >= 2:
+        warnings.append(f"[고려사항] '{cat}' 일정을 이미 {count}번 소화했습니다...")
+    elif cat == "커피-음료" and count >= 1:
+        warnings.append("[고려사항] 방금 카페를 다녀왔습니다. 보통 바로 또 카페를 가지는 않지만...")
+if warnings:
+    session_activity += "\n  " + "\n  ".join(warnings)
+```
+
+</details>
 
 ---
 
@@ -91,6 +190,27 @@
 | **설정 이유** | LLM이 페르소나 기반으로 아침 카페, 저녁 주점 등 현실적 선택 가능하도록 |
 | **고도화 #** | #14 |
 | **참고** | 아침: 식당+카페, 점심: 식당+카페, 저녁: 식당+주점+카페, 야식: 식당+주점 |
+
+<details>
+<summary>▶ 코드: TIME_SLOT_CATEGORIES</summary>
+
+```python
+# action_algorithm.py
+DESTINATION_CATEGORIES = {
+    "식당": ["한식", "중식", "일식", "양식", "분식", "패스트푸드", "국밥", "찌개", "고기", "치킨"],
+    "카페": ["카페", "커피", "디저트", "베이커리", "브런치"],
+    "주점": ["호프", "이자카야", "포차", "와인바", "술집", "막걸리", "칵테일바", "칵테일"],
+}
+TIME_SLOT_CATEGORIES = {
+    "아침": DESTINATION_CATEGORIES["식당"] + DESTINATION_CATEGORIES["카페"],
+    "점심": DESTINATION_CATEGORIES["식당"] + DESTINATION_CATEGORIES["카페"],
+    "저녁": DESTINATION_CATEGORIES["식당"] + DESTINATION_CATEGORIES["주점"] + DESTINATION_CATEGORIES["카페"],
+    "야식": DESTINATION_CATEGORIES["식당"] + DESTINATION_CATEGORIES["주점"],
+}
+available_categories = TIME_SLOT_CATEGORIES.get(time_slot, DESTINATION_CATEGORIES["식당"])
+```
+
+</details>
 
 ### 2.2 Softmax 가중 샘플링 (T=0.5, 20개)
 
@@ -111,6 +231,28 @@
 | **고도화 #** | #23 |
 | **참고** | 돼지야 0건 → 13건, 메가MGC커피 0건 → 35건(카테고리 선택 가능해짐) |
 
+<details>
+<summary>▶ 코드: Softmax + 계층화 샘플링</summary>
+
+```python
+# global_store.py
+max_score = max(scores)
+exp_scores = [exp((s - max_score) / temperature) for s in scores]
+probs = [e / sum(exp_scores) for e in exp_scores]
+
+# 계층화: 상위60% + 중위25% + 하위15%
+sorted_indices = sorted(range(len(pool)), key=lambda i: scores[i], reverse=True)
+tier_top = sorted_indices[:n//3]
+tier_mid = sorted_indices[n//3:2*n//3]
+tier_low = sorted_indices[2*n//3:]
+k_top, k_mid, k_low = round(k*0.60), round(k*0.25), k - k_top - k_mid
+# 각 tier 내 Softmax 확률 비례 추출
+```
+
+스코어: 별점×1.5 + 에이전트평점×2.0 + log1p(min(리뷰,50))×0.3 - 거리×0.3
+
+</details>
+
 ### 2.4 CATEGORY_ALIAS + match_category
 
 | 항목 | 내용 |
@@ -120,6 +262,27 @@
 | **고도화 #** | #13 |
 | **참고** | `CATEGORY_ALIAS`, `match_category()` |
 
+<details>
+<summary>▶ 코드: CATEGORY_ALIAS + match_category</summary>
+
+```python
+# global_store.py
+CATEGORY_ALIAS = {
+    "카페": "커피-음료", "커피": "커피-음료",
+    "디저트": "제과점", "베이커리": "제과점",
+    "이자카야": "호프-간이주점", "포차": "호프-간이주점", ...
+}
+
+def match_category(query: str, store_category: str) -> bool:
+    q, sc = query.lower(), (store_category or "").lower()
+    if q in sc:
+        return True
+    alias = CATEGORY_ALIAS.get(query, "").lower()
+    return bool(alias and alias in sc)
+```
+
+</details>
+
 ### 2.5 JSON metadata fallback (좌표·카테고리)
 
 | 항목 | 내용 |
@@ -128,6 +291,13 @@
 | **설정 이유** | 상주 에이전트 점심 전원 "적합한 매장 없음" — 좌표/카테고리 누락으로 검색 0건 |
 | **고도화 #** | #13 |
 | **참고** | `global_store.load_from_json_dir()` |
+
+<details>
+<summary>▶ 설명: load_from_json_dir</summary>
+
+`category` 없으면 `metadata.sector`, `x`/`y` 없으면 `metadata.x`/`metadata.y` 사용.
+
+</details>
 
 ### 2.6 random.shuffle (위치 편향 방지)
 
@@ -175,6 +345,27 @@
 | **설정 이유** | 단순화하면서도 리뷰 품질 유지 |
 | **고도화 #** | #1 |
 
+<details>
+<summary>▶ 코드: tone_instruction + focus_aspect</summary>
+
+```python
+# action_algorithm.py (Step 4)
+tone_instruction = "자연스럽게 작성하세요."
+if agent.generation in ["Z1", "Z2"]:
+    tone_instruction = "Z세대 말투(존나, 개꿀맛, ㅋ, 이모티콘 등)를 사용해서..."
+elif agent.generation == "Y":
+    tone_instruction = "밀레니얼 세대 말투로, 적당히 트렌디하면서도 정보성 있게..."
+elif agent.generation == "X":
+    tone_instruction = "X세대 말투로, 점잖으면서도 꼼꼼하게 분석하듯이..."
+elif agent.generation == "S":
+    tone_instruction = "어르신 말투로, 구체적이고 진중하게..."
+
+focus_aspects = ["맛/퀄리티", "가성비", "매장 분위기/인테리어", "직원 서비스/친절도", "매장 청결/위생", "특색있는 메뉴"]
+selected_focus = random.choice(focus_aspects)
+```
+
+</details>
+
 ---
 
 ## 4. 에이전트·위치
@@ -197,6 +388,28 @@
 | **설정 이유** | 유동은 "집"이 없음. 떠나기 선택 시 해당 일 시뮬 종료 |
 | **고도화 #** | #3 |
 
+<details>
+<summary>▶ 코드: entry_point + 유동 초기화</summary>
+
+```python
+# agent.py
+entry_point: Optional[Tuple[float, float]] = field(default=None)
+entry_time_slot: Optional[str] = field(default=None)
+left_mangwon: bool = field(default=False)
+
+# run_generative_simulation.py
+for agent in daily_floating:
+    agent.left_mangwon = False
+    if agent.entry_point:
+        lat, lng = agent.entry_point
+    else:
+        loc = random.choice(list(FLOATING_LOCATIONS.values()))
+        lat, lng = loc["lat"], loc["lng"]
+    agent_locations[agent.id] = network.initialize_agent_location(lat, lng)
+```
+
+</details>
+
 ### 4.3 상주 초기위치 오프셋 (150m)
 
 | 항목 | 내용 |
@@ -207,6 +420,23 @@
 | **고도화 #** | #6 |
 | **참고** | `RESIDENT_OFFSET_RADIUS_M = 150`, `_apply_location_offset()` |
 
+<details>
+<summary>▶ 코드: _apply_location_offset</summary>
+
+```python
+# agent.py
+RESIDENT_OFFSET_RADIUS_M = 150
+
+def _apply_location_offset(base_lat: float, base_lng: float, max_radius_m: float = RESIDENT_OFFSET_RADIUS_M):
+    offset_m = random.uniform(0, max_radius_m)
+    angle = random.uniform(0, 2 * math.pi)
+    dlat = (offset_m * math.cos(angle)) / 111320
+    dlng = (offset_m * math.sin(angle)) / (111320 * math.cos(math.radians(base_lat)))
+    return (base_lat + dlat, base_lng + dlng)
+```
+
+</details>
+
 ### 4.4 유동인구 교체 비율 (요일별 + 재방문 10%)
 
 | 항목 | 내용 |
@@ -216,6 +446,22 @@
 | **설정 이유** | 주말 유동인구 증가 반영. 재방문으로 연속성 부여 |
 | **고도화 #** | #5 |
 | **참고** | `DAILY_FLOATING_COUNT_BY_DAY`, `REVISIT_RATE = 0.10` |
+
+<details>
+<summary>▶ 코드: DAILY_FLOATING_COUNT_BY_DAY + REVISIT_RATE</summary>
+
+```python
+# run_generative_simulation.py
+DAILY_FLOATING_COUNT_BY_DAY = {"월": 51, "화": 51, "수": 51, "목": 51, "금": 51, "토": 58, "일": 58}
+REVISIT_RATE = 0.10
+
+base_count = DAILY_FLOATING_COUNT_BY_DAY.get(weekday, 53)
+revisit_count = max(1, int(len(prev_visitors) * REVISIT_RATE))
+revisit_agents = random.sample(prev_visitors, min(revisit_count, len(prev_visitors)))
+daily_floating = revisit_agents + new_agents
+```
+
+</details>
 
 ### 4.5 유동 [0,0] fallback
 
@@ -232,6 +478,18 @@
 | **설정** | `load_graph()`에서 lat &lt; 37.550 노드 제거 |
 | **설정 이유** | 한강 다리 도로를 경유지로 사용해 한강 위를 걷는 것처럼 표시되는 문제 |
 | **고도화 #** | #15 |
+
+<details>
+<summary>▶ 코드: 한강 위 노드 제거</summary>
+
+```python
+# street_network.py
+river_nodes = [n for n, d in self._graph.nodes(data=True) if d.get('y', 999) < 37.550]
+if river_nodes:
+    self._graph.remove_nodes_from(river_nodes)
+```
+
+</details>
 
 ---
 
@@ -325,5 +583,5 @@
 |------|------|
 | [agent-decision-flow.md](./agent-decision-flow.md) | Step 1~5 데이터 흐름, 프롬프트 예시, 변수 출처 |
 | [agent-upgrade-summary.md](./agent-upgrade-summary.md) | 고도화 상세 (문제·원인·해결·변경 파일) |
-| [agent-upgrade-code-reference.md](./agent-upgrade-code-reference.md) | 고도화 실제 코드 + 토글로 펼쳐보기 |
+| [agent-upgrade-code-reference.md](./agent-upgrade-code-reference.md) | 고도화 코드 상세 (별도 문서) |
 | [agent_action_algorithm.md](./agent_action_algorithm.md) | 의사결정 알고리즘 기술 스펙 |
