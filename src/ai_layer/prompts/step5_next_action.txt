@@ -6,11 +6,13 @@
 - 요일: {weekday}요일
 - 현재 시간대: {current_time_slot}
 - 다음 시간대: {next_time_slot}
-- 방금 한 일: {last_action}
+
+이번 시간대 활동:
+{session_activity}
 
 {memory_context}
 
-질문: 다음 시간대까지 무엇을 할지 결정하세요.
+질문: 위 활동 이력을 고려하여, 다음 시간대까지 무엇을 할지 결정하세요.
 
 선택 가능한 행동:
 {available_actions}

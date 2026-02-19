@@ -485,24 +485,18 @@ class ActionAlgorithm:
         current_time_slot: str,
         next_time_slot: str,
         weekday: str,
-        last_action: str,
+        session_visits: Optional[List[Dict[str, Any]]] = None,
         current_date: str = "",
     ) -> Dict[str, Any]:
         """
         Step 5: 다음 시간대까지 무엇을 할지 결정
         LLM 실패 시 LLMCallFailedError 발생 (Fallback 없음)
 
-        선택지:
-        - 집에서_쉬기: 집에 돌아가서 휴식
-        - 카페_가기: 근처 카페에서 시간 보내기
-        - 배회하기: 망원동 거리를 걸으며 구경하기
-        - 한강공원_산책: 망원한강공원에서 산책
-        - 망원시장_장보기: 망원시장에서 장보기
-        - 회사_가기: 직장에 출근하기 (직장인만)
+        Args:
+            session_visits: 이번 타임슬롯 방문 이력 리스트
+                [{"visited_store": str, "visited_category": str, "rating": int}, ...]
 
         Returns: {"action": str, "walking_speed": float, "reason": str, "destination": dict | None}
-
-        walking_speed는 LLM이 페르소나 특징을 보고 직접 판단한 km/h 값
         """
         # 에이전트 유형별 선택지 분리
         if agent.is_resident:
@@ -528,6 +522,19 @@ class ActionAlgorithm:
             valid_actions = ["카페_가기", "배회하기", "한강공원_산책", "망원시장_장보기", "망원동_떠나기"]
             action_options = "|".join(valid_actions)
 
+        # 이번 타임슬롯 활동 이력을 자연어로 구성
+        if session_visits:
+            activity_lines = []
+            for i, v in enumerate(session_visits, 1):
+                store = v.get("visited_store", "?")
+                cat = v.get("visited_category", "")
+                rating = v.get("rating", "")
+                rating_str = f" → 별점 {rating}/5" if rating else ""
+                activity_lines.append(f"  {i}. {store}({cat}) 방문{rating_str}")
+            session_activity = "\n".join(activity_lines)
+        else:
+            session_activity = "  (아직 활동 없음)"
+
         prompt = render_prompt(
             STEP5_NEXT_ACTION,
             agent_name=agent.persona_id,
@@ -535,7 +542,7 @@ class ActionAlgorithm:
             weekday=weekday,
             current_time_slot=current_time_slot,
             next_time_slot=next_time_slot,
-            last_action=last_action,
+            session_activity=session_activity,
             memory_context=agent.get_memory_context(current_date),
             available_actions=available_actions,
             action_options=action_options,
@@ -693,6 +700,12 @@ class ActionAlgorithm:
 
     # ==================== Main Process ====================
 
+    # Step 5에서 매장 방문이 수반되는 행동 → Step 3→4 루프 트리거
+    STORE_VISIT_ACTIONS = {
+        "카페_가기": "커피-음료",
+    }
+    MAX_VISIT_LOOP = 3  # 타임슬롯 내 최대 추가 방문 횟수
+
     async def process_decision(
         self,
         agent: GenerativeAgent,
@@ -700,48 +713,52 @@ class ActionAlgorithm:
         time_slot: str,
         weekday: str,
         current_datetime: str,
+        next_time_slot: str = "",
         improvement_text: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        4단계 의사결정 전체 프로세스 수행 (비동기).
-        에이전트 내 각 단계는 이전 결과에 의존하므로 await로 순차 실행.
-        LLM 실패 시 LLMCallFailedError 발생 (Fallback 없음)
+        5단계 의사결정 전체 프로세스 수행 (비동기).
+        Step 1→2→3→4→5, Step 5에서 매장 방문 행동이면 3→4→5 루프.
+        다음 타임슬롯에서는 Step 1부터 재시작.
 
         Args:
+            next_time_slot: 다음 시간대 이름 (Step 5용, 없으면 빈 문자열)
             improvement_text: 개선사항 텍스트 (Step 3, 4에서 LLM에 전달)
 
         Returns: {
             "decision": "visit" | "stay_home" | "llm_failed",
-            "steps": {step1, step2, step3, step4},
-            "visited_store": str | None,
+            "visits": [{"visited_store", "visited_category", "ratings", "steps"}],
+            "visited_store": str | None,  (첫 번째 방문, 하위 호환)
             "visited_category": str | None,
             "ratings": {taste, value, atmosphere} | None,
+            "step5": {"action", "walking_speed", "reason", "destination"} | None,
             "error": str | None,
         }
         """
         try:
-            # current_datetime에서 날짜 추출 (예: "2026-02-16T07:00:00" → "2026-02-16")
             current_date = current_datetime[:10] if current_datetime else ""
 
-            # Step 1: 망원동 내 식사 여부 결정 (확률 기반, LLM 불필요 → 동기)
+            # Step 1: 망원동 내 식사 여부 결정 (확률 기반, LLM 불필요)
             step1 = self.step1_eat_in_mangwon(agent, time_slot, weekday, current_date)
 
             if not step1.get("eat_in_mangwon", False):
                 return {
                     "decision": "stay_home",
                     "steps": {"step1": step1},
+                    "visits": [],
                     "visited_store": None,
                     "visited_category": None,
                     "ratings": None,
                     "reason": step1.get("reason", "망원동 외부 식사"),
+                    "step5": None,
                     "error": None,
                 }
 
-            # Step 2: 업종 선택 — 시간대별 전체 카테고리 풀을 LLM에 전달
+            # Step 2: 업종 선택
             step2 = await self.step2_category_selection(agent, time_slot, current_date)
             category = step2.get("category", "한식")
 
-            # Step 3: 매장 선택 (LLM, step2 결과 필요 → await 순차)
+            # Step 3: 매장 선택
             step3 = await self.step3_store_selection(agent, category, nearby_stores, time_slot, improvement_text, current_date)
             store_name = step3.get("store_name")
 
@@ -749,14 +766,15 @@ class ActionAlgorithm:
                 return {
                     "decision": "stay_home",
                     "steps": {"step1": step1, "step2": step2, "step3": step3},
+                    "visits": [],
                     "visited_store": None,
                     "visited_category": None,
                     "ratings": None,
                     "reason": "적합한 매장 없음",
+                    "step5": None,
                     "error": None,
                 }
 
-            # 매장 정보 가져오기
             store = self.global_store.get_by_name(store_name)
             if not store:
                 for s in nearby_stores:
@@ -768,19 +786,20 @@ class ActionAlgorithm:
                 return {
                     "decision": "stay_home",
                     "steps": {"step1": step1, "step2": step2, "step3": step3},
+                    "visits": [],
                     "visited_store": None,
                     "visited_category": None,
                     "ratings": None,
                     "reason": "매장 정보 없음",
+                    "step5": None,
                     "error": None,
                 }
 
-            # Step 4: 평가 및 피드백 (LLM, step3 결과 필요 → await 순차)
+            # Step 4: 평가 및 피드백
             step4 = await self.step4_evaluate_and_feedback(agent, store, current_datetime, improvement_text)
 
-            return {
-                "decision": "visit",
-                "steps": {"step1": step1, "step2": step2, "step3": step3, "step4": step4},
+            # 다중 방문 리스트
+            visits = [{
                 "visited_store": store_name,
                 "visited_category": store.category,
                 "ratings": {
@@ -788,7 +807,91 @@ class ActionAlgorithm:
                     "value": step4["rating"],
                     "atmosphere": step4["rating"],
                 },
+                "steps": {"step3": step3, "step4": step4},
+            }]
+
+            # Step 5 루프: 다음 행동 결정 → 매장 방문이면 3→4→5 반복
+            last_step5 = None
+
+            for _loop_i in range(self.MAX_VISIT_LOOP):
+                # 이번 타임슬롯 방문 이력을 Step 5에 전달 (LLM이 자연스럽게 판단)
+                session_visits = [
+                    {
+                        "visited_store": v["visited_store"],
+                        "visited_category": v["visited_category"],
+                        "rating": v["ratings"]["taste"],
+                    }
+                    for v in visits
+                ]
+
+                try:
+                    step5 = await self.step5_next_action(
+                        agent, time_slot, next_time_slot or time_slot,
+                        weekday, session_visits, current_date,
+                    )
+                except LLMCallFailedError:
+                    break  # Step 5 실패 시 루프 종료 (이전 방문은 유지)
+
+                last_step5 = step5
+                action = step5.get("action", "")
+
+                # 매장 방문이 수반되지 않는 행동 → 루프 종료
+                if action not in self.STORE_VISIT_ACTIONS:
+                    break
+
+                # 매장 방문 행동 → Step 3→4 추가 실행
+                loop_category = self.STORE_VISIT_ACTIONS[action]
+
+                try:
+                    step3_loop = await self.step3_store_selection(
+                        agent, loop_category, nearby_stores, time_slot,
+                        improvement_text, current_date,
+                    )
+                except LLMCallFailedError:
+                    break
+
+                loop_store_name = step3_loop.get("store_name")
+                if not loop_store_name:
+                    break
+
+                loop_store = self.global_store.get_by_name(loop_store_name)
+                if not loop_store:
+                    for s in nearby_stores:
+                        if s.store_name == loop_store_name:
+                            loop_store = s
+                            break
+                if not loop_store:
+                    break
+
+                try:
+                    step4_loop = await self.step4_evaluate_and_feedback(
+                        agent, loop_store, current_datetime, improvement_text,
+                    )
+                except LLMCallFailedError:
+                    break
+
+                visits.append({
+                    "visited_store": loop_store_name,
+                    "visited_category": loop_store.category,
+                    "ratings": {
+                        "taste": step4_loop["rating"],
+                        "value": step4_loop["rating"],
+                        "atmosphere": step4_loop["rating"],
+                    },
+                    "steps": {"step3": step3_loop, "step4": step4_loop},
+                })
+
+            # 첫 번째 방문 정보 (하위 호환)
+            first_visit = visits[0]
+            return {
+                "decision": "visit",
+                "steps": {"step1": step1, "step2": step2, "step3": step3, "step4": step4},
+                "visits": visits,
+                "visited_store": first_visit["visited_store"],
+                "visited_category": first_visit["visited_category"],
+                "ratings": first_visit["ratings"],
                 "reason": f"{step1.get('reason', '')} → {step2.get('reason', '')} → {step3.get('reason', '')}",
+                "step5": last_step5,
                 "error": None,
             }
 
@@ -796,10 +899,12 @@ class ActionAlgorithm:
             return {
                 "decision": "llm_failed",
                 "steps": {},
+                "visits": [],
                 "visited_store": None,
                 "visited_category": None,
                 "ratings": None,
                 "reason": None,
+                "step5": None,
                 "error": str(e),
             }
 

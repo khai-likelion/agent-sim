@@ -306,11 +306,13 @@ async def agent_task(
     weekday: str,
     slot_time: datetime,
     agent_locations: Dict[int, Any],
+    next_time_slot: str = "",
 ) -> Optional[Dict[str, Any]]:
     """
     에이전트 한 명의 한 타임슬롯 의사결정 코루틴.
 
-    - 에이전트 내 Step 1~4는 await로 순차 실행 (이전 결과가 다음 입력).
+    - 에이전트 내 Step 1→2→3→4→5는 await로 순차 실행.
+    - Step 5에서 매장 방문 행동이면 Step 3→4→5 루프 반복.
     - 여러 에이전트의 코루틴은 asyncio.gather()로 동시에 실행됨.
     - 평점은 add_pending_rating()에 버퍼링 → 타임슬롯 종료 후 flush.
     """
@@ -336,33 +338,40 @@ async def agent_task(
     else:
         nearby_stores = list(global_store.stores.values())
 
-    # 에이전트 내부: Step 1→2→3→4 순차 await (각 단계가 이전 결과에 의존)
+    # 에이전트 내부: Step 1→2→3→4→5 (Step 5에서 매장 방문이면 3→4→5 루프)
     result = await algorithm.process_decision(
         agent=agent,
         nearby_stores=nearby_stores,
         time_slot=slot_name,
         weekday=weekday,
         current_datetime=slot_time.isoformat(),
+        next_time_slot=next_time_slot,
     )
 
     # 실시간 결정 로그
     decision = result.get("decision", "?")
+    visits = result.get("visits", [])
     steps = result.get("steps", {})
-    step4 = steps.get("step4", {})
+
     if decision == "visit":
-        store = result.get("visited_store", "?")
-        category = result.get("visited_category", "")
-        ratings = result.get("ratings") or {}
-        rating = ratings.get("taste", "-")
-        comment = step4.get("comment", "")
-        tags = step4.get("selected_tags", [])
-        tags_str = " ".join(f"#{t}" for t in tags) if tags else ""
-        reason = result.get("reason", "")
-        reason_short = reason[:40] + "..." if len(reason) > 40 else reason
-        print(f"  [{agent.persona_id}] {slot_name} | "
-              f"방문: {store}({category}) | 별점:{rating}/5 {tags_str}")
-        if comment:
-            print(f"         리뷰: {comment[:60]}{'...' if len(comment)>60 else ''}")
+        for i, visit in enumerate(visits):
+            v_store = visit["visited_store"]
+            v_category = visit["visited_category"]
+            v_rating = visit["ratings"]["taste"]
+            v_step4 = visit["steps"].get("step4", {})
+            comment = v_step4.get("comment", "")
+            tags = v_step4.get("selected_tags", [])
+            tags_str = " ".join(f"#{t}" for t in tags) if tags else ""
+            prefix = "  " if i == 0 else "    ++"
+            print(f"{prefix}[{agent.persona_id}] {slot_name} | "
+                  f"방문: {v_store}({v_category}) | 별점:{v_rating}/5 {tags_str}")
+            if comment:
+                print(f"         리뷰: {comment[:60]}{'...' if len(comment)>60 else ''}")
+
+        # Step 5 결과 로그
+        step5 = result.get("step5")
+        if step5:
+            print(f"    >> 다음행동: {step5.get('action', '?')} | {step5.get('reason', '')[:40]}")
     elif decision == "stay_home":
         step2 = steps.get("step2", {})
         reason = result.get("reason", step2.get("reason", ""))
@@ -514,11 +523,15 @@ async def run_simulation(
 
             tqdm.write(f"    [{slot_name}] {slot_time.strftime('%H:%M')} - 에이전트 {len(daily_agents)}명 병렬 의사결정 중...")
 
+            # 다음 타임슬롯 이름 계산 (Step 5용)
+            current_slot_idx = [i for i, (name, _) in enumerate(time_slot_list) if name == slot_name][0]
+            next_slot_name = time_slot_list[current_slot_idx + 1][0] if current_slot_idx + 1 < len(time_slot_list) else ""
+
             # 타임슬롯 내 모든 에이전트의 의사결정을 동시에 실행.
             # - 에이전트 간: asyncio.gather()로 병렬 실행 (LLM 응답 대기 중 다른 에이전트 요청 전송)
-            # - 에이전트 내: process_decision() 안에서 Step1→2→3→4 순차 await
+            # - 에이전트 내: process_decision() 안에서 Step1→2→3→4→5 순차 await (Step5 루프 포함)
             tasks = [
-                agent_task(agent, algorithm, global_store, slot_name, weekday, slot_time, agent_locations)
+                agent_task(agent, algorithm, global_store, slot_name, weekday, slot_time, agent_locations, next_slot_name)
                 for agent in daily_agents
             ]
             task_outputs = await asyncio.gather(*tasks, return_exceptions=True)
@@ -543,9 +556,10 @@ async def run_simulation(
 
                 location = output["location"]
                 result = output["result"]
+                visits = result.get("visits", [])
 
-                # 결과 기록
-                record = {
+                # 공통 필드
+                common = {
                     "timestamp": slot_time.strftime("%Y-%m-%d %H:%M"),
                     "agent_id": agent.id,
                     "persona_id": agent.persona_id,
@@ -554,20 +568,38 @@ async def run_simulation(
                     "segment": agent.segment,
                     "weekday": weekday,
                     "time_slot": slot_name,
-                    "decision": result["decision"],
-                    "visited_store": result.get("visited_store"),
-                    "visited_category": result.get("visited_category"),
-                    # 위치 정보
                     "agent_lat": location.lat,
                     "agent_lng": location.lng,
-                    # 평점 정보
-                    "taste_rating": result.get("ratings", {}).get("taste") if result.get("ratings") else None,
-                    "value_rating": result.get("ratings", {}).get("value") if result.get("ratings") else None,
-                    "atmosphere_rating": result.get("ratings", {}).get("atmosphere") if result.get("ratings") else None,
-                    "reason": result.get("reason", ""),
                     "nearby_store_count": output["nearby_store_count"],
                 }
-                results.append(record)
+
+                if visits:
+                    # 다중 방문: 방문당 1개 레코드
+                    for visit in visits:
+                        record = {
+                            **common,
+                            "decision": "visit",
+                            "visited_store": visit["visited_store"],
+                            "visited_category": visit["visited_category"],
+                            "taste_rating": visit["ratings"]["taste"],
+                            "value_rating": visit["ratings"]["value"],
+                            "atmosphere_rating": visit["ratings"]["atmosphere"],
+                            "reason": result.get("reason", ""),
+                        }
+                        results.append(record)
+                else:
+                    # 비방문 (stay_home, llm_failed)
+                    record = {
+                        **common,
+                        "decision": result["decision"],
+                        "visited_store": None,
+                        "visited_category": None,
+                        "taste_rating": None,
+                        "value_rating": None,
+                        "atmosphere_rating": None,
+                        "reason": result.get("reason", ""),
+                    }
+                    results.append(record)
 
         # 하루 종료: 소요시간 출력
         day_elapsed = time_module.perf_counter() - day_start_time

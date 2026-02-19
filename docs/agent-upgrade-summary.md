@@ -28,6 +28,8 @@
 | 22 | 지도 마커/뷰 개선 | 이모지만으로 에이전트/매장 구분 어려움, 경로 잘림 | 사람 마커(🧑+색 원) + 매장 핀(빨간 원+🍴) + 바운딩 박스 자동 줌 | **완료** |
 | 23 | 타겟 매장 방문 0건 | 돼지야(한식) 0건, 메가커피(커피) 0건 — Softmax 랭킹 편중 + 카페 카테고리 미선택 | 계층화 샘플링(상위60%+중위25%+하위15%) → 롱테일 매장도 LLM 후보 진입 | **완료** |
 | 24 | 유동 에이전트 좌표 [0,0] | home_location [0,0]이 유효값으로 처리 → 지도에서 엉뚱한 위치 표시 | entry_point fallback + `_is_valid_loc()` 체크 3중 적용 | **완료** |
+| 25 | Step 5 활성화 + 다중 방문 루프 | Step 5 미호출 (죽은 코드) → ①카페_가기 등이 실제 매장 선택/평가 없이 종료 ②타임슬롯당 1회 방문만 가능 | Step 4 후 Step 5 호출 → 매장 방문 행동이면 Step 3→4→5 루프 (MAX=3) | **완료** |
+| 26 | Step 5 활동 맥락 부재 | Step 5에 last_action 단일 문자열만 전달 → 이번 타임슬롯에서 뭘 했는지 모름 (첫 방문이든 다중 방문이든 동일하게 맥락 없음) | session_visits 전체 이력을 session_activity 자연어로 변환하여 LLM에 전달 → 맥락 기반 자연스러운 판단 | **완료** |
 
 ---
 
@@ -1085,3 +1087,135 @@ start_date = (today_kst - timedelta(days=days_since_friday)).replace(hour=0, min
 
 ### 변경 파일
 - `scripts/dashboard.py`: 에이전트/매장 레이어 재구성, ViewState 바운딩 박스 계산
+
+---
+
+## 25. Step 5 활성화 + 타임슬롯 내 다중 방문 루프
+
+### 현재 방식
+- **파일**: `src/simulation_layer/persona/cognitive_modules/action_algorithm.py`
+- `process_decision`이 Step 1→2→3→4까지만 실행
+- Step 5(`step5_next_action`)는 정의만 되어 있고 **호출되지 않음** (죽은 코드)
+- 에이전트가 식사 후 "카페_가기"를 결정해도 실제 매장 선택/평가가 없음
+- **결과**: 한 타임슬롯에 1회만 방문 가능, 식사 후 카페 같은 현실적 다중 방문 불가
+
+### 문제점
+
+**A. Step 5 미호출 → 카페_가기 등이 매장 방문으로 이어지지 않음**
+- Step 5 선택지(`카페_가기`, `한강공원_산책`, `배회하기` 등)는 정의되어 있으나 실제 호출되지 않음
+- 기존에는 `_select_random_cafe()`로 랜덤 카페 좌표만 배정하고, 실제 매장 선택(Step 3)/평가(Step 4)를 거치지 않음
+- 따라서 카페 방문이 **visit_log에 기록되지 않고**, 매장 평점/리뷰도 생성되지 않음
+- 에이전트의 "다음 할 일" 결정 자체가 시뮬레이션에 반영되지 않는 구조적 문제
+
+**B. 타임슬롯당 1회 방문만 가능 → 실제 소비 패턴과 괴리**
+- 현실에서는 점심 식사 후 카페, 저녁 식사 후 2차(술자리) 같은 다중 방문이 자연스러움
+- 기존 구조에서는 타임슬롯당 1개 매장 방문만 기록 → 카페/주점 방문 데이터가 구조적으로 부족
+- 이는 #14(카페/주점 방문 불가) 해결 이후에도 실제 카페 방문 건수가 낮은 원인 중 하나
+
+### 최종 채택안
+**완료** — Step 4 이후 Step 5 호출 + 매장 방문 행동이면 Step 3→4→5 루프
+
+변경 흐름:
+```
+Step1 → Step2 → Step3 → Step4 → Step5 ─┐
+                  ↑                      │
+                  └── 매장 방문 행동이면 ──┘
+                      (카페_가기 등)
+               비매장 행동이면 → return
+               MAX_VISIT_LOOP=3 초과 → return
+```
+
+구현 내용:
+1. **Step 5 호출**: Step 4(평가) 완료 후 `step5_next_action()` 호출
+2. **매장 방문 행동 판별**: `STORE_VISIT_ACTIONS = {"카페_가기": "커피-음료"}` 매핑 테이블
+3. **루프**: 매장 방문 행동이면 해당 카테고리로 Step 3(매장 선택) → Step 4(평가) → Step 5(다음 행동) 반복
+4. **안전 장치**: `MAX_VISIT_LOOP = 3` — 최대 3회 추가 방문으로 무한루프 방지
+5. **다중 방문 기록**: `visits` 리스트에 방문별 매장/카테고리/평점 저장
+
+```python
+# process_decision 반환값 확장
+{
+    "decision": "visit",
+    "visits": [                          # 다중 방문 리스트
+        {"visited_store": "돼지야", "visited_category": "한식", "ratings": {...}},
+        {"visited_store": "메가커피", "visited_category": "커피-음료", "ratings": {...}},
+    ],
+    "visited_store": "돼지야",           # 첫 번째 방문 (하위 호환)
+    "step5": {"action": "카페_가기", ...},  # 마지막 Step 5 결과
+}
+```
+
+6. **agent_task 다중 레코드**: `visits` 리스트를 순회하며 방문당 1개 CSV 레코드 생성
+7. **next_time_slot 전달**: `process_decision` 시그니처에 `next_time_slot: str = ""` 추가, Step 5 프롬프트에서 "다음 시간대까지 무엇을 할지" 판단에 활용
+
+### LLM 호출 증가 분석
+
+| 시나리오 | 기존 | 루프 후 (1회 추가 방문) |
+|----------|:----:|:-----:|
+| LLM 호출/에이전트/슬롯 | 3회 (S2+S3+S4) | 6회 (S2+S3+S4+S5+S3+S4) |
+| 100에이전트 × 4슬롯 × 7일 | ~2,800 | ~4,200~5,600 |
+
+### 변경 파일
+- `src/simulation_layer/persona/cognitive_modules/action_algorithm.py`: `process_decision`에 Step 5 루프 추가, `STORE_VISIT_ACTIONS`, `MAX_VISIT_LOOP` 상수, `visits` 리스트 반환
+- `scripts/run_generative_simulation.py`: `agent_task`에서 다중 visit 레코드 생성, `next_time_slot` 계산 및 전달, 로그에 추가 방문 `↳` 표시
+- `src/ai_layer/prompts/step5_next_action.txt`: Step 5 프롬프트 (기존 죽은 코드에서 실제 호출로 전환)
+
+---
+
+## 26. Step 5 활동 맥락 부재 → session_activity 도입
+
+### 현재 방식 (#25 초기 구현)
+- Step 5 프롬프트에 `last_action: str` 단일 문자열만 전달
+- "방금 한 일: 돼지야 방문" 정도의 정보만 제공
+- LLM이 이번 타임슬롯에서 **이미 뭘 했는지** 전체 맥락을 모름
+- 첫 방문 후 Step 5든, 다중 방문 루프 중이든 동일하게 맥락 없음
+- **결과**: 어떤 매장을 방문했고 별점을 몇 점 줬는지 모르니 다음 행동 판단이 비현실적 (예: 카페 3곳 연속 방문)
+
+### 개선 방향
+사용자 요구: "너무 제약을 걸지 않은 채로 현실에서 사람이 선택을 할 때와 비슷하게"
+→ 하드코딩 제약 대신 LLM에 충분한 맥락을 주고 자연스럽게 판단하도록 유도
+
+### 최종 채택안
+**완료** — `last_action: str` → `session_visits: List[Dict]` + `session_activity` 프롬프트
+
+변경 내용:
+1. **`step5_next_action` 시그니처 변경**: `last_action: str` → `session_visits: Optional[List[Dict]]`
+2. **session_activity 생성**: 방문 리스트를 자연어로 변환하여 프롬프트에 삽입
+
+```python
+# session_visits → session_activity 변환
+if session_visits:
+    activity_lines = []
+    for i, v in enumerate(session_visits, 1):
+        store = v.get("visited_store", "?")
+        cat = v.get("visited_category", "")
+        rating = v.get("rating", "")
+        rating_str = f" → 별점 {rating}/5" if rating else ""
+        activity_lines.append(f"  {i}. {store}({cat}) 방문{rating_str}")
+    session_activity = "\n".join(activity_lines)
+else:
+    session_activity = "  (아직 활동 없음)"
+```
+
+3. **Step 5 프롬프트 개편**:
+
+변경 전:
+```
+- 방금 한 일: {last_action}
+```
+
+변경 후:
+```
+이번 시간대 활동:
+{session_activity}
+
+질문: 위 활동 이력을 고려하여, 다음 시간대까지 무엇을 할지 결정하세요.
+```
+
+**효과**: LLM이 "이미 한식 먹고 별점 4점 줬다" → 자연스럽게 "카페 가자" 판단.
+"이미 한식 먹고 카페도 갔다" → 자연스럽게 "배회하기" 또는 "집에서 쉬기" 판단.
+별도의 카테고리 중복 차단 코드 없이도 LLM이 맥락 기반으로 현실적 선택.
+
+### 변경 파일
+- `src/simulation_layer/persona/cognitive_modules/action_algorithm.py`: `step5_next_action` 시그니처 변경, `session_activity` 생성 로직
+- `src/ai_layer/prompts/step5_next_action.txt`: `{last_action}` → `{session_activity}` + 활동 이력 기반 질문
