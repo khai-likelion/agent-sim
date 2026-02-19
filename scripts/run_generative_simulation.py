@@ -80,7 +80,8 @@ DEFAULT_NETWORK_RADIUS_M = 800.0  # 망원동 구역 내로 제한
 
 
 def estimate_simulation(agent_count: int, days: int = 7, time_slots: int = 4,
-                        resident_count: int = 47, floating_count: int = 113) -> Dict[str, Any]:
+                        resident_count: int = 47, floating_count: int = 113,
+                        max_concurrent_llm_calls: int = 10) -> Dict[str, Any]:
     """
     시뮬레이션 전 예상치 계산.
 
@@ -139,9 +140,9 @@ def estimate_simulation(agent_count: int, days: int = 7, time_slots: int = 4,
     output_cost = (total_output_tokens / 1_000_000) * output_cost_per_million
     total_cost = input_cost + output_cost
 
-    # 예상 시간 (API 호출당 평균 1초 + 0.5초 딜레이)
+    # 예상 시간 (API 호출당 평균 1.5초, 병렬 호출로 분산)
     avg_time_per_call = 1.5  # seconds
-    total_time_seconds = total_llm_calls * avg_time_per_call
+    total_time_seconds = total_llm_calls * avg_time_per_call / max(1, max_concurrent_llm_calls)
     total_time_minutes = total_time_seconds / 60
 
     return {
@@ -163,6 +164,7 @@ def estimate_simulation(agent_count: int, days: int = 7, time_slots: int = 4,
             "total": round(total_cost, 4),
         },
         "estimated_time_minutes": round(total_time_minutes, 1),
+        "max_concurrent_llm_calls": max_concurrent_llm_calls,
     }
 
 
@@ -198,7 +200,8 @@ def print_estimates(estimates: Dict[str, Any]):
         print(f"  Output: ${cost['output']:.4f}")
         print(f"  Total: ${cost['total']:.4f} (약 {cost['total'] * 1400:.0f}원)")
     print()
-    print(f"예상 소요 시간: 약 {estimates['estimated_time_minutes']:.1f}분")
+    mc = estimates.get("max_concurrent_llm_calls", 10)
+    print(f"예상 소요 시간: 약 {estimates['estimated_time_minutes']:.1f}분 (병렬 {mc}개 기준)")
     print("=" * 60)
 
 
@@ -338,6 +341,8 @@ async def agent_task(
     else:
         nearby_stores = list(global_store.stores.values())
 
+    agent.current_location = location
+
     # 에이전트 내부: Step 1→2→3→4→5 (Step 5에서 매장 방문이면 3→4→5 루프)
     result = await algorithm.process_decision(
         agent=agent,
@@ -446,7 +451,13 @@ async def run_simulation(
     # 에이전트 초기 위치 딕셔너리
     agent_locations = {}
 
-    day_pbar = tqdm(range(days), desc="전체 진행", unit="day", position=0)
+    day_pbar = tqdm(
+        range(days),
+        desc="전체 진행",
+        unit="day",
+        position=0,
+        bar_format="{desc}: {percentage:3.0f}%|{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]",
+    )
     for day_idx in day_pbar:
         day_start_time = time_module.perf_counter()
         current_date = start_date + timedelta(days=day_idx)
@@ -548,6 +559,7 @@ async def run_simulation(
                 unit="agent",
                 position=1,
                 leave=False,
+                bar_format="{desc}: {percentage:3.0f}%|{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]",
             )
             for agent, output in slot_pbar:
                 day_processed += 1

@@ -294,10 +294,15 @@ class ActionAlgorithm:
         SEARCH_THRESHOLD = 30  # 30개 이상이면 검색 랭킹 적용
         if len(affordable_stores) > SEARCH_THRESHOLD:
             # Softmax 가중 샘플링: 카테고리 선필터 → 점수 비례 20개 추출
+            loc = agent.current_location
+            agent_lat = loc.lat if loc and hasattr(loc, "lat") else 0.0
+            agent_lng = loc.lng if loc and hasattr(loc, "lng") else 0.0
             display_stores = self.global_store.search_ranked_stores(
                 category=category,
                 sample_k=20,
                 candidate_stores=affordable_stores,
+                agent_lat=agent_lat,
+                agent_lng=agent_lng,
             )
         else:
             # 상주 에이전트: 카테고리 매칭 후 전체 사용
