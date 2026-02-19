@@ -5,7 +5,7 @@
 | # | 항목 | 현재 방식 | 개선안 | 최종 채택안 |
 |---|------|----------|--------|------------|
 | 1 | 리뷰 멘트 다양성 | Step4 프롬프트가 "한줄 평가"만 지시 → 전원 동일한 키워드 재조합 | 페르소나 말투 지정 + 관점 분산 + 구체적 경험 유도 | **완료** (tone_instruction + focus_aspect + comment 규칙) |
-| 2 | 4끼 전부 외식 | Step1이 확률 기반(BASE_EATING_OUT_PROB) + memory_context에 당일 식사 이력 없음 | Step1 프롬프트 선택지 강화 + memory_context에 당일 식사 이력 추가 | **완료** (프롬프트 수정 + 당일 식사 이력 memory_context 통합) |
+| 2 | 4끼 전부 외식 | Step1이 확률 기반(BASE_EATING_OUT_PROB) + memory_context에 당일 식사 이력 없음 | Step1 LLM 전면 전환(순수 의사결정) + memory_context에 당일 식사 이력 추가 | **완료** (LLM 판단 + 프롬프트 강화) |
 | 3 | 유동 초기위치/시작시간 | FLOATING_LOCATIONS → home_location 저장, 아침부터 전원 활동 | entry_point 분리 + entry_time_slot 도입 + "집에서_쉬기" → "망원동 떠나기" | **완료** |
 | 4 | LLM 모델 선택 | GPT-4o-mini (고정) | Gemini 2.0 Flash (33% 저렴, 성능 우위, 속도 25% 빠름) | **완료** (provider 라우팅 + Gemini 전환) |
 | 5 | 유동인구 교체 비율 | 매일 113명 중 53명 랜덤 샘플링 (고정) | 요일별 차등(평일 51/주말 58, 인구DB 비율 1.14배) + 재방문율 10% | **완료** |
@@ -30,6 +30,7 @@
 | 24 | 유동 에이전트 좌표 [0,0] | home_location [0,0]이 유효값으로 처리 → 지도에서 엉뚱한 위치 표시 | entry_point fallback + `_is_valid_loc()` 체크 3중 적용 | **완료** |
 | 25 | Step 5 활성화 + 다중 방문 루프 | Step 5 미호출 (죽은 코드) → ①카페_가기 등이 실제 매장 선택/평가 없이 종료 ②타임슬롯당 1회 방문만 가능 | Step 4 후 Step 5 호출 → 매장 방문 행동이면 Step 3→4→5 루프 (MAX=3) | **완료** |
 | 26 | Step 5 활동 맥락 부재 | Step 5에 last_action 단일 문자열만 전달 → 이번 타임슬롯에서 뭘 했는지 모름 (첫 방문이든 다중 방문이든 동일하게 맥락 없음) | session_visits 전체 이력을 session_activity 자연어로 변환하여 LLM에 전달 → 맥락 기반 자연스러운 판단 | **완료** |
+| 27 | 카테고리 중복 방문 (카페 3연속) | 하드 가드(break)로 원천 봉쇄 → 기계적 제한 | 하드 가드 제거 + `[고려사항]` 맥락 주입 (Internal Thought) → 2회 허용, 3회 자제 유도 | **완료** |
 
 ---
 
@@ -104,14 +105,15 @@
 ```
 
 ### 최종 채택안
-**완료** — Step1 프롬프트 선택지 강화 + memory_context 당일 식사 이력 통합
+**완료** — Step1 LLM 전면 전환 + memory_context 당일 식사 이력 통합
 
-> 참고: Step1 자체는 확률 기반(`BASE_EATING_OUT_PROB`)이 유지되지만, 프롬프트를 통해 LLM이 참고할 수 있는 시간대별 경향과 현실적 판단 유도문을 추가했고, Step2/Step3에서 memory_context로 당일 식사 이력을 전달하여 전체적으로 4끼 외식을 억제함.
+> 기존 확률 기반(`BASE_EATING_OUT_PROB`) 로직을 폐기하고, Step 1부터 LLM(`STEP1_DESTINATION` 프롬프트)을 사용하여 순수 의사결정으로 전환함.
+> 이제 에이전트는 "확률 70%니까 나감"이 아니라, "어제 파스타 먹었으니 오늘은 한식 먹으러 나가야지"라고 직접 판단함.
 
 ### 변경 파일
 - `src/ai_layer/prompts/step1_destination.txt`: 선택지 3가지 분리 + 현실적 판단 유도문 + 시간대별 외식 경향 수치
 - `src/simulation_layer/persona/agent.py`: `get_meals_today()` 메서드, `get_memory_context(current_date)` 메서드
-- `src/simulation_layer/persona/cognitive_modules/action_algorithm.py`: Step1에서 식사 횟수 보정, Step2/Step3에 `memory_context` 전달
+- `src/simulation_layer/persona/cognitive_modules/action_algorithm.py`: **Step1 메서드(`step1_eat_in_mangwon`)를 async LLM 호출로 변경**
 
 ---
 
@@ -798,6 +800,72 @@ def match_category(query: str, store_category: str) -> bool:
   - `CATEGORY_ALIAS` 딕셔너리 + `match_category()` 헬퍼 함수 추가
   - `search_ranked_stores()`, `get_stores_by_category()`, `get_stores_in_budget()`, `get_top_stores_by_agent_rating()`: match_category() 적용
 - `src/simulation_layer/persona/cognitive_modules/action_algorithm.py`: Step3 카테고리 필터링에 match_category() 적용
+
+---
+
+## 27. 카테고리 중복 방문 (Natural Constraints)
+
+### 현재 방식
+- **파일**: `src/simulation_layer/persona/cognitive_modules/action_algorithm.py`
+- `process_decision` 내 루프에서 하드 가드(Hard Guard) 존재:
+
+```python
+# 기존 코드 (루프 내)
+visited_cats = {v["visited_category"] for v in visits}
+if loop_category in visited_cats:
+    break  # 같은 카테고리면 무조건 루프 탈출
+```
+
+- 프롬프트(`step5_next_action.txt`)에서도 "같은 유형의 매장 연속 방문은 비현실적"이라고 강하게 부정
+
+### 문제점
+- **현실성 부족**: 현실에서는 "카페 1차 → 카페 2차"나 "1차 술집 → 2차 술집"이 빈번함  
+- **기계적 제약**: LLM이 "카페 한 번 더 가고 싶다"고 판단해도 코드가 강제로 종료시킴
+
+### 최종 채택안
+**완료** — 하드 가드 제거 + `[고려사항]` 내부 맥락 주입 (Internal Thought)
+
+#### 1. 하드 가드 주석 처리
+```python
+# 하드 가드 제거: 비현실적이지만 가능성은 열어둠 (프롬프트로 제어)
+# visited_cats = {v["visited_category"] for v in visits}
+# if loop_category in visited_cats:
+#     break
+```
+
+#### 2. 동적 경고 (Internal Thought) 주입
+```python
+# step5 session_activity 구성 시
+from collections import Counter
+cat_counts = Counter(visited_categories)
+
+warnings = []
+for cat, count in cat_counts.items():
+    if count >= 2:
+        warnings.append(
+            f"[고려사항] '{cat}' 일정을 이미 {count}번 소화했습니다. "
+            "3번 연속 같은 활동을 하는 것은 현실적으로 부자연스럽습니다. "
+            "이제는 산책이나 장보기 등 다른 활동으로 환기하는 것이 좋습니다."
+        )
+    elif cat == "커피-음료" and count >= 1:
+        warnings.append(
+            "[고려사항] 방금 카페를 다녀왔습니다. 보통 바로 또 카페를 가지는 않지만, "
+            "분위기가 다른 곳으로 2차를 가야 할 특별한 이유가 있다면 가능합니다."
+        )
+```
+
+#### 3. 동작 시나리오
+| 상황 | 주입 메시지 | LLM 예상 판단 |
+|---|---|---|
+| 카페 첫 방문 | 없음 | 자유 판단 |
+| 카페 2번째 방문 | "방금 카페 다녀왔습니다... 가능합니다" | 대부분 다른 활동 선택 |
+| 카페 3번째 시도 | "이미 2번... 부자연스럽습니다" | 다른 활동으로 전환 유도 |
+
+### 변경 파일
+- `src/simulation_layer/persona/cognitive_modules/action_algorithm.py`:
+  - 하드 가드(`break`) 주석 처리 (루프 834~836행)
+  - `session_activity` 구성 시 동적 경고 추가 (510~523행)
+- `src/ai_layer/prompts/step5_next_action.txt`: "비현실적" → "일반적이진 않지만 이유가 있으면 가능" 어조 완화
 
 ---
 
