@@ -650,20 +650,22 @@ async def run_simulation(
 
 
 def save_results(results_df: pd.DataFrame, global_store: GlobalStore, agents: List[GenerativeAgent], settings):
-    """결과 저장"""
+    """결과 저장 (실행별 타임스탬프 폴더로 구분)"""
     print(f"\n[4/4] 결과 저장 중...")
 
-    output_dir = settings.paths.output_dir
+    base_dir = settings.paths.output_dir
+    run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_dir = base_dir / f"generative_{run_id}"
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # 전체 결과 CSV
-    results_path = output_dir / "generative_simulation_result.csv"
+    results_path = output_dir / "simulation_result.csv"
     results_df.to_csv(results_path, index=False, encoding="utf-8-sig")
     print(f"  시뮬레이션 결과: {results_path}")
 
     # 방문 로그만 추출
     visit_df = results_df[results_df["decision"] == "visit"]
-    visit_path = output_dir / "generative_visit_log.csv"
+    visit_path = output_dir / "visit_log.csv"
     visit_df.to_csv(visit_path, index=False, encoding="utf-8-sig")
     print(f"  방문 로그: {visit_path}")
 
@@ -674,7 +676,7 @@ def save_results(results_df: pd.DataFrame, global_store: GlobalStore, agents: Li
 
     # 에이전트 최종 상태 저장
     agents_data = [a.to_dict() for a in agents]
-    agents_path = output_dir / "agents_final_state.json"
+    agents_path = output_dir / "agents_final.json"
     with open(agents_path, "w", encoding="utf-8") as f:
         json.dump(agents_data, f, ensure_ascii=False, indent=2)
     print(f"  에이전트 상태: {agents_path}")

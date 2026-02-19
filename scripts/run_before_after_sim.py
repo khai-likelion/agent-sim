@@ -211,9 +211,11 @@ async def main():
         max_concurrent_llm_calls=60,
     )
 
+    # 실행별 구분: 타임스탬프 추가 (여러 시뮬 결과 보존)
+    run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
     prefix = args.output_prefix or args.target_store
-    before_dir = output_base / f"{prefix}_before"
-    after_dir = output_base / f"{prefix}_after"
+    before_dir = output_base / f"{prefix}_before_{run_id}"
+    after_dir = output_base / f"{prefix}_after_{run_id}"
 
     before_visit_df = save_results_to(
         results_before, global_store_before, agents_before,
