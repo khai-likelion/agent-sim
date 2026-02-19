@@ -187,7 +187,7 @@ class ActionAlgorithm:
 
     # ==================== Step 1: 망원동 내 식사 여부 결정 ====================
 
-    def step1_eat_in_mangwon(
+    async def step1_eat_in_mangwon(
         self,
         agent: GenerativeAgent,
         time_slot: str,
@@ -195,57 +195,28 @@ class ActionAlgorithm:
         current_date: str = "",
     ) -> Dict[str, Any]:
         """
-        Step 1: 망원동 내 식사 여부 결정 (확률 기반)
-
-        시간대별 기본 확률에 보정을 적용.
-        - 오늘 식사 횟수가 2회 이상이면 확률 감소 (하루 2~3끼)
-        - 주말이면 확률 약간 증가
-
-        Returns: {"eat_in_mangwon": bool, "reason": str}
+        Step 1: 망원동 내 식사 여부 결정 (LLM 기반)
         """
-        base_prob = BASE_EATING_OUT_PROB.get(time_slot, 0.50)
+        # 프롬프트 렌더링
+        prompt = render_prompt(
+            STEP1_DESTINATION,
+            agent_name=agent.persona_id,
+            persona_summary=agent.get_persona_summary(),
+            weekday=weekday,
+            time_slot=time_slot,
+            memory_context=agent.get_memory_context(current_date),
+        )
 
-        # 오늘 식사 횟수 보정 (하루 2~3끼 제한)
-        meals_today = len(agent.get_meals_today(current_date)) if current_date else len(agent.recent_history)
-        if meals_today >= 3:
-            base_prob *= 0.1  # 3끼 이상이면 크게 감소
-        elif meals_today >= 2:
-            base_prob *= 0.5  # 2끼면 절반
-        elif meals_today >= 1 and time_slot == "아침":
-            pass  # 아침에 이미 먹었으면 그대로
+        # LLM 호출
+        response = await self._call_llm_async(prompt)
+        result = self._parse_json_response(response)
 
-        # 주말 보정
-        if weekday in ["토", "일"]:
-            base_prob = min(1.0, base_prob * 1.15)
+        if result and "eat_in_mangwon" in result:
+            return result
+        
+        # 파싱 실패 시 기본값 (False)
+        return {"eat_in_mangwon": False, "reason": "LLM 응답 실패로 인한 기본값 처리"}
 
-        # 확률적 결정
-        eat_out = random.random() < base_prob
-
-        if eat_out:
-            reasons = {
-                "아침": "아침 식사를 위해 외출",
-                "점심": "점심 시간 외식",
-                "저녁": "저녁 외식",
-                "야식": "야식이 땡김",
-            }
-            reason = reasons.get(time_slot, "외식")
-        else:
-            if time_slot == "아침" or meals_today == 0:
-                reasons_skip = [
-                    "배가 안 고픔",
-                    "집에서 해결",
-                    "이 시간에는 안 먹음",
-                ]
-            else:
-                reasons_skip = [
-                    "배가 안 고픔",
-                    "이전 식사로 충분",
-                    "집에서 해결",
-                    "이 시간에는 안 먹음",
-                ]
-            reason = random.choice(reasons_skip)
-
-        return {"eat_in_mangwon": eat_out, "reason": reason}
 
     # ==================== Step 2: 업종 선택 ====================
 
@@ -525,13 +496,33 @@ class ActionAlgorithm:
         # 이번 타임슬롯 활동 이력을 자연어로 구성
         if session_visits:
             activity_lines = []
+            visited_categories = []
             for i, v in enumerate(session_visits, 1):
                 store = v.get("visited_store", "?")
                 cat = v.get("visited_category", "")
                 rating = v.get("rating", "")
-                rating_str = f" → 별점 {rating}/5" if rating else ""
+                rating_str = f" -> {rating}/5" if rating else ""
                 activity_lines.append(f"  {i}. {store}({cat}) 방문{rating_str}")
+                if cat:
+                    visited_categories.append(cat)
             session_activity = "\n".join(activity_lines)
+
+            # 특정 카테고리 중복 방문 체크
+            from collections import Counter
+            cat_counts = Counter(visited_categories)
+            
+            # 2회 이상 방문한 카테고리가 있으면 자연스러운 "고려사항"으로 제시
+            warnings = []
+            for cat, count in cat_counts.items():
+                if count >= 2:
+                    warnings.append(f"[고려사항] '{cat}' 일정을 이미 {count}번 소화했습니다. 3번 연속 같은 활동을 하는 것은 현실적으로 부자연스럽습니다. 이제는 산책이나 장보기 등 다른 활동으로 환기하는 것이 좋습니다.")
+                elif cat == "커피-음료" and count >= 1:
+                    warnings.append("[고려사항] 방금 카페를 다녀왔습니다. 보통 바로 또 카페를 가지는 않지만, 분위기가 다른 곳으로 2차를 가야 할 특별한 이유가 있다면 가능합니다.")
+
+            if warnings:
+                session_activity += "\n  " + "\n  ".join(warnings)
+
+
         else:
             session_activity = "  (아직 활동 없음)"
 
@@ -738,8 +729,9 @@ class ActionAlgorithm:
         try:
             current_date = current_datetime[:10] if current_datetime else ""
 
-            # Step 1: 망원동 내 식사 여부 결정 (확률 기반, LLM 불필요)
-            step1 = self.step1_eat_in_mangwon(agent, time_slot, weekday, current_date)
+            # Step 1: 망원동 내 식사 여부 결정 (LLM 기반)
+            step1 = await self.step1_eat_in_mangwon(agent, time_slot, weekday, current_date)
+
 
             if not step1.get("eat_in_mangwon", False):
                 return {
@@ -841,6 +833,12 @@ class ActionAlgorithm:
 
                 # 매장 방문 행동 → Step 3→4 추가 실행
                 loop_category = self.STORE_VISIT_ACTIONS[action]
+
+                # 하드 가드 제거: 비현실적이지만 가능성은 열어둠 (프롬프트로 제어)
+                # visited_cats = {v["visited_category"] for v in visits}
+                # if loop_category in visited_cats:
+                #     break
+
 
                 try:
                     step3_loop = await self.step3_store_selection(
