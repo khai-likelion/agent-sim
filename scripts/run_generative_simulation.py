@@ -32,6 +32,9 @@ DEFAULT_SEED = 42
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+from dotenv import load_dotenv
+load_dotenv(PROJECT_ROOT / ".env")
+
 from config import get_settings
 from src.simulation_layer.persona.agent import GenerativeAgent, load_personas_from_md
 from src.data_layer.global_store import get_global_store, GlobalStore
@@ -757,7 +760,7 @@ async def async_main():
     results_df = await run_simulation(
         agents, global_store, settings, days,
         target_store=args.target_store,
-        max_concurrent_llm_calls=20,
+        max_concurrent_llm_calls=5,
     )
     save_results(results_df, global_store, agents, settings)
 
@@ -765,7 +768,14 @@ async def async_main():
 
 
 def main():
-    asyncio.run(async_main())
+    import sys
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    loop = asyncio.new_event_loop()
+    try:
+        loop.run_until_complete(async_main())
+    finally:
+        loop.close()
 
 
 if __name__ == "__main__":
