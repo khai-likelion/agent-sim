@@ -2,16 +2,45 @@
 
 이 문서는 시뮬레이션 내 에이전트의 **5단계 의사결정 과정**을 구체적인 데이터 흐름 예시로 설명합니다.
 
+---
+
+## 목차
+
+| 단계 | 내용 |
+|:---:|---|
+| [아키텍처](#아키텍처-흐름도) | 전체 흐름도 및 종료 조건 |
+| [Step 1](#step-1-목적지-유형-결정-llm-기반) | 외식 여부 결정 |
+| [Step 2](#step-2-업종-선택-llm-기반) | 업종(카테고리) 선택 |
+| [Step 3](#step-3-매장-선택-llm-기반) | 매장 선택 |
+| [Step 4](#step-4-평가-및-피드백-llm-기반) | 평가 및 리뷰 |
+| [Step 5](#step-5-다음-행동-결정-llm-기반) | 다음 행동 결정 |
+| [Loop](#loop-매장-방문-행동이면-step-34-5-반복) | 매장 방문 시 Step 3→4→5 반복 |
+| [요약](#llm-호출-횟수-요약) | 호출 횟수, 데이터 저장 |
+
+---
+
 ## 아키텍처 흐름도
 
+```mermaid
+flowchart LR
+    S1[Step1<br/>외식 여부] --> S2[Step2<br/>업종 선택]
+    S2 --> S3[Step3<br/>매장 선택]
+    S3 --> S4[Step4<br/>평가]
+    S4 --> S5[Step5<br/>다음 행동]
+    S5 -->|매장 방문<br/>카페_가기 등| S3
+    S5 -->|비매장 행동| END1[return]
+    S1 -->|eat_in_mangwon=false| END2[return]
 ```
-Step1 (외식 여부) → Step2 (업종 선택) → Step3 (매장 선택) → Step4 (평가) → Step5 (다음 행동) ─┐
-                                           ↑                                                    │
-                                           └──────── 매장 방문 행동이면 (카페_가기 등) ──────────┘
-                                        비매장 행동이면 → return (배회하기, 집에서_쉬기 등)
-                                        MAX_VISIT_LOOP=3 초과 → return
-                                        Step1에서 eat_in_mangwon=false → return (Step2 이후 미진입)
-```
+
+**종료 조건 요약**
+
+| 조건 | 결과 |
+|------|------|
+| Step 1에서 `eat_in_mangwon = false` | Step 2 이후 미진입, **return** |
+| Step 5에서 비매장 행동 (배회하기, 집에서_쉬기 등) | **return** |
+| `MAX_VISIT_LOOP = 3` 초과 | **return** |
+
+---
 
 ## 시나리오 설정
 
@@ -25,7 +54,7 @@ Step1 (외식 여부) → Step2 (업종 선택) → Step3 (매장 선택) → St
 
 ### 페르소나 (persona_summary)
 
-```
+```text
 [R025]
 - 유형: 상주 / 사적모임형 / 2인
 - 세대: Y
@@ -53,7 +82,7 @@ Step1 (외식 여부) → Step2 (업종 선택) → Step3 (매장 선택) → St
 
 **템플릿**: `src/ai_layer/prompts/step1_destination.txt`
 
-```
+```text
 당신은 R025입니다.
 
 [R025]
@@ -108,10 +137,7 @@ Step1 (외식 여부) → Step2 (업종 선택) → Step3 (매장 선택) → St
 {"eat_in_mangwon": true, "reason": "점심이고 오늘 아직 밖에서 안 먹었으니 망원동에서 먹자"}
 ```
 
-### 분기
-
-- `eat_in_mangwon = true` → **Step 2로 진입**
-- `eat_in_mangwon = false` → `decision: "stay_home"` 반환, **종료**
+> **분기**: `eat_in_mangwon = true` → Step 2 진입 · `false` → `decision: "stay_home"` 반환 후 종료
 
 ---
 
@@ -123,7 +149,7 @@ Step1 (외식 여부) → Step2 (업종 선택) → Step3 (매장 선택) → St
 
 **템플릿**: `src/ai_layer/prompts/step2_category.txt`
 
-```
+```text
 당신은 R025입니다.
 
 [R025]
@@ -174,7 +200,7 @@ Step1 (외식 여부) → Step2 (업종 선택) → Step3 (매장 선택) → St
 
 ### 매장 후보 필터링 로직
 
-```
+```text
 nearby_stores (전체 매장)
   → 30개 초과: search_ranked_stores(category, sample_k=20) — Softmax 가중 샘플링
   → 30개 이하: category 매칭 필터
@@ -185,7 +211,7 @@ nearby_stores (전체 매장)
 
 **템플릿**: `src/ai_layer/prompts/step3_store.txt`
 
-```
+```text
 당신은 R025입니다.
 
 [R025]
@@ -254,7 +280,7 @@ nearby_stores (전체 매장)
 
 ### 매장 정보 포맷 (`_get_store_info_for_prompt`)
 
-```
+```text
 [매장명]
   store_id: {store_id}
   카테고리: {category}
@@ -271,7 +297,7 @@ nearby_stores (전체 매장)
 {"store_name": "스시요리하루", "reason": "평점도 높고 런치세트 가성비 좋다는 리뷰가 많아서 가보고 싶음"}
 ```
 
-### 검증 로직
+### 검증 로직 (매장명 매칭)
 
 ```python
 # 1차: 정확한 매장명 매칭
@@ -294,7 +320,7 @@ for name in valid_names:
 
 **템플릿**: `src/ai_layer/prompts/step4_evaluate.txt`
 
-```
+```text
 당신은 R025입니다. 방금 [스시요리하루]에서 식사를 마쳤습니다.
 
 [R025]
@@ -413,7 +439,7 @@ agent.add_visit(
 
 **템플릿**: `src/ai_layer/prompts/step5_next_action.txt`
 
-```
+```text
 당신은 R025입니다.
 
 [R025]
@@ -474,10 +500,7 @@ agent.add_visit(
 {"action": "카페_가기", "walking_speed": 4.5, "reason": "초밥 먹었으니 식후 커피 한 잔 하면서 여유롭게 시간 보내고 싶음"}
 ```
 
-### 분기
-
-- `action = "카페_가기"` → `STORE_VISIT_ACTIONS`에 존재 → **Loop 진입**
-- `action = "배회하기"` 등 → `STORE_VISIT_ACTIONS`에 없음 → **return (사이클 종료)**
+> **분기**: `action`이 `STORE_VISIT_ACTIONS`에 있으면 (예: 카페_가기) → **Loop 진입** · 없으면 (배회하기 등) → **return (사이클 종료)**
 
 ---
 
@@ -520,6 +543,7 @@ agent.add_visit(
 **`[고려사항]` 주입 조건** (동적 경고):
 
 ```python
+# 동일 카테고리 연속 방문 시 경고 문구 주입
 from collections import Counter
 cat_counts = Counter(visited_categories)  # {"일식": 1, "커피-음료": 1}
 
@@ -537,9 +561,7 @@ if count >= 2:
 {"action": "한강공원_산책", "walking_speed": 4.0, "reason": "배도 부르고 커피도 마셨으니 소화시킬 겸 한강에서 좀 걷자"}
 ```
 
-### 분기
-
-- `action = "한강공원_산책"` → `STORE_VISIT_ACTIONS`에 없음 → **Loop 종료**
+> **분기**: `action = "한강공원_산책"` → `STORE_VISIT_ACTIONS`에 없음 → **Loop 종료**
 
 ---
 
@@ -556,7 +578,7 @@ if count >= 2:
 
 ## 최종 반환값 (`process_decision`)
 
-```python
+```json
 {
     "decision": "visit",
     "visits": [
@@ -608,7 +630,7 @@ if count >= 2:
 
 ## 데이터 저장 흐름
 
-```
+```text
 Step 4 평가 완료
   ├── GlobalStore.pending_ratings 버퍼에 추가 (즉시)
   ├── agent.recent_history에 추가 (즉시, 최대 15개 유지)
@@ -624,7 +646,7 @@ Step 4 평가 완료
 
 `visits` 리스트를 순회하며 **방문당 1개 레코드** 생성:
 
-```csv
+```text
 agent_id, store_name, category, rating, comment, visit_datetime, ...
 R025, 스시요리하루, 일식, 4, "런치 오마카세...", 2026-02-19T12:00:00
 R025, 딥블루레이크, 커피-음료, 5, "인테리어가 진짜 감성적...", 2026-02-19T12:00:00
