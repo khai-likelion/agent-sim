@@ -36,6 +36,7 @@ from src.data_layer.global_store import GlobalStore, get_global_store
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 from run_generative_simulation import (
     run_simulation, generate_agents,
+    estimate_simulation, print_estimates,
     DEFAULT_SEED,
 )
 
@@ -192,6 +193,12 @@ async def main():
         shutil.copy2(backup_path, target_store_json)
         print(f"  원본 데이터 사용: {args.target_store}.json")
 
+    # 예상치 출력 (160명 기준: 상주 47 + 유동 113, 병렬 60)
+    est = estimate_simulation(args.agents, args.days, resident_count=47, floating_count=113,
+                              max_concurrent_llm_calls=60)
+    print_estimates(est)
+    print("※ 시뮬레이션 2회 실행 시 총 예상 시간은 위의 약 2배입니다.\n")
+
     random.seed(args.seed)
     np.random.seed(args.seed)
 
@@ -201,7 +208,7 @@ async def main():
     results_before = await run_simulation(
         agents_before, global_store_before, settings, args.days,
         target_store=args.target_store,
-        max_concurrent_llm_calls=20,
+        max_concurrent_llm_calls=60,
     )
 
     prefix = args.output_prefix or args.target_store
@@ -257,7 +264,7 @@ async def main():
     results_after = await run_simulation(
         agents_after, global_store_after, settings, args.days,
         target_store=args.target_store,
-        max_concurrent_llm_calls=20,
+        max_concurrent_llm_calls=60,
     )
 
     after_visit_df = save_results_to(
