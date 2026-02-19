@@ -325,4 +325,5 @@
 |------|------|
 | [agent-decision-flow.md](./agent-decision-flow.md) | Step 1~5 데이터 흐름, 프롬프트 예시, 변수 출처 |
 | [agent-upgrade-summary.md](./agent-upgrade-summary.md) | 고도화 상세 (문제·원인·해결·변경 파일) |
+| [agent-upgrade-code-reference.md](./agent-upgrade-code-reference.md) | 고도화 실제 코드 + 토글로 펼쳐보기 |
 | [agent_action_algorithm.md](./agent_action_algorithm.md) | 의사결정 알고리즘 기술 스펙 |
