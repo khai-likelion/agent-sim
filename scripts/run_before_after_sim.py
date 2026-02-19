@@ -40,7 +40,7 @@ from run_generative_simulation import (
 )
 
 # StrategyBridge 임포트
-from utils_strategy_bridge_test_v2 import apply_x_report_strategy_async
+from X_to_Sim import apply_x_report_strategy_async
 
 
 # ============================================================

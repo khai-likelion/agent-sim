@@ -36,7 +36,7 @@ from dotenv import load_dotenv
 load_dotenv(PROJECT_ROOT / ".env")
 
 from config import get_settings
-from src.simulation_layer.persona.agent import GenerativeAgent, load_personas_from_md
+from src.simulation_layer.persona.agent import GenerativeAgent, load_personas_from_json
 from src.data_layer.global_store import get_global_store, GlobalStore
 from src.simulation_layer.persona.cognitive_modules.action_algorithm import ActionAlgorithm
 from src.data_layer.street_network import StreetNetwork, StreetNetworkConfig, AgentLocation, reset_street_network
@@ -228,10 +228,10 @@ def load_environment(settings, target_store: str = None):
 
 
 def generate_agents(agent_count: int) -> List[GenerativeAgent]:
-    """personas_160.md에서 에이전트 로드"""
+    """personas_160.json에서 에이전트 로드"""
     print(f"\n[2/4] 에이전트 로드 중 ({agent_count}명)...")
 
-    agents = load_personas_from_md()
+    agents = load_personas_from_json()
 
     if agent_count < len(agents):
         import random as _rng
@@ -571,6 +571,7 @@ async def run_simulation(
                     "generation": agent.generation,
                     "gender_composition": agent.gender_composition,
                     "segment": agent.segment,
+                    "special_condition": agent.special_condition or "",
                     "weekday": weekday,
                     "time_slot": slot_name,
                     "agent_lat": location.lat,
@@ -590,6 +591,7 @@ async def run_simulation(
                             "value_rating": visit["ratings"]["value"],
                             "atmosphere_rating": visit["ratings"]["atmosphere"],
                             "reason": result.get("reason", ""),
+                            "comment": visit.get("comment", ""),
                         }
                         results.append(record)
                 else:
@@ -603,6 +605,7 @@ async def run_simulation(
                         "value_rating": None,
                         "atmosphere_rating": None,
                         "reason": result.get("reason", ""),
+                        "comment": "",
                     }
                     results.append(record)
 

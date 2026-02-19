@@ -36,7 +36,7 @@ from run_generative_simulation import run_simulation, generate_agents, DEFAULT_S
 from run_before_after_sim import (
     load_environment_from_dir, save_results_to, compare_results
 )
-from utils_strategy_bridge_test_v2 import apply_x_report_strategy_async
+from X_to_Sim import apply_x_report_strategy_async
 
 AGENTS = 160
 DAYS = 7

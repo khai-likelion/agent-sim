@@ -103,9 +103,18 @@ PURPOSE_KEYWORDS = ["생활베이스형", "사적모임형", "공적모임형", 
 PURPOSE_LABELS   = ["생활베이스", "사적모임", "공적모임", "가족모임"]
 PURPOSE_COLORS   = ["#76B7B2", "#59A14F", "#EDC948", "#B07AA1"]
 
-# "혼합" 계열 세대를 6번째 버킷으로 통합
-GENERATION_ORDER = ["Z1", "Z2", "Y", "X", "S", "혼합"]
-GEN_COLORS       = ["#4E79A7", "#F28E2B", "#E15759", "#76B7B2", "#59A14F", "#B07AA1"]
+# 혼합 세대: special_condition의 S/Z1 포함 유무로 4가지 구분
+GENERATION_ORDER = [
+    "Z1", "Z2", "Y", "X", "S",
+    "혼합(S, Z1)",
+    "혼합(S, Z1미포함)",
+    "혼합(S미포함, Z1)",
+    "혼합(S미포함, Z1미포함)",
+]
+GEN_COLORS = [
+    "#4E79A7", "#F28E2B", "#E15759", "#76B7B2", "#59A14F",
+    "#B07AA1", "#9C755F", "#BAB0AC", "#D37295",
+]
 
 TIME_SLOT_MAP = {"아침": 7, "점심": 12, "저녁": 18, "야식": 22}
 
@@ -184,7 +193,8 @@ class ComparisonReportGenerator:
         """visit_log.csv (또는 simulation_result.csv) 로드 후 전처리."""
         _EMPTY_COLS = [
             "timestamp", "agent_id", "persona_id", "generation",
-            "gender_composition", "segment", "weekday", "time_slot",
+            "gender_composition", "segment", "special_condition",
+            "weekday", "time_slot",
             "decision", "visited_store", "visited_category",
             "taste_rating", "value_rating", "atmosphere_rating",
             "reason", "comment",
@@ -202,12 +212,15 @@ class ComparisonReportGenerator:
             print(f"  [경고] {label}: 데이터 파일 없음 ({data_dir})")
             df = pd.DataFrame(columns=_EMPTY_COLS)
 
-        # generation 혼합 정규화:
-        # "혼합(Z2+Y)" / "혼합(Y+X)" / "혼합(Z2+X)" 등 → "혼합" 단일 버킷
+        # generation 혼합 세분화:
+        # special_condition의 S/Z1 포함 유무로 4가지 레이블 변환
+        # 예) generation="혼합(Z2+Y)", special_condition="S포함_Z1미포함" → "혼합(S, Z1미포함)"
         if "generation" in df.columns:
-            df["generation"] = df["generation"].apply(
-                lambda g: "혼합" if isinstance(g, str) and g.startswith("혼합") else g
-            )
+            sc_series = df["special_condition"] if "special_condition" in df.columns else pd.Series("", index=df.index)
+            df["generation"] = [
+                self._resolve_generation_label(g, sc)
+                for g, sc in zip(df["generation"], sc_series)
+            ]
 
         # persona_type: segment 문자열에서 4대 방문 목적 추출
         df["persona_type"] = df.get("segment", pd.Series(dtype=str)).apply(
@@ -257,6 +270,24 @@ class ComparisonReportGenerator:
             return "기타"
         first = segment.split("_")[0]
         return first if first in ("유동", "상주") else "기타"
+
+    @staticmethod
+    def _resolve_generation_label(generation: str, special_condition: str) -> str:
+        """
+        혼합 세대를 special_condition 기반으로 4가지 레이블로 세분화.
+        non-혼합 세대(Z1/Z2/Y/X/S)는 그대로 반환.
+
+        예)
+          generation="혼합(Z2+Y)", special_condition="S포함_Z1미포함" → "혼합(S, Z1미포함)"
+          generation="혼합",       special_condition="S미포함_Z1포함" → "혼합(S미포함, Z1)"
+          generation="Z1"                                            → "Z1"
+        """
+        if not isinstance(generation, str) or not generation.startswith("혼합"):
+            return generation
+        sc = special_condition or ""
+        s_label  = "S"       if "S포함"  in sc else "S미포함"
+        z1_label = "Z1"      if "Z1포함" in sc else "Z1미포함"
+        return f"혼합({s_label}, {z1_label})"
 
     @staticmethod
     def _load_json_list(path: Path) -> List[Dict]:

@@ -5,6 +5,7 @@ md 파일의 '#### P001 / ... ~ ---' 단위가 에이전트 하나.
 자연어 페르소나가 LLM 의사결정의 유일한 근거.
 """
 
+import json
 import math
 import random
 import re
@@ -86,6 +87,7 @@ class GenerativeAgent:
 
     natural_language_persona: str = ""
     housing_type: Optional[str] = None
+    special_condition: Optional[str] = None
 
     recent_history: List[VisitRecord] = field(default_factory=list)
     current_location: Optional[Any] = field(default=None, repr=False)
@@ -182,6 +184,7 @@ class GenerativeAgent:
             "generation": self.generation, "gender_composition": self.gender_composition,
             "agent_type": self.agent_type, "segment": self.segment,
             "housing_type": self.housing_type,
+            "special_condition": self.special_condition,
             "home_location": list(self.home_location),
             "entry_point": list(self.entry_point) if self.entry_point else None,
             "entry_time_slot": self.entry_time_slot,
@@ -305,8 +308,76 @@ def load_personas_from_md(
     return agents
 
 
+def load_personas_from_json(
+    json_path: Optional[Path] = None,
+    agent_type_filter: Optional[str] = None,
+) -> List["GenerativeAgent"]:
+    """
+    personas_160.json을 파싱하여 에이전트 리스트를 반환한다.
+    special_condition 필드를 포함하며, 위치 초기화 로직은 load_personas_from_md와 동일.
+    """
+    if json_path is None:
+        json_path = Path(__file__).parent / "personas_160.json"
+
+    with open(json_path, encoding="utf-8") as f:
+        raw_list = json.load(f)
+
+    agents: List[GenerativeAgent] = []
+    for attrs in raw_list:
+        if agent_type_filter and attrs.get("agent_type") != agent_type_filter:
+            continue
+
+        agent_type  = attrs["agent_type"]
+        group_type  = attrs["group_type"]
+        housing_type = attrs.get("housing_type")
+        entry_point = None
+        entry_time_slot = None
+
+        if agent_type == "유동":
+            loc = random.choice(list(FLOATING_LOCATIONS.values()))
+            entry_point = (loc["lat"], loc["lng"])
+            home = (0.0, 0.0)
+            if group_type == "공적모임형":
+                entry_time_slot = "점심"
+            elif group_type == "사적모임형":
+                entry_time_slot = random.choice(["점심", "저녁"])
+            elif group_type == "가족모임형":
+                entry_time_slot = random.choice(["아침", "점심"])
+            else:
+                entry_time_slot = random.choice(["아침", "점심", "저녁"])
+        elif agent_type == "상주" and group_type == "가족모임형" and attrs.get("group_size") == 4:
+            loc = random.choice(RESIDENT_LOCATIONS["아파트"])
+            home = _apply_location_offset(loc["lat"], loc["lng"])
+        elif agent_type == "상주" and housing_type == "단독·연립(주택)":
+            loc = random.choice(RESIDENT_LOCATIONS["주택"])
+            home = _apply_location_offset(loc["lat"], loc["lng"])
+        elif agent_type == "상주" and housing_type == "다세대(빌라)":
+            loc = random.choice(RESIDENT_LOCATIONS["빌라"])
+            home = _apply_location_offset(loc["lat"], loc["lng"])
+        else:
+            home = _apply_location_offset(37.5565, 126.9029)
+
+        agents.append(GenerativeAgent(
+            id=len(agents) + 1,
+            persona_id=attrs["id"],
+            group_type=group_type,
+            group_size=attrs["group_size"],
+            generation=attrs["generation"],
+            gender_composition=attrs["gender_composition"],
+            agent_type=agent_type,
+            natural_language_persona=attrs.get("natural_language_persona", ""),
+            housing_type=housing_type,
+            special_condition=attrs.get("special_condition"),
+            home_location=home,
+            entry_point=entry_point,
+            entry_time_slot=entry_time_slot,
+        ))
+
+    return agents
+
+
 if __name__ == "__main__":
-    agents = load_personas_from_md()
+    agents = load_personas_from_json()
     print(f"총 {len(agents)}명 로드")
     for t in sorted({a.agent_type for a in agents}):
         print(f"  {t}: {sum(1 for a in agents if a.agent_type == t)}명")
