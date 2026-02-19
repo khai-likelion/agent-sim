@@ -15,6 +15,7 @@ import argparse
 import asyncio
 import json
 import shutil
+import subprocess
 import sys
 import os
 import random
@@ -148,6 +149,8 @@ async def main():
     parser.add_argument("-y", "--yes", action="store_true", help="확인 없이 바로 실행")
     parser.add_argument("--output-prefix", type=str, default=None,
                         help="결과 폴더 접두사 (예: '돼지야' → 돼지야_before, 돼지야_after)")
+    parser.add_argument("--skip-sim-to-y", action="store_true",
+                        help="Sim_to_Y 비교 보고서 생성 건너뜀")
     args = parser.parse_args()
 
     settings = get_settings()
@@ -298,6 +301,33 @@ async def main():
     with open(summary_path, "w", encoding="utf-8") as f:
         json.dump(summary, f, ensure_ascii=False, indent=2)
     print(f"\n📄 비교 요약 저장: {summary_path}")
+
+    # ============================================================
+    # Sim_to_Y: 비교 보고서 자동 생성
+    # ============================================================
+    if not args.skip_sim_to_y:
+        print("\n" + "=" * 60)
+        print("📊 Sim_to_Y: 비교 보고서 생성 중...")
+        print("=" * 60)
+        report_output_rel = f"reports/{prefix}_{run_id}"
+        report_output = PROJECT_ROOT / report_output_rel
+        report_output.mkdir(parents=True, exist_ok=True)
+        cmd = [
+            sys.executable,
+            str(PROJECT_ROOT / "Sim_to_Y.py"),
+            "--target-store", args.target_store,
+            "--before-dir", str(before_dir),
+            "--after-dir", str(after_dir),
+            "--output-dir", report_output_rel,
+        ]
+        ret = subprocess.run(cmd, cwd=str(PROJECT_ROOT))
+        if ret.returncode == 0:
+            print(f"\n✅ 비교 보고서 생성 완료: {report_output / 'Comparison_Report.md'}")
+        else:
+            print(f"\n⚠️ Sim_to_Y 실행 실패 (코드: {ret.returncode})")
+    else:
+        print("\n⚙️ --skip-sim-to-y: 비교 보고서 생성 건너뜀")
+
     print("\n✅ 전략 전/후 비교 시뮬레이션 완료!")
 
 
