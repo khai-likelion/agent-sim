@@ -393,11 +393,6 @@ class ActionAlgorithm:
         elif agent.generation == "S":
             tone_instruction = "어르신 말투로, 구체적이고 진중하게 작성하세요."
         
-        # 2. 평가 관점 랜덤 선택 (다양성 유도)
-        import random
-        focus_aspects = ["맛/퀄리티", "가성비", "매장 분위기/인테리어", "직원 서비스/친절도", "매장 청결/위생", "특색있는 메뉴"]
-        selected_focus = random.choice(focus_aspects)
-
         prompt = render_prompt(
             STEP4_EVALUATE,
             agent_name=agent.persona_id,
@@ -406,7 +401,6 @@ class ActionAlgorithm:
             store_info=store_info,
             improvement_section=improvement_section,
             tone_instruction=tone_instruction,
-            focus_aspect=selected_focus,
         )
 
         response = await self._call_llm_async(prompt)
