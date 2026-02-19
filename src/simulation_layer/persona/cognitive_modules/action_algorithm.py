@@ -176,10 +176,10 @@ class ActionAlgorithm:
         if store.agent_rating_count > 0:
             lines.append(f"  에이전트 평점: {store.agent_avg_rating:.1f}/5 ({store.agent_rating_count}건), 태그: 맛 {store.taste_count}, 가성비 {store.value_count}, 분위기 {store.atmosphere_count}, 서비스 {store.service_count}")
 
-            # 최근 3개 평가
-            rating_labels = {0: "없음", 1: "매우별로", 2: "별로", 3: "보통", 4: "좋음", 5: "매우좋음"}
-            for r in store.agent_ratings[-3:]:
-                lines.append(f"    - {r.agent_name}: {rating_labels.get(r.rating, '?')} {r.selected_tags}")
+            # 리뷰 맥락: summary(누적 요약) + review_buffer(미요약 최신 리뷰) — 토큰 절약
+            review_ctx = store.get_review_context()
+            if review_ctx:
+                lines.append(f"  리뷰 맥락: {review_ctx}")
         else:
             lines.append("  에이전트 평점: 아직 없음")
 

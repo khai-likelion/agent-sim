@@ -106,22 +106,37 @@ class AgentRatingRecord:
 @dataclass
 class AgentReview:
     """
-    에이전트 리뷰 요약 관리 (Recursive Summarization).
+    에이전트 리뷰 요약 관리 (Summary + Buffer 구조).
 
-    - comments: 아직 요약되지 않은 코멘트들 (버퍼)
-    - summary: 현재까지의 요약 텍스트
-    - total_review_count: 전체 리뷰 수
-    - summary_threshold: N개 쌓이면 요약 실행 (기본 10개)
+    Fields:
+        summary      : 과거 리뷰들을 LLM이 누적 요약한 텍스트.
+        review_buffer: 아직 summary에 반영되지 않은 최근 리뷰 (최대 10개).
+                       10개가 채워지면 LLM 요약 후 비워짐.
+        all_comments : 요약 여부와 무관한 원본 리뷰 전체 로그.
+        total_review_count: 전체 리뷰 누적 수.
+        summary_threshold : 버퍼가 이 값 이상이면 자동 요약 실행 (기본 10).
     """
-    comments: List[str] = field(default_factory=list)
     summary: str = ""
+    review_buffer: List[str] = field(default_factory=list)
+    all_comments: List[str] = field(default_factory=list)
     total_review_count: int = 0
-    summary_threshold: int = 10  # 10개 쌓이면 요약 실행
+    summary_threshold: int = 10
+
+    def get_context_for_agent(self) -> str:
+        """에이전트에게 제공할 리뷰 맥락: summary + 현재 buffer 결합."""
+        parts: List[str] = []
+        if self.summary:
+            parts.append(f"[요약] {self.summary}")
+        if self.review_buffer:
+            recent = " / ".join(self.review_buffer[-5:])  # 최신 5개만 노출
+            parts.append(f"[최근 리뷰] {recent}")
+        return " ".join(parts) if parts else ""
 
     def to_dict(self) -> Dict[str, Any]:
         return {
-            "comments": self.comments,
             "summary": self.summary,
+            "review_buffer": self.review_buffer,
+            "all_comments": self.all_comments,
             "total_review_count": self.total_review_count,
         }
 
@@ -240,9 +255,10 @@ class StoreRating:
             elif tag == "서비스":
                 self.service_count += 1
 
-        # === 리뷰 코멘트 추가 ===
+        # === 리뷰 코멘트 추가 (buffer + 전체 로그) ===
         if comment:
-            self.agent_review.comments.append(comment)
+            self.agent_review.review_buffer.append(comment)
+            self.agent_review.all_comments.append(comment)
             self.agent_review.total_review_count += 1
 
     def get_agent_score_text(self) -> str:
@@ -250,6 +266,13 @@ class StoreRating:
         if not self.agent_ratings:
             return "아직 평가 없음"
         return f"별점:{self.star_rating:.1f}/5 ({self.agent_rating_count}건), 맛:{self.taste_count}, 가성비:{self.value_count}, 분위기:{self.atmosphere_count}, 서비스:{self.service_count}"
+
+    def get_review_context(self) -> str:
+        """
+        에이전트 매장 조회 시 제공하는 리뷰 맥락.
+        summary(누적 요약) + review_buffer(미요약 최근 리뷰)만 반환하여 토큰 절약.
+        """
+        return self.agent_review.get_context_for_agent()
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -732,57 +755,140 @@ class GlobalStore:
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
-    # ==================== Recursive Summarization ====================
+    # ==================== Review Summarization (Summary + Buffer) ====================
 
     def summarize_reviews_for_store(
         self,
         store: StoreRating,
-        summarize_fn: callable
+        summarize_fn: callable,
     ) -> bool:
         """
-        특정 매장의 리뷰를 요약 (N개 이상 쌓였을 때)
+        특정 매장의 review_buffer가 threshold 이상이면 동기 요약 실행.
 
         Args:
             store: 대상 매장
-            summarize_fn: LLM 요약 함수 (comments: List[str], existing_summary: str) -> str
+            summarize_fn: 동기 LLM 요약 함수
+                          signature: (comments: List[str], existing_summary: str) -> str
 
         Returns:
             요약 실행 여부
         """
         review = store.agent_review
-        threshold = review.summary_threshold
-
-        # N개 이상 쌓였을 때만 요약 실행
-        if len(review.comments) < threshold:
+        if len(review.review_buffer) < review.summary_threshold:
             return False
 
-        # Recursive Summarization: [기존 summary] + [새로 쌓인 N개 리뷰]
         new_summary = summarize_fn(
-            comments=review.comments,
-            existing_summary=review.summary
+            comments=review.review_buffer,
+            existing_summary=review.summary,
         )
-
-        # 상태 업데이트
         review.summary = new_summary
-        review.comments = []  # 요약된 코멘트는 비움
-
+        review.review_buffer = []   # 요약 완료 → buffer 비움
         return True
 
     def summarize_all_reviews(self, summarize_fn: callable) -> int:
-        """
-        모든 매장의 리뷰를 필요시 요약
-
-        Args:
-            summarize_fn: LLM 요약 함수
-
-        Returns:
-            요약 실행된 매장 수
-        """
+        """모든 매장의 리뷰를 필요시 동기 요약. Returns 요약 실행 매장 수."""
         count = 0
         for store in self.stores.values():
             if self.summarize_reviews_for_store(store, summarize_fn):
                 count += 1
         return count
+
+    async def auto_summarize_store_async(
+        self,
+        store: StoreRating,
+        api_key: str = "",
+        model: str = "gpt-4o-mini",
+    ) -> bool:
+        """
+        review_buffer >= threshold 일 때 gpt-4o-mini로 자동 요약 (비동기).
+
+        요약 형식:
+            기존 summary + buffer 리뷰들을 합쳐 핵심만 3문장 이내로 재요약.
+
+        Args:
+            store    : 대상 매장 StoreRating
+            api_key  : OpenAI API 키 (없으면 LLM_API_KEY 환경변수 사용)
+            model    : 요약에 사용할 모델 (기본 gpt-4o-mini)
+
+        Returns:
+            요약 실행 여부
+        """
+        review = store.agent_review
+        if len(review.review_buffer) < review.summary_threshold:
+            return False
+
+        _key = api_key or os.getenv("OPENAI_API_KEY", "") or os.getenv("LLM_API_KEY", "")
+        if not _key:
+            # API 키 없으면 단순 텍스트 병합으로 fallback
+            combined = " | ".join(review.review_buffer)
+            review.summary = (f"{review.summary} {combined}".strip())[:500]
+            review.review_buffer = []
+            return True
+
+        try:
+            import openai
+            client = openai.AsyncOpenAI(api_key=_key)
+
+            existing  = review.summary
+            new_items = review.review_buffer
+            reviews_text = "\n".join(f"- {r}" for r in new_items)
+
+            system_msg = (
+                "당신은 식당 리뷰 요약 전문가입니다. "
+                "제공된 리뷰들을 핵심 정보만 남겨 간결하게 요약해 주세요."
+            )
+            user_msg = (
+                f"매장명: {store.store_name}\n\n"
+                + (f"기존 요약:\n{existing}\n\n" if existing else "")
+                + f"새 리뷰 {len(new_items)}건:\n{reviews_text}\n\n"
+                "위 내용을 통합하여 핵심 인상(맛·분위기·가성비·서비스)을 "
+                "3문장 이내 한국어로 요약해 주세요."
+            )
+
+            response = await client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": system_msg},
+                    {"role": "user",   "content": user_msg},
+                ],
+                temperature=0.3,
+                max_tokens=200,
+            )
+            review.summary = response.choices[0].message.content.strip()
+            review.review_buffer = []   # buffer 비움
+            return True
+
+        except Exception as e:
+            # 요약 실패 시 buffer는 유지 (다음 flush 때 재시도)
+            print(f"  [리뷰 요약 오류] {store.store_name}: {e}")
+            return False
+
+    async def flush_and_summarize_async(
+        self,
+        api_key: str = "",
+        model: str = "gpt-4o-mini",
+    ) -> Dict[str, int]:
+        """
+        pending_ratings flush 후, buffer >= threshold 매장을 비동기 요약.
+
+        시뮬레이션 타임슬롯 종료 시 flush_pending_ratings() 대신 호출하면
+        평점 반영 + 리뷰 자동 요약을 한 번에 처리.
+
+        Returns:
+            {"flushed": int, "summarized": int}
+        """
+        flushed = self.flush_pending_ratings()
+
+        import asyncio
+        tasks = [
+            self.auto_summarize_store_async(store, api_key, model)
+            for store in self.stores.values()
+            if len(store.agent_review.review_buffer) >= store.agent_review.summary_threshold
+        ]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        summarized = sum(1 for r in results if r is True)
+
+        return {"flushed": flushed, "summarized": summarized}
 
     # ==================== 원본 JSON 파일 업데이트 ====================
 
@@ -904,4 +1010,5 @@ if __name__ == "__main__":
         print(f"업데이트된 별점: {test_store.star_rating}")
         print(f"태그: 맛:{test_store.taste_count}, 가성비:{test_store.value_count}, 분위기:{test_store.atmosphere_count}, 서비스:{test_store.service_count}")
         print(f"에이전트 평점: {test_store.get_agent_score_text()}")
-        print(f"리뷰 코멘트: {test_store.agent_review.comments}")
+        print(f"리뷰 버퍼(미요약): {test_store.agent_review.review_buffer}")
+        print(f"리뷰 컨텍스트(에이전트용): {test_store.get_review_context()}")

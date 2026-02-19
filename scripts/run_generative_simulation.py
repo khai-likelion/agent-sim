@@ -516,10 +516,15 @@ async def run_simulation(
             sim_hour = slot_hour
             slot_time = current_date.replace(hour=slot_hour, minute=0, second=0)
 
-            # 이전 타임슬롯에서 쌓인 평점을 GlobalStore에 반영
-            flushed = global_store.flush_pending_ratings()
+            # 이전 타임슬롯 평점 반영 + review_buffer >= 10인 매장 자동 요약
+            flush_result = await global_store.flush_and_summarize_async()
+            flushed = flush_result["flushed"]
+            summarized = flush_result["summarized"]
             if flushed > 0:
-                tqdm.write(f"      평점 반영: {flushed}건")
+                msg = f"      평점 반영: {flushed}건"
+                if summarized > 0:
+                    msg += f" | 리뷰 요약: {summarized}개 매장"
+                tqdm.write(msg)
 
             tqdm.write(f"    [{slot_name}] {slot_time.strftime('%H:%M')} - 에이전트 {len(daily_agents)}명 병렬 의사결정 중...")
 
@@ -616,10 +621,11 @@ async def run_simulation(
         if run_simulation._prev_day_visitors:
             tqdm.write(f"      재방문 풀: 유동 {len(run_simulation._prev_day_visitors)}명 (내일 {REVISIT_RATE*100:.0f}% 우선 포함)")
 
-    # 마지막 타임슬롯의 평점 반영
-    flushed = global_store.flush_pending_ratings()
-    if flushed > 0:
-        tqdm.write(f"      마지막 평점 반영: {flushed}건")
+    # 마지막 타임슬롯 평점 반영 + 잔여 buffer 요약
+    flush_result = await global_store.flush_and_summarize_async()
+    if flush_result["flushed"] > 0:
+        tqdm.write(f"      마지막 평점 반영: {flush_result['flushed']}건"
+                   + (f" | 리뷰 요약: {flush_result['summarized']}개 매장" if flush_result["summarized"] > 0 else ""))
 
     day_pbar.close()
     sim_elapsed = time_module.perf_counter() - sim_start_time
