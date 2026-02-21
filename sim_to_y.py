@@ -1157,259 +1157,6 @@ class ComparisonReportGenerator:
         return result
 
     # ──────────────────────────────────────────────────────────────
-    # 솔루션 안전성 진단 (Safety Diagnosis)
-    # ──────────────────────────────────────────────────────────────
-
-    def analysis_safety_diagnosis(self) -> Dict:
-        """
-        metrics_summary의 기존 11개 지표를 종합하여 역효과를 자동 감지.
-
-        Returns:
-            {
-                "safety_score": int (0~100, 낮을수록 안전),
-                "risk_level": str,
-                "counts": {"positive": int, "watch": int, "adverse": int},
-                "alerts": [{"metric", "change", "level", "description"}, ...],
-                "tradeoffs": {"gains": [...], "losses": [...]},
-            }
-        """
-        m = self.metrics_summary
-        overview  = m.get("overview",    {})
-        rating    = m.get("rating",      {})
-        traffic   = m.get("traffic",     {})
-        gen       = m.get("generation",  {})
-        purpose   = m.get("purpose",     {})
-        retention = m.get("retention",   {})
-
-        alerts: List[Dict[str, str]] = []
-        gains:  List[Dict[str, str]] = []
-        losses: List[Dict[str, str]] = []
-        counts = {"positive": 0, "watch": 0, "adverse": 0}
-
-        def _classify(value: float, positive_threshold: float,
-                      watch_threshold: float, metric: str, change_str: str,
-                      desc_adverse: str, desc_watch: str = "",
-                      unit: str = ""):
-            """값을 순기능/관찰필요/역효과로 분류하고 alerts/gains/losses에 추가."""
-            if value > positive_threshold:
-                counts["positive"] += 1
-                gains.append({"metric": metric, "change": f"{change_str}{unit}"})
-            elif value <= watch_threshold:
-                counts["adverse"] += 1
-                alerts.append({
-                    "metric": metric,
-                    "change": f"{change_str}{unit}",
-                    "level": "역효과",
-                    "description": desc_adverse,
-                })
-                losses.append({"metric": metric, "change": f"{change_str}{unit}"})
-            else:
-                counts["watch"] += 1
-                alerts.append({
-                    "metric": metric,
-                    "change": f"{change_str}{unit}",
-                    "level": "관찰 필요",
-                    "description": desc_watch or desc_adverse,
-                })
-                losses.append({"metric": metric, "change": f"{change_str}{unit}"})
-
-        # ── 1. 총 방문 수 변화 ──
-        v_chg = overview.get("visit_change_pct", 0)
-        _classify(
-            v_chg, 0, -5,
-            "총 방문 수", f"{v_chg:+.1f}%", unit="",
-            desc_adverse="전략 후 방문 수가 유의미하게 감소함",
-            desc_watch="방문 수가 소폭 감소하여 추이 관찰 필요",
-        )
-
-        # ── 2. 시장 점유율 변화 ──
-        ms_chg = overview.get("market_share_after", 0) - overview.get("market_share_before", 0)
-        _classify(
-            ms_chg, 0, -1,
-            "시장 점유율", f"{ms_chg:+.2f}%p", unit="",
-            desc_adverse="경쟁 대비 시장 점유율이 하락함",
-            desc_watch="시장 점유율 소폭 하락, 경쟁 환경 변화 관찰 필요",
-        )
-
-        # ── 3. 평균 평점 변화 ──
-        r_chg = rating.get("avg_rating_after", 0) - rating.get("avg_rating_before", 0)
-        _classify(
-            r_chg, 0, -0.3,
-            "평균 평점", f"{r_chg:+.2f}점", unit="",
-            desc_adverse="전략 후 평균 평점이 하락함",
-            desc_watch="평점 소폭 하락, 세부 항목 점검 필요",
-        )
-
-        # ── 4. 만족도(4점 이상) 변화 ──
-        sat_chg = rating.get("satisfaction_rate_after", 0) - rating.get("satisfaction_rate_before", 0)
-        _classify(
-            sat_chg, 0, -5,
-            "만족도(4점↑)", f"{sat_chg:+.1f}%p", unit="",
-            desc_adverse="만족도(4점 이상) 비율이 크게 하락함",
-            desc_watch="만족도 소폭 하락, 추이 관찰 필요",
-        )
-
-        # ── 5. 피크 타임슬롯 이동 ──
-        peak_before = traffic.get("peak_slot_before", "")
-        peak_after  = traffic.get("peak_slot_after",  "")
-        if peak_before and peak_after:
-            if peak_before == peak_after:
-                counts["positive"] += 1
-            else:
-                # 트래픽 변화량 계산
-                t_before = traffic.get("traffic_before", {})
-                t_after  = traffic.get("traffic_after",  {})
-                # 기존 피크의 감소율
-                slot_map = {"아침(07)": 7, "점심(12)": 12, "저녁(18)": 18, "야식(22)": 22}
-                peak_hour = slot_map.get(peak_before, 12)
-                old_peak_count = t_before.get(peak_hour, 0)
-                new_peak_count = t_after.get(peak_hour, 0)
-                if old_peak_count > 0:
-                    peak_loss_pct = (new_peak_count - old_peak_count) / old_peak_count * 100
-                else:
-                    peak_loss_pct = 0
-                counts["adverse"] += 1
-                alerts.append({
-                    "metric": f"{peak_before} 시간대 트래픽",
-                    "change": f"{peak_loss_pct:+.0f}%",
-                    "level": "역효과",
-                    "description": f"피크타임이 {peak_before}→{peak_after}으로 전환되며 기존 피크 시간대 매출 공백 발생 위험",
-                })
-                losses.append({"metric": f"{peak_before} 트래픽 하락", "change": f"{peak_loss_pct:+.0f}%"})
-                gains.append({"metric": f"{peak_after} 트래픽 급증", "change": f"피크 전환"})
-
-        # ── 6. 세대별 이탈 ──
-        gen_before = gen.get("before", {})
-        gen_after  = gen.get("after",  {})
-        for g in GENERATION_ORDER:
-            g_chg = gen_after.get(g, 0) - gen_before.get(g, 0)
-            if g_chg > 1:  # 유의미한 증가만 gain으로
-                counts["positive"] += 1
-                gains.append({"metric": f"{g}세대 유입", "change": f"{g_chg:+.1f}%p"})
-            elif g_chg < -3:
-                counts["adverse"] += 1
-                alerts.append({
-                    "metric": f"{g}세대 방문 비중",
-                    "change": f"{g_chg:+.1f}%p",
-                    "level": "역효과",
-                    "description": f"전략이 {g}세대 고객을 감소시킬 수 있음",
-                })
-                losses.append({"metric": f"{g}세대 이탈", "change": f"{g_chg:+.1f}%p"})
-            elif g_chg < 0:
-                counts["watch"] += 1
-            else:
-                counts["positive"] += 1
-
-        # ── 7. 방문 목적별 비중 감소 ──
-        p_rb = purpose.get("purpose_ratio_before", {})
-        p_ra = purpose.get("purpose_ratio_after",  {})
-        for p in PURPOSE_KEYWORDS:
-            p_chg = p_ra.get(p, 0) - p_rb.get(p, 0)
-            if p_chg > 1:
-                gains.append({"metric": f"{p} 방문", "change": f"{p_chg:+.1f}%p"})
-            elif p_chg < -3:
-                losses.append({"metric": f"{p} 감소", "change": f"{p_chg:+.1f}%p"})
-
-        # ── 8. 방문 목적별 만족도 하락 ──
-        p_sb = purpose.get("purpose_satisfaction_before", {})
-        p_sa = purpose.get("purpose_satisfaction_after",  {})
-        for p in PURPOSE_KEYWORDS:
-            ps_chg = p_sa.get(p, 0) - p_sb.get(p, 0)
-            if ps_chg < -0.3:
-                counts["adverse"] += 1
-                alerts.append({
-                    "metric": f"{p} 만족도",
-                    "change": f"{ps_chg:+.2f}점",
-                    "level": "역효과",
-                    "description": f"{p} 고객의 만족도가 하락함",
-                })
-            elif ps_chg < 0:
-                counts["watch"] += 1
-            else:
-                counts["positive"] += 1
-
-        # ── 9. 고객 유지율 ──
-        ret_rate = retention.get("retention_rate", 0)
-        if ret_rate >= 50:
-            counts["positive"] += 1
-            gains.append({"metric": "고객 유지율", "change": f"{ret_rate:.1f}%"})
-        elif ret_rate >= 30:
-            counts["watch"] += 1
-            alerts.append({
-                "metric": "고객 유지율",
-                "change": f"{ret_rate:.1f}%",
-                "level": "관찰 필요",
-                "description": "기존 고객 유지율이 보통 수준, 충성도 강화 필요",
-            })
-        else:
-            counts["adverse"] += 1
-            alerts.append({
-                "metric": "고객 유지율",
-                "change": f"{ret_rate:.1f}%",
-                "level": "역효과",
-                "description": "기존 고객 유지율이 낮아 이탈 심각",
-            })
-            losses.append({"metric": "고객 이탈", "change": f"유지율 {ret_rate:.1f}%"})
-
-        # ── 10. 순 고객 증감 ──
-        new_users = retention.get("new_users", 0)
-        churned   = retention.get("churned",   0)
-        net = new_users - churned
-        if net > 0:
-            counts["positive"] += 1
-            gains.append({"metric": "순 고객 증가", "change": f"+{net}명"})
-        elif net == 0:
-            counts["watch"] += 1
-        else:
-            counts["adverse"] += 1
-            alerts.append({
-                "metric": "순 고객 감소",
-                "change": f"{net}명",
-                "level": "역효과",
-                "description": f"신규 유입({new_users}명)보다 이탈({churned}명)이 많음",
-            })
-            losses.append({"metric": "순 고객 감소", "change": f"{net}명"})
-
-        # ── 11. 가성비 만족도 변화 ──
-        v1 = self.target1["value_rating"].dropna() if "value_rating" in self.target1.columns else pd.Series(dtype=float)
-        v2 = self.target2["value_rating"].dropna() if "value_rating" in self.target2.columns else pd.Series(dtype=float)
-        v_avg1 = float(v1.mean()) if len(v1) > 0 else 0
-        v_avg2 = float(v2.mean()) if len(v2) > 0 else 0
-        v_chg_val = v_avg2 - v_avg1
-        _classify(
-            v_chg_val, 0, -0.3,
-            "가성비 인식", f"{v_chg_val:+.1f}점", unit="",
-            desc_adverse="인테리어 개선 후 '비싸 보인다'는 인식이 소폭 증가",
-            desc_watch="가성비 인식 소폭 하락, 가격 정책 점검 필요",
-        )
-
-        # ── 안전성 스코어 계산 ──
-        safety_score = min(100, counts["adverse"] * 25 + counts["watch"] * 8)
-        if safety_score <= 30:
-            risk_level = "낮은 위험"
-        elif safety_score <= 60:
-            risk_level = "보통 위험"
-        else:
-            risk_level = "높은 위험"
-
-        # alerts를 역효과 → 관찰 필요 순서로 정렬
-        level_order = {"역효과": 0, "관찰 필요": 1}
-        alerts.sort(key=lambda a: level_order.get(a["level"], 2))
-
-        result = {
-            "safety_score": safety_score,
-            "risk_level": risk_level,
-            "counts": counts,
-            "alerts": alerts,
-            "tradeoffs": {"gains": gains, "losses": losses},
-        }
-        self.metrics_summary["safety"] = result
-
-        print(f"  [Safety] 스코어: {safety_score}/100 ({risk_level})"
-              f" | 순기능 {counts['positive']}, 관찰 {counts['watch']}, 역효과 {counts['adverse']}")
-        return result
-
-    # ──────────────────────────────────────────────────────────────
     # 8. 종합 평가 (LLM Summary)
     # ──────────────────────────────────────────────────────────────
 
@@ -1451,19 +1198,6 @@ class ComparisonReportGenerator:
         except Exception as e:
             print(f"  [8] LLM Summary: OpenAI 오류 ({e}) → 규칙 기반 요약 사용")
             return self._rule_based_summary()
-
-    def _format_safety_for_prompt(self) -> str:
-        """안전성 진단 결과를 LLM 프롬프트용 텍스트로 포맷."""
-        safety = self.metrics_summary.get("safety")
-        if not safety:
-            return "- 안전성 진단 미실행"
-        lines = [
-            f"- 안전성 스코어: {safety['safety_score']}/100 ({safety['risk_level']})",
-            f"- 순기능 {safety['counts']['positive']}건, 관찰 필요 {safety['counts']['watch']}건, 역효과 {safety['counts']['adverse']}건",
-        ]
-        for a in safety.get("alerts", []):
-            lines.append(f"- [{a['level']}] {a['metric']} {a['change']}: {a['description']}")
-        return "\n".join(lines)
 
     def _build_llm_prompt(self) -> str:
         m        = self.metrics_summary
@@ -1539,15 +1273,11 @@ class ComparisonReportGenerator:
 - 신규 유입: {retention.get('new_users',0)}명
 - 이탈: {retention.get('churned',0)}명
 
-### 안전성 진단 결과
-{self._format_safety_for_prompt()}
-
-위 데이터를 바탕으로 **3~5 문단 한국어**로 아래 다섯 가지를 분석해 주세요:
+위 데이터를 바탕으로 **3~5 문단 한국어**로 아래 네 가지를 분석해 주세요:
 1. **전략의 효과**: 방문·만족도 변화와 그 원인
 2. **바뀐 주 고객층의 특성**: 증가한 세대·방문 목적·상주/유동·성별과 시사점
 3. **재방문율 및 고객 충성도** 평가
-4. **역효과 분석**: 감지된 역효과 항목에 대한 원인 추론과 대응 방안
-5. **향후 권장 사항**: 데이터에서 발견된 기회 요소와 리스크"""
+4. **향후 권장 사항**: 데이터에서 발견된 기회 요소와 리스크"""
 
     def _rule_based_summary(self) -> str:
         """OpenAI 없을 때의 규칙 기반 한국어 요약."""
@@ -1638,14 +1368,11 @@ class ComparisonReportGenerator:
         r10 = self.analysis_10_gender_composition()
         r11 = self.analysis_11_crosstab_heatmap()
 
-        print("\n[안전성 진단 중...]")
-        safety = self.analysis_safety_diagnosis()
-
         print("\n[LLM 종합 평가 생성 중...]")
         summary_text = self.analysis_8_llm_summary()
 
         report_path = self._write_markdown_report(
-            r1, r2, r3, r4, r5, r6, r7, r9, r10, r11, summary_text, safety
+            r1, r2, r3, r4, r5, r6, r7, r9, r10, r11, summary_text
         )
 
         print(f"\n{sep}")
@@ -1665,7 +1392,6 @@ class ComparisonReportGenerator:
         r5: Dict, r6: Dict, r7: Dict,
         r9: Dict, r10: Dict, r11: Dict,
         summary_text: str,
-        safety: Optional[Dict] = None,
     ) -> Path:
         now = datetime.now().strftime("%Y-%m-%d %H:%M")
 
@@ -1714,58 +1440,6 @@ class ComparisonReportGenerator:
             for g in g_gs
         ) if g_gs else "| (데이터 없음) | - | - | - |"
 
-        # ── 안전성 진단 섹션 구성 ──
-        safety_section = ""
-        if safety:
-            sc = safety.get("counts", {})
-            alerts_list = safety.get("alerts", [])
-            tradeoffs = safety.get("tradeoffs", {})
-
-            # 알림 테이블 행
-            alert_rows = "\n".join(
-                f"| {a['metric']} | {a['change']} | {'⚠️ ' if a['level']=='역효과' else '👁 '}{a['level']} | {a['description']} |"
-                for a in alerts_list
-            ) if alerts_list else "| (감지된 역효과 없음) | - | - | - |"
-
-            # 트레이드오프 테이블
-            g_list = tradeoffs.get("gains", [])
-            l_list = tradeoffs.get("losses", [])
-            max_rows = max(len(g_list), len(l_list))
-            tradeoff_rows = ""
-            for i in range(max_rows):
-                g_text = f"{g_list[i]['metric']}  {g_list[i]['change']}" if i < len(g_list) else ""
-                l_text = f"{l_list[i]['metric']}  {l_list[i]['change']}" if i < len(l_list) else ""
-                tradeoff_rows += f"| {g_text} | ↔ | {l_text} |\n"
-
-            safety_section = f"""
-## 솔루션 안전성 진단
-
-> 시뮬레이션 11개 지표 기반 역효과 자동 탐지 결과
-
-**안전성 스코어: {safety['safety_score']}/100 ({safety['risk_level']})**
-
-| 구분 | 건수 |
-|------|:----:|
-| ✅ 순기능 | {sc.get('positive', 0)} |
-| 👁 관찰 필요 | {sc.get('watch', 0)} |
-| ⚠️ 역효과 검지 | {sc.get('adverse', 0)} |
-
-### 역효과 감지 알림 ({len(alerts_list)}건)
-
-| 지표 | 변화 | 수준 | 설명 |
-|------|------|------|------|
-{alert_rows}
-
-> 💡 **판단 가이드:** 좌측(순기능)이 우측(역효과)보다 크면 전략을 유지하되, 역효과가 치명적이면 해당 솔루션만 제외 후 재시뮬레이션을 권장합니다.
-
-### 전략 트레이드오프 — 얻은 것 vs 잃은 것
-
-| ↗ 얻은 것 (Gain) | | ↘ 잃은 것 (Loss) |
-|---|:---:|---|
-{tradeoff_rows}
----
-"""
-
         report = f"""# 전략 전/후 비교 분석 보고서 (ABM Simulation)
 
 > **대상 매장:** {self.target_store}
@@ -1774,7 +1448,7 @@ class ComparisonReportGenerator:
 > **Sim 2:** 전략 적용 후 (After Strategy)
 
 ---
-{safety_section}
+
 ## 1. 기본 방문 지표 (Overview)
 
 | 지표 | Sim 1 (전략 전) | Sim 2 (전략 후) | 변화 |
