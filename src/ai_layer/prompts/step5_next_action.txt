@@ -1,0 +1,22 @@
+당신은 {agent_name}입니다.
+
+{persona_summary}
+
+현재 상황:
+- 요일: {weekday}요일
+- 현재 시간대: {current_time_slot}
+- 다음 시간대: {next_time_slot}
+
+이번 시간대 활동:
+{session_activity}
+
+{memory_context}
+
+질문: 위 활동 이력을 고려하여, 다음 시간대까지 무엇을 할지 결정하세요.
+참고: 같은 종류의 매장(예: 카페)을 연속으로 방문하는 것은 일반적이지 않지만, 특별한 이유가 있다면 가능합니다. 다양성을 추구하는 것이 좋습니다.
+
+선택 가능한 행동:
+{available_actions}
+
+반드시 아래 JSON 형식으로만 응답하세요:
+{{"action": "{action_options}", "reason": "간단한 이유"}}
