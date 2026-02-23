@@ -1,0 +1,81 @@
+{
+    "id": "망원1동_망원역_제과점_20253",
+    "market_analysis": {
+        "phase": "보합",
+        "trend_review": "망원1동 망원역 제과점 시장은 총 점포 수가 1년 동안 변동 없이 6개로 유지되며, 개업률과 폐업률 모두 0%로 나타나 시장의 규모는 크게 변화하지 않는 것으로 보입니다. 객단가는 2024년 10,103원에서 2025년 9,690원으로 하락했지만, 2025년 말에는 12,513원으로 다시 상승하여 일정한 변동성을 보입니다.  ",
+        "competition_intensity": "중간"
+    },
+    "revenue_analysis": "객단가는 12,513원으로 나타났으며, 주말 비중은 38.3%로 주중보다 높습니다. 시간대별로는 오후 5시부터 9시 사이(17:00-21:00)가 가장 높은 매출을 기록하며 40.3%를 차지합니다. 이는 저녁 시간대에 제과점 이용이 활발하다는 것을 의미합니다.",
+    "customer_analysis": "고객은 여성이 58.1%, 남성이 41.9%로 여성 고객이 다수를 차지합니다. 연령대별로는 20대가 24.8%로 가장 높고, 그 다음으로 30대(19.7%), 50대(19.5%), 40대(18.7%), 60대 이상(15.5%) 순으로 나타납니다.",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.2,
+            "label": "Negative",
+            "comparison": "Several reviews highlight severe issues with service and cleanliness, overshadowing positive aspects mentioned in fewer reviews."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.3,
+                "label": "Neutral",
+                "avg_score": 0.8104166666666666
+            },
+            "price_value": {
+                "score": 0.4,
+                "label": "Neutral",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.5,
+                "label": "Poor",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.4,
+                "label": "Poor",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.3,
+                "label": "Below Average",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.4,
+                "label": "Negative",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포5개(개업0%/폐업0%)|객단가:10,103원 -> [20251] 점포5개(개업0%/폐업0%)|객단가:9,690원 -> [20252] 점포6개(개업17%/폐업0%)|객단가:9,186원 -> [20253] 점포6개(개업0%/폐업0%)|객단가:12,513원",
+        "metrics": {
+            "store_count": 6,
+            "net_change": 0,
+            "close_rate": 0,
+            "has_sales_data": true
+        }
+    },
+    "metadata": {
+        "area": "망원1동",
+        "section": "망원역",
+        "sector": "제과점",
+        "quarter": "20253"
+    },
+    "store_id": "2113434083",
+    "store_name": "파리바게뜨 망원역점",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "불친절",
+        "빵 관리",
+        "장염",
+        "서비스",
+        "사장"
+    ],
+    "critical_feedback": [
+        "심각한 불친절과 부적절한 직원 태도로 인해 고객 만족도가 매우 낮음.",
+        "빵의 신선도 관리 부족으로 인해 식중독 사례 발생 가능성이 있음.",
+        "사장의 부적절한 대응과 고객 응대 부족으로 인해 신뢰성이 떨어짐."
+    ],
+    "rag_context": "파리바게뜨 망원역점은 맛과 가격 측면에서는 중립적인 평가를 받지만, 청결도와 서비스 품질이 크게 저하되었다는 비판이 다수 제기되었습니다. 특히 직원들의 불친절한 태도와 빵의 신선도 관리 부족이 주요 문제점으로 지적되었습니다. 일부 리뷰에서는 직원의 과도한 반응과 위생 문제로 인한 식중독 우려까지 제기되어 고객들의 불안감을 증폭시켰습니다. 긍정적인 측면으로는 몇몇 리뷰에서 친절한 직원의 응대를 언급했지만, 이는 전체적인 부정적인 평가에 비해 상대적으로 적습니다.",
+    "review_count": 8
+}

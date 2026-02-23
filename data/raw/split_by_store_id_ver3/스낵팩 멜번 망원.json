@@ -1,0 +1,81 @@
+{
+    "id": "망원1동_망리단길_양식음식점_20253",
+    "market_analysis": {
+        "phase": "성장",
+        "trend_review": "망원1동 망리단길 양식음식점 시장은 총 점포 수가 증가하고 있으며, 개업률이 폐업률을 상회하는 추세입니다. 특히 20253년에는 점포 수가 2년 전 대비 2개 증가했으며, 객단가는 꾸준히 유지되고 있습니다. 이러한 흐름은 시장이 성장하고 있는 것을 시사합니다.",
+        "competition_intensity": "중간"
+    },
+    "revenue_analysis": "객단가는 31,023원으로 나타났으며, 주말 비중이 43.9%로 높습니다. 시간대별로는 저녁 시간대(17:00-21:00)가 43.4%로 가장 높은 비중을 차지하고 있습니다.",
+    "customer_analysis": "고객은 여성(60.6%)이 남성(39.4%)보다 많으며, 연령대는 30대(38.6%)가 가장 높은 비중을 차지합니다.",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.3,
+            "label": "Mixed",
+            "comparison": "리뷰들은 긍정적인 맛 평가와 부정적인 위생 및 건강 문제를 동시에 지적하고 있어 전체적으로 혼합된 평가를 보입니다."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.8,
+                "label": "Good",
+                "avg_score": 0.868498727735369
+            },
+            "price_value": {
+                "score": 0.4,
+                "label": "Average",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.3,
+                "label": "Poor",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.6,
+                "label": "Moderate",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.5,
+                "label": "Average",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.4,
+                "label": "Below Average",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포50개(개업4%/폐업2%)|객단가:32,800원 -> [20251] 점포49개(개업0%/폐업2%)|객단가:32,151원 -> [20252] 점포49개(개업4%/폐업4%)|객단가:30,780원 -> [20253] 점포51개(개업10%/폐업6%)|객단가:31,023원",
+        "metrics": {
+            "store_count": 51,
+            "net_change": 2,
+            "close_rate": 6,
+            "has_sales_data": true
+        }
+    },
+    "metadata": {
+        "area": "망원1동",
+        "section": "망리단길",
+        "sector": "양식음식점",
+        "quarter": "20253"
+    },
+    "store_id": "1063795736",
+    "store_name": "스낵팩 멜번 망원",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "자극적",
+        "옥수수튀김",
+        "배탈",
+        "좁음",
+        "더움",
+        "느끼함"
+    ],
+    "critical_feedback": [
+        "매우 협소하고 환기가 안 되어 더웠다",
+        "주문한 음식 섭취 후 배탈이 났다"
+    ],
+    "rag_context": "스낵팩 멜번 망원은 자극적인 맛과 특히 옥수수튀김의 품질로 긍정적인 평가를 받았지만, 위생 상태와 환경에 대한 비판이 제기되었습니다. 협소한 공간과 열악한 환기 상태로 인해 고객들은 불편함을 느꼈으며, 일부 리뷰에서는 음식 섭취 후 배탈을 경험했다고 언급했습니다. 서비스 측면에서는 특별히 부정적인 언급이 없었지만, 가성비는 평균적인 수준으로 평가되었습니다. 분위기는 더운 환경과 불편한 공간으로 인해 다소 부정적이었습니다.",
+    "review_count": 3
+}

@@ -1,0 +1,84 @@
+{
+    "id": "망원2동_KB국민은행 망원동지점_중식음식점_20253",
+    "market_analysis": {
+        "phase": "분석 불가 (데이터 부족)",
+        "trend_review": "총 점포 2개로, 1년 동안 개업/폐업률 변화는 없었습니다. 객단가 정보는 부족합니다.",
+        "competition_intensity": "분석 불가 (데이터 부족)"
+    },
+    "revenue_analysis": "분석 불가 (데이터 부족)",
+    "customer_analysis": "분석 불가 (데이터 부족)",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.75,
+            "label": "긍정적",
+            "comparison": "리뷰어들은 대체로 만족스러운 경험을 했지만, 위생과 청결에 대한 약간의 우려가 있었습니다."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.78,
+                "label": "좋음",
+                "avg_score": 0.7241830065359477
+            },
+            "price_value": {
+                "score": 0.6,
+                "label": "보통",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.65,
+                "label": "보통",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.7,
+                "label": "좋음",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.7,
+                "label": "보통",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.6,
+                "label": "보통",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포2개(개업0%/폐업0%)|객단가:정보없음 -> [20251] 점포2개(개업0%/폐업0%)|객단가:정보없음 -> [20252] 점포2개(개업0%/폐업0%)|객단가:정보없음 -> [20253] 점포2개(개업0%/폐업0%)|객단가:정보없음",
+        "metrics": {
+            "store_count": 2,
+            "net_change": 0,
+            "close_rate": 0,
+            "has_sales_data": false
+        }
+    },
+    "metadata": {
+        "area": "망원2동",
+        "section": "KB국민은행 망원동지점",
+        "sector": "중식음식점",
+        "quarter": "20253"
+    },
+    "store_id": "1673857593",
+    "store_name": "설경",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "간짜장",
+        "볶음밥",
+        "군만두",
+        "배달",
+        "웨이팅",
+        "분위기",
+        "위생",
+        "가격",
+        "맛"
+    ],
+    "critical_feedback": [
+        "가게 내부가 다소 어지럽게 정돈되어 있어 청결에 대한 의문이 생길 수 있습니다.",
+        "메뉴 가격이 일부 조정되어 있어 메뉴 구성의 일관성이 약간 떨어질 수 있습니다."
+    ],
+    "rag_context": "설경은 망원동에서 인기 있는 중식당으로, 특히 간짜장과 볶음밥이 호평을 받았습니다. 맛은 대체로 만족스러웠으나, 내부 분위기는 다소 정돈되지 않은 느낌이었습니다. 배달 서비스는 빠르고 효율적이었지만, 가게 자체는 협소하고 손님이 많아 웨이팅이 발생할 수 있습니다. 가격대비 만족도는 중간 수준으로, 특히 짬뽕 국물과 함께 주문한 삼선매운쟁반짜장은 매운 맛을 즐기는 사람들에게 추천됩니다. 하지만 위생 상태에 대한 개선이 필요할 것으로 보입니다.",
+    "review_count": 3
+}

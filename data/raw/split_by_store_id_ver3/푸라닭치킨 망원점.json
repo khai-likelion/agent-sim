@@ -1,0 +1,81 @@
+{
+    "id": "망원2동_망원월드컵시장_치킨전문점_20253",
+    "market_analysis": {
+        "phase": "분석 불가 (데이터 부족)",
+        "trend_review": "총 점포 수는 1개로, 1년 동안 개업과 폐업이 0%로 나타났습니다. 객단가 정보는 부족합니다.",
+        "competition_intensity": "분석 불가 (데이터 부족)"
+    },
+    "revenue_analysis": "분석 불가 (데이터 부족)",
+    "customer_analysis": "분석 불가 (데이터 부족)",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.2,
+            "label": "Negative",
+            "comparison": "리뷰들은 주로 부정적인 경험에 초점을 맞추고 있으며, 특히 서비스와 직원 태도에 대한 비판이 두드러집니다."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.3,
+                "label": "Below Average",
+                "avg_score": 0.7080597014925373
+            },
+            "price_value": {
+                "score": 0.4,
+                "label": "Below Average",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.4,
+                "label": "Below Average",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.1,
+                "label": "Poor",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.5,
+                "label": "Average",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.3,
+                "label": "Below Average",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포1개(개업0%/폐업0%)|객단가:정보없음 -> [20251] 점포1개(개업100%/폐업100%)|객단가:정보없음 -> [20252] 점포1개(개업0%/폐업0%)|객단가:정보없음 -> [20253] 점포1개(개업0%/폐업0%)|객단가:정보없음",
+        "metrics": {
+            "store_count": 1,
+            "net_change": 0,
+            "close_rate": 0,
+            "has_sales_data": false
+        }
+    },
+    "metadata": {
+        "area": "망원2동",
+        "section": "망원월드컵시장",
+        "sector": "치킨전문점",
+        "quarter": "20253"
+    },
+    "store_id": "1764665968",
+    "store_name": "푸라닭치킨 망원점",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "불친절",
+        "기름",
+        "사장",
+        "직원 태도",
+        "쿠폰 문제"
+    ],
+    "critical_feedback": [
+        "직원의 불친절한 태도와 소통 부족이 심각합니다.",
+        "사장 교체 후 서비스 품질과 쿠폰 정책이 크게 저하되었습니다.",
+        "음식의 기름 함량이 높아 맛에 부정적인 영향을 미칩니다."
+    ],
+    "rag_context": "푸라닭치킨 망원점은 여러 리뷰에서 서비스 품질과 직원 태도에 대한 심각한 비판을 받고 있습니다. 특히 새로운 사장님의 불친절한 태도와 직원들의 무례한 행동이 주요 문제점으로 지적되었습니다. 주문 과정에서의 소통 부재와 쿠폰 정책의 변경으로 인한 고객 불만이 확인되었습니다. 음식의 기름 함량이 높아 맛에 대한 만족도도 낮은 편으로 보입니다. 청결 상태는 대체로 유지되고 있지만, 전반적인 경험은 부정적이며, 특히 서비스와 직원 태도 개선이 시급해 보입니다.",
+    "review_count": 6
+}

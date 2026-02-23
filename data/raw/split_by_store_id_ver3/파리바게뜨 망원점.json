@@ -1,0 +1,82 @@
+{
+    "id": "망원2동_망원월드컵시장_제과점_20253",
+    "market_analysis": {
+        "phase": "분석 불가 (데이터 부족)",
+        "trend_review": "총 점포 수는 1개로 일정하며, 개업률과 폐업률은 0%입니다. 1년간 점포 수 변화는 없었고, 객단가 정보는 부족합니다.",
+        "competition_intensity": "분석 불가 (데이터 부족)"
+    },
+    "revenue_analysis": "분석 불가 (데이터 부족)",
+    "customer_analysis": "분석 불가 (데이터 부족)",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.2,
+            "label": "Negative",
+            "comparison": "Several reviews highlight significant issues with service and cleanliness, overshadowing positive aspects like taste in some cases, leading to an overall negative sentiment."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.6,
+                "label": "Mixed",
+                "avg_score": 0.8104166666666666
+            },
+            "price_value": {
+                "score": 0.3,
+                "label": "Below Average",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.4,
+                "label": "Poor",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.5,
+                "label": "Unfavorable",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.4,
+                "label": "Average",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.5,
+                "label": "Mixed",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포1개(개업0%/폐업0%)|객단가:정보없음 -> [20251] 점포1개(개업0%/폐업0%)|객단가:정보없음 -> [20252] 점포1개(개업0%/폐업0%)|객단가:정보없음 -> [20253] 점포1개(개업0%/폐업0%)|객단가:정보없음",
+        "metrics": {
+            "store_count": 1,
+            "net_change": 0,
+            "close_rate": 0,
+            "has_sales_data": false
+        }
+    },
+    "metadata": {
+        "area": "망원2동",
+        "section": "망원월드컵시장",
+        "sector": "제과점",
+        "quarter": "20253"
+    },
+    "store_id": "10892369",
+    "store_name": "파리바게뜨 망원점",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "불친절",
+        "빵",
+        "머리카락",
+        "서비스",
+        "맛",
+        "청결",
+        "가격"
+    ],
+    "critical_feedback": [
+        "다수의 리뷰에서 직원들의 불친절한 태도와 청결 문제(머리카락 발견 등)가 지적되었습니다. 일부 리뷰에서는 빵의 품질에 대한 긍정적인 의견도 있으나, 대부분의 부정적인 피드백이 서비스와 청결에 집중되어 있습니다.",
+        "특정 직원의 불친절한 태도와 고객 대응 부족이 여러 리뷰에서 반복적으로 언급되었습니다."
+    ],
+    "rag_context": "파리바게뜨 망원점은 맛에 대한 평가가 혼재되어 있으며, 일부 고객은 롤케이크와 같은 특정 제품의 맛을 긍정적으로 평가하지만, 대부분의 리뷰는 직원들의 불친절한 서비스와 청결 문제에 초점을 맞춥니다. 특히 머리카락 발견과 같은 위생 문제는 심각한 불만을 야기했습니다. 긍정적인 측면으로는 친절한 직원과 좋은 분위기를 경험한 리뷰가 있으나, 이는 부정적인 경험에 비해 상대적으로 적습니다. 주차 공간 부족과 같은 운영 측면의 문제점도 일부 리뷰에서 언급되었습니다.",
+    "review_count": 15
+}

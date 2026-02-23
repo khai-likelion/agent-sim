@@ -1,0 +1,84 @@
+{
+    "id": "망원2동_동교초등학교_치킨전문점_20253",
+    "market_analysis": {
+        "phase": "분석 불가 (데이터 부족)",
+        "trend_review": "총 점포는 3개로, 1년 동안 폐업률은 33%를 기록했습니다. 객단가 정보는 부족합니다.",
+        "competition_intensity": "분석 불가 (데이터 부족)"
+    },
+    "revenue_analysis": "분석 불가 (데이터 부족)",
+    "customer_analysis": "분석 불가 (데이터 부족)",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.4,
+            "label": "Neutral",
+            "comparison": "리뷰 내에서 긍정적인 경험과 부정적인 경험이 혼재되어 있어 중립적인 평가를 받음."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.8,
+                "label": "Good",
+                "avg_score": 0.7080597014925373
+            },
+            "price_value": {
+                "score": 0.4,
+                "label": "Average",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.7,
+                "label": "Good",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.55,
+                "label": "Mixed",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.4,
+                "label": "Average",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.5,
+                "label": "Average",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포4개(개업0%/폐업0%)|객단가:정보없음 -> [20251] 점포4개(개업0%/폐업0%)|객단가:정보없음 -> [20252] 점포3개(개업0%/폐업33%)|객단가:정보없음 -> [20253] 점포3개(개업0%/폐업0%)|객단가:정보없음",
+        "metrics": {
+            "store_count": 3,
+            "net_change": 0,
+            "close_rate": 0,
+            "has_sales_data": false
+        }
+    },
+    "metadata": {
+        "area": "망원2동",
+        "section": "동교초등학교",
+        "sector": "치킨전문점",
+        "quarter": "20253"
+    },
+    "store_id": "228017396",
+    "store_name": "BHC치킨 망원점",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "맛있어요",
+        "친절",
+        "불친절",
+        "양",
+        "기프티콘",
+        "배달",
+        "주문"
+    ],
+    "critical_feedback": [
+        "불친절한 서비스 경험이 여러 리뷰에서 언급됨",
+        "기프티콘 처리에 대한 불만",
+        "주문 수락 문제와 연락 부족",
+        "전화 응대 부족 및 바쁜 상황에 대한 불만"
+    ],
+    "rag_context": "BHC치킨 망원점은 맛에 대한 긍정적인 평가가 주를 이루며, 특히 바삭하고 맛있는 치킨으로 호평을 받고 있습니다. 그러나 서비스 측면에서는 일관성이 부족한 것으로 보입니다. 일부 고객은 친절한 경험을 공유하지만, 다른 리뷰어들은 불친절한 응대와 주문 처리 문제로 불편함을 호소하고 있습니다. 기프티콘 사용에 대한 처리 방식도 비판의 대상이 되고 있으며, 주문 접수와 배달 시간 관리에 대한 불만도 상당수 있습니다. 청결과 분위기는 대체적으로 양호한 평가를 받고 있지만, 회전율은 평균적인 수준으로 보입니다. 이러한 다양한 피드백을 고려할 때, 서비스 품질의 일관성 향상이 필요할 것으로 보입니다.",
+    "review_count": 16
+}

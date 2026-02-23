@@ -1,0 +1,84 @@
+{
+    "id": "망원1동_망원역_커피-음료_20253",
+    "market_analysis": {
+        "phase": "성장",
+        "trend_review": "망원1동 망원역 커피-음료 시장은 총 점포 수가 증가하고 있으며, 개업률이 폐업률을 압도하고 있어 성장 단계에 있다. 특히 2024년과 2025년 초반까지 점포 수가 증가하는 추세를 보였으나, 2025년 중반부터 점포 수가 감소하는 추세를 보이고 있다. 객단가는 2024년부터 2025년까지 증가하다가 2025년 중반부터 감소하는 추세를 보이고 있다.",
+        "competition_intensity": "중간"
+    },
+    "revenue_analysis": "객단가는 7,212원으로 나타났으며, 주말 비중은 31.5%로 높은 수치를 보인다. 시간대별로는 오후 11시부터 오후 2시 사이가 가장 높은 매출을 기록하며, 오후 2시부터 오후 5시 사이, 오후 5시부터 오후 9시 사이 순으로 매출이 높다. 낮 시간대와 밤 시간대의 매출은 상대적으로 낮다.",
+    "customer_analysis": "고객층은 여성이 59.4%, 남성이 40.6%로 여성 고객이 다수를 차지한다. 연령대별로는 30대가 28.4%로 가장 높으며, 20대가 24.5%, 40대가 20.4%로 이어진다. 50대 이상 고객은 8%로, 10대 고객은 1%로 나타났다.",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.65,
+            "label": "Neutral to Positive",
+            "comparison": "Reviews show mixed experiences with notable positives in taste and atmosphere but significant negatives regarding cleanliness and service inconsistency."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.75,
+                "label": "Good",
+                "avg_score": 0.853
+            },
+            "price_value": {
+                "score": 0.45,
+                "label": "Average",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.55,
+                "label": "Below Average",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.6,
+                "label": "Mixed",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.5,
+                "label": "Average",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.7,
+                "label": "Good",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포28개(개업4%/폐업7%)|객단가:7,454원 -> [20251] 점포28개(개업0%/폐업0%)|객단가:7,995원 -> [20252] 점포26개(개업4%/폐업12%)|객단가:7,164원 -> [20253] 점포27개(개업4%/폐업0%)|객단가:7,212원",
+        "metrics": {
+            "store_count": 27,
+            "net_change": 1,
+            "close_rate": 0,
+            "has_sales_data": true
+        }
+    },
+    "metadata": {
+        "area": "망원1동",
+        "section": "망원역",
+        "sector": "커피-음료",
+        "quarter": "20253"
+    },
+    "store_id": "2090377910",
+    "store_name": "카펫 망원점",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "티라미수 커피",
+        "번 초코",
+        "스콘",
+        "친절",
+        "청결",
+        "분위기",
+        "서비스",
+        "맛"
+    ],
+    "critical_feedback": [
+        "청결 상태가 좋지 않으며 먼지와 끈적임이 있다.",
+        "직원 서비스가 일관되지 않으며 친절도가 떨어진다 (일부 리뷰에서는 매우 친절하다고 언급되나 다른 리뷰에서는 불친절하다고 지적).",
+        "빵의 품질이 일관되지 않으며 일부는 기대에 미치지 못한다."
+    ],
+    "rag_context": "카펫 망원점은 맛과 분위기 측면에서 높은 평가를 받고 있으며, 특히 티라미수 커피와 번 초코, 스콘 등 디저트와 음료의 맛이 호평을 받고 있습니다. 그러나 청결 상태가 여러 리뷰에서 지적되며 먼지와 끈적임이 문제로 제기되었습니다. 서비스 측면에서도 직원들의 친절도가 일관되지 않아 일부 방문객에게는 부정적인 경험을 제공하였습니다. 분위기는 대체로 긍정적이지만, 공간이 협소하고 소음 문제가 있어 편안함을 저해할 수 있습니다. 가격대비 가치는 평균적이며, 다양한 메뉴 선택이 가능하지만 품질의 일관성이 요구됩니다.",
+    "review_count": 62
+}

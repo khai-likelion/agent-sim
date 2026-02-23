@@ -1,0 +1,86 @@
+{
+    "id": "망원1동_망리단길_제과점_20253",
+    "market_analysis": {
+        "phase": "성장",
+        "trend_review": "망원1동 망리단길 제과점 시장은 지난 1년 동안 점포 수가 지속적으로 증가하고 있으며, 개업률 또한 꾸준히 높은 수준을 유지하고 있습니다. 이는 시장의 성장 가능성이 높음을 시사합니다.",
+        "competition_intensity": "중간"
+    },
+    "revenue_analysis": "객단가는 12,880원으로, 주말에 집중되는 경향이 있으며, 오후 11시부터 오후 2시 사이가 가장 높은 매출을 기록합니다.",
+    "customer_analysis": "주요 고객층은 20대 여성으로, 30대 여성도 상당한 비중을 차지합니다.",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.45,
+            "label": "Neutral",
+            "comparison": "Reviews show mixed feelings with notable praise for taste but significant complaints about long waiting times and occasional service issues."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.85,
+                "label": "Good",
+                "avg_score": 0.8104166666666666
+            },
+            "price_value": {
+                "score": 0.4,
+                "label": "Fair",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.7,
+                "label": "Average",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.65,
+                "label": "Average",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.45,
+                "label": "Below Average",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.6,
+                "label": "Average",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포38개(개업8%/폐업0%)|객단가:13,111원 -> [20251] 점포40개(개업8%/폐업3%)|객단가:12,692원 -> [20252] 점포44개(개업9%/폐업0%)|객단가:12,587원 -> [20253] 점포47개(개업11%/폐업4%)|객단가:12,880원",
+        "metrics": {
+            "store_count": 47,
+            "net_change": 3,
+            "close_rate": 4,
+            "has_sales_data": true
+        }
+    },
+    "metadata": {
+        "area": "망원1동",
+        "section": "망리단길",
+        "sector": "제과점",
+        "quarter": "20253"
+    },
+    "store_id": "1596111775",
+    "store_name": "투떰즈업",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "쌀 베이글",
+        "쫀득한 빵피",
+        "웨이팅",
+        "피스타치오",
+        "맘모스",
+        "서비스",
+        "가격"
+    ],
+    "critical_feedback": [
+        "긴 웨이팅 시간",
+        "웨이팅 시스템의 복잡성",
+        "가끔 불친절한 서비스",
+        "쌀 베이글의 맛은 좋지만, 일부 제품의 맛이 평범하거나 호불호 갈릴 수 있음",
+        "매장 내 식사 불가",
+        "가격 대비 가치가 다소 떨어짐"
+    ],
+    "rag_context": "투떰즈업은 특히 쌀 베이글의 쫀득한 식감으로 호평을 받지만, 긴 웨이팅 시간과 복잡한 예약 시스템이 많은 고객들에게 불만을 주고 있습니다. 맛에 있어서는 피스타치오와 말차 맛의 베이글이 특히 칭찬받지만, 맘모스 같은 제품은 맛이 평범하거나 개인의 취향에 따라 호불호가 갈릴 수 있습니다. 서비스 측면에서는 직원들의 친절함이 언급되지만, 일부 리뷰에서는 불친절한 경험을 공유하기도 합니다. 청결과 분위기는 대체로 평균적이지만, 매장 내 식사가 불가능하고 화장실이 없다는 점이 단점으로 지적됩니다. 가격은 높은 편이지만, 제품의 품질은 인정받고 있으나, 가성비 측면에서는 다소 아쉬움이 남습니다.",
+    "review_count": 117
+}

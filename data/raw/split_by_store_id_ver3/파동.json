@@ -1,0 +1,86 @@
+{
+    "id": "망원1동_망리단길_일식음식점_20253",
+    "market_analysis": {
+        "phase": "보합",
+        "trend_review": "망원1동 망리단길 일식음식점 시장은 최근 1년 동안 점포 수가 감소하는 추세를 보이고 있습니다. 개업률은 0%로 낮고 폐업률은 4%로 상대적으로 높습니다. 객단가 또한 2024년 15만원대에서 2025년 3만원대로 하락하여 수익성 저하가 우려됩니다.  ",
+        "competition_intensity": "중간"
+    },
+    "revenue_analysis": "객단가는 37,685원으로 낮은 편이며, 주말 비중이 36.1%로 높습니다. 시간대별로는 저녁 시간대(17:00-21:00, 21:00-24:00)에 고객이 집중되는 경향을 보입니다.",
+    "customer_analysis": "고객은 남성(54.0%)이 여성(46.0%)보다 많으며, 30대(43.0%)가 가장 많은 비중을 차지합니다. 20대, 50대 고객도 상당수를 차지하고 있습니다.",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.65,
+            "label": "Neutral to Positive",
+            "comparison": "Reviews show mixed sentiments with notable praise for taste and atmosphere alongside criticisms regarding service quality, cleanliness issues, and occasional high prices."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.8,
+                "label": "Good",
+                "avg_score": 0.8346
+            },
+            "price_value": {
+                "score": 0.55,
+                "label": "Moderate",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.65,
+                "label": "Average",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.6,
+                "label": "Average",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.45,
+                "label": "Below Average",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.7,
+                "label": "Good",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포27개(개업7%/폐업11%)|객단가:157,443원 -> [20251] 점포26개(개업0%/폐업4%)|객단가:133,636원 -> [20252] 점포26개(개업0%/폐업0%)|객단가:132,869원 -> [20253] 점포25개(개업0%/폐업4%)|객단가:37,685원",
+        "metrics": {
+            "store_count": 25,
+            "net_change": -1,
+            "close_rate": 4,
+            "has_sales_data": true
+        }
+    },
+    "metadata": {
+        "area": "망원1동",
+        "section": "망리단길",
+        "sector": "일식음식점",
+        "quarter": "20253"
+    },
+    "store_id": "524925693",
+    "store_name": "파동",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "스테이크덮밥",
+        "연어덮밥",
+        "후토마키",
+        "친절",
+        "웨이팅",
+        "환기",
+        "가격",
+        "분위기"
+    ],
+    "critical_feedback": [
+        "환기 상태가 좋지 않아 불편함",
+        "서비스 품질이 일정하지 않음 (친절한 직원도 있지만 일부 부정적인 경험 보고 있음)",
+        "음식 양이 가격대비 적을 수 있음",
+        "특정 메뉴의 품질 변동 (예: 후토마키의 상태)",
+        "예약 시스템 부족으로 인한 대기 시간 증가"
+    ],
+    "rag_context": "파동은 맛에 대한 평가가 대체적으로 긍정적이지만, 환기 상태와 서비스 품질에 대한 비판적인 의견이 일부 리뷰에서 제기되었습니다. 특히 연어덮밥과 스테이크덮밥은 높은 평가를 받았지만, 일부 고객은 음식의 양이 가격대비 적다고 느꼈습니다. 분위기는 좋은 평가를 받았으나, 매장의 협소함과 웨이팅 시간이 불편함을 초래하기도 했습니다. 직원들의 친절함은 긍정적인 요소였으나, 일관성 있는 서비스 제공에 대한 요구가 있었습니다. 가격대비 맛은 만족스러웠지만, 일부 메뉴의 품질 변동과 예약 시스템의 부족으로 인한 대기 시간 증가는 개선이 필요한 부분으로 지적되었습니다.",
+    "review_count": 52
+}

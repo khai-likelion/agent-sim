@@ -1,0 +1,88 @@
+{
+    "id": "망원1동_망리단길_한식음식점_20253",
+    "market_analysis": {
+        "phase": "성장",
+        "trend_review": "망원1동 망리단길 한식음식점 시장은 지난 4년간 점포 수가 지속적으로 증가하고 있으며, 개업률이 폐업률을 넘어서고 있습니다. 특히 20253년에는 개업률이 11%로 크게 증가하여 시장의 성장 가능성이 높다고 판단됩니다.",
+        "competition_intensity": "중간"
+    },
+    "revenue_analysis": "객단가는 40,722원이며, 주말에 집중적으로 매출이 발생하는 것으로 나타났습니다. 시간대별로는 저녁 시간대(17:00-21:00)에 가장 높은 매출을 기록하고 있습니다.",
+    "customer_analysis": "주요 고객층은 30대 남성이며, 20대, 40대, 50대 고객도 상당수를 차지합니다.",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.35,
+            "label": "Neutral to Negative",
+            "comparison": "Reviews show significant variability with notable complaints about portion sizes, taste consistency, cleanliness, and service quality, balancing with positive remarks on taste and atmosphere in some cases."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.65,
+                "label": "Average to Good",
+                "avg_score": 0.7912822517591869
+            },
+            "price_value": {
+                "score": 0.45,
+                "label": "Below Average",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.55,
+                "label": "Average",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.5,
+                "label": "Average",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.5,
+                "label": "Average",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.6,
+                "label": "Average",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포111개(개업6%/폐업3%)|객단가:45,271원 -> [20251] 점포113개(개업4%/폐업3%)|객단가:44,128원 -> [20252] 점포116개(개업7%/폐업4%)|객단가:42,690원 -> [20253] 점포119개(개업11%/폐업8%)|객단가:40,722원",
+        "metrics": {
+            "store_count": 119,
+            "net_change": 3,
+            "close_rate": 8,
+            "has_sales_data": true
+        }
+    },
+    "metadata": {
+        "area": "망원1동",
+        "section": "망리단길",
+        "sector": "한식음식점",
+        "quarter": "20253"
+    },
+    "store_id": "11969069",
+    "store_name": "만복기사식당",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "portion size",
+        "taste",
+        "price",
+        "cleanliness",
+        "service",
+        "atmosphere",
+        "food quality",
+        "variety",
+        "budget-friendly",
+        "customer experience"
+    ],
+    "critical_feedback": [
+        "Significant inconsistency in portion sizes reported by multiple reviewers.",
+        "Several complaints about declining food quality and taste consistency over time.",
+        "Issues highlighted with cleanliness and occasional poor service experiences.",
+        "Price perceived as not matching value by many reviewers.",
+        "Parking availability questioned, impacting the '기사식당' (driver's restaurant) designation."
+    ],
+    "rag_context": "Reviews for 만복기사식당 (Manbok Gisa-sik) present a mixed landscape. While appreciated for its authentic atmosphere and some positive remarks on taste, particularly regarding the 고추장불백 (gochujang bulak) dish, there are recurring concerns about portion sizes being notably smaller than expected, impacting perceived value for money. Cleanliness and service quality receive mixed feedback, with several instances highlighting unsatisfactory experiences. Despite these drawbacks, the establishment garners praise for its 1인분 (single portion) ordering flexibility and certain menu items like 김치찌개 (kimchi jjigae) and 고등어 구이 (gaegori gui). However, recurring issues with hygiene and inconsistent food quality noted by regular patrons suggest areas needing improvement to meet customer expectations fully.",
+    "review_count": 96
+}

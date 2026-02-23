@@ -67,7 +67,8 @@ cp .env.example .env
 ```env
 # LLM Provider (openai / gemini)
 LLM_PROVIDER=openai
-LLM_MODEL_NAME=gpt-4o-mini
+LLM_MODEL_NAME=gemini-2.5-flash-lite
+LLM_EVAL_MODEL_NAME=gemini-3-flash
 LLM_API_KEY=your_api_key_here
 
 # 시뮬레이션 설정

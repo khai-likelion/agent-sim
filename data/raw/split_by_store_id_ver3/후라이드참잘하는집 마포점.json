@@ -1,0 +1,80 @@
+{
+    "id": "망원2동_망원월드컵시장_치킨전문점_20253",
+    "market_analysis": {
+        "phase": "분석 불가 (데이터 부족)",
+        "trend_review": "총 점포 수는 1개로, 1년 동안 개업과 폐업이 0%로 나타났습니다. 객단가 정보는 부족합니다.",
+        "competition_intensity": "분석 불가 (데이터 부족)"
+    },
+    "revenue_analysis": "분석 불가 (데이터 부족)",
+    "customer_analysis": "분석 불가 (데이터 부족)",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.65,
+            "label": "긍정적",
+            "comparison": "리뷰 내에서 긍정적인 평가가 다수 포함되어 있지만, 서비스에 대한 부정적인 언급도 있어 중간 수준의 만족도를 보입니다."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.8,
+                "label": "매우 좋음",
+                "avg_score": 0.7080597014925373
+            },
+            "price_value": {
+                "score": 0.6,
+                "label": "보통",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.8,
+                "label": "매우 좋음",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.6,
+                "label": "보통",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.5,
+                "label": "보통 이하",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.6,
+                "label": "보통",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포1개(개업0%/폐업0%)|객단가:정보없음 -> [20251] 점포1개(개업100%/폐업100%)|객단가:정보없음 -> [20252] 점포1개(개업0%/폐업0%)|객단가:정보없음 -> [20253] 점포1개(개업0%/폐업0%)|객단가:정보없음",
+        "metrics": {
+            "store_count": 1,
+            "net_change": 0,
+            "close_rate": 0,
+            "has_sales_data": false
+        }
+    },
+    "metadata": {
+        "area": "망원2동",
+        "section": "망원월드컵시장",
+        "sector": "치킨전문점",
+        "quarter": "20253"
+    },
+    "store_id": "1528768693",
+    "store_name": "후라이드참잘하는집 마포점",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "맛있음",
+        "깔끔함",
+        "후라이드",
+        "서비스",
+        "다식음"
+    ],
+    "critical_feedback": [
+        "서비스가 다소 무뚝뚝하다",
+        "후라이드 치킨의 질감이 좋지 않다"
+    ],
+    "rag_context": "후라이드참잘하는집 마포점은 맛과 청결 측면에서 높은 평가를 받고 있으며, 특히 치킨의 맛에 대한 긍정적인 리뷰가 많습니다. 매장의 청결 상태는 크게 개선되어 매우 깔끔하다는 평가를 받고 있습니다. 그러나 일부 리뷰에서는 서비스의 친절함이 부족하다는 지적이 있으며, 치킨의 질감이 딱딱하고 다식었다는 부정적인 피드백도 있습니다. 가격 대비 만족도는 보통 수준으로, 전반적으로 평타 이상의 경험을 제공하지만, 완벽한 서비스와 치킨 질감 개선이 필요할 것으로 보입니다.",
+    "review_count": 7
+}

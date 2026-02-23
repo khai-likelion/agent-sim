@@ -1,0 +1,83 @@
+{
+    "id": "망원2동_KB국민은행 망원동지점_일식음식점_20253",
+    "market_analysis": {
+        "phase": "분석 불가 (데이터 부족)",
+        "trend_review": "총 점포 2개로, 1년 동안 개업/폐업률 변화는 없었습니다. 객단가 정보는 부족합니다.",
+        "competition_intensity": "분석 불가 (데이터 부족)"
+    },
+    "revenue_analysis": "분석 불가 (데이터 부족)",
+    "customer_analysis": "분석 불가 (데이터 부족)",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.85,
+            "label": "매우 긍정적",
+            "comparison": "리뷰들은 주로 긍정적인 평가를 내리며, 맛과 서비스에 대한 칭찬이 많아 전체적으로 높은 만족도를 보입니다."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.95,
+                "label": "매우 우수",
+                "avg_score": 0.8346399777592438
+            },
+            "price_value": {
+                "score": 0.6,
+                "label": "보통",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.75,
+                "label": "양호",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.7,
+                "label": "양호",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.55,
+                "label": "보통",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.6,
+                "label": "보통",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포2개(개업0%/폐업0%)|객단가:정보없음 -> [20251] 점포2개(개업0%/폐업0%)|객단가:정보없음 -> [20252] 점포2개(개업0%/폐업0%)|객단가:정보없음 -> [20253] 점포2개(개업0%/폐업0%)|객단가:정보없음",
+        "metrics": {
+            "store_count": 2,
+            "net_change": 0,
+            "close_rate": 0,
+            "has_sales_data": false
+        }
+    },
+    "metadata": {
+        "area": "망원2동",
+        "section": "KB국민은행 망원동지점",
+        "sector": "일식음식점",
+        "quarter": "20253"
+    },
+    "store_id": "20539565",
+    "store_name": "광",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "참치",
+        "맛",
+        "친절",
+        "가성비",
+        "다양한 부위",
+        "해동",
+        "서비스",
+        "양"
+    ],
+    "critical_feedback": [
+        "주차가 다소 불편하니 대중교통 이용 권장",
+        "양은 진짜 적은데 가격 대비 양에 대한 지적이 있음"
+    ],
+    "rag_context": "광 식당은 참치의 본래 맛을 중시하며 다양한 특수 부위를 제공해 맛 측면에서 높은 평가를 받고 있습니다. 특히 사장님의 친절한 서비스와 합리적인 가격 대비 품질이 긍정적으로 언급되었습니다. 그러나 일부 리뷰에서는 참치의 양이 적다는 지적이 있어 이 부분은 개선의 여지가 있습니다. 주차 편의성은 다소 떨어지므로 대중교통 이용을 권장합니다. 분위기와 청결은 대체적으로 양호하다는 평가를 받고 있습니다.",
+    "review_count": 15
+}

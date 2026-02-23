@@ -1,0 +1,82 @@
+{
+    "id": "망원2동_KB국민은행 망원동지점_일식음식점_20253",
+    "market_analysis": {
+        "phase": "분석 불가 (데이터 부족)",
+        "trend_review": "총 점포 2개로, 1년 동안 개업/폐업률 변화는 없었습니다. 객단가 정보는 부족합니다.",
+        "competition_intensity": "분석 불가 (데이터 부족)"
+    },
+    "revenue_analysis": "분석 불가 (데이터 부족)",
+    "customer_analysis": "분석 불가 (데이터 부족)",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.9,
+            "label": "매우 긍정적",
+            "comparison": "대부분의 리뷰가 맛과 서비스에 대해 매우 긍정적이며, 청결과 분위기에 대한 언급도 긍정적이어서 전체적으로 높은 만족도를 보입니다."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.95,
+                "label": "매우 우수",
+                "avg_score": 0.83464
+            },
+            "price_value": {
+                "score": 0.6,
+                "label": "보통",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.8,
+                "label": "우수",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.85,
+                "label": "매우 우수",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.4,
+                "label": "개선 필요",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.6,
+                "label": "보통",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포2개(개업0%/폐업0%)|객단가:정보없음 -> [20251] 점포2개(개업0%/폐업0%)|객단가:정보없음 -> [20252] 점포2개(개업0%/폐업0%)|객단가:정보없음 -> [20253] 점포2개(개업0%/폐업0%)|객단가:정보없음",
+        "metrics": {
+            "store_count": 2,
+            "net_change": 0,
+            "close_rate": 0,
+            "has_sales_data": false
+        }
+    },
+    "metadata": {
+        "area": "망원2동",
+        "section": "KB국민은행 망원동지점",
+        "sector": "일식음식점",
+        "quarter": "20253"
+    },
+    "store_id": "166397630",
+    "store_name": "하치고",
+    "analysis_date": "2026-02-13",
+    "top_keywords": [
+        "맛있음",
+        "친절",
+        "청결",
+        "히레카츠",
+        "돈까스",
+        "미니카레"
+    ],
+    "critical_feedback": [
+        "주차 공간 부족",
+        "좌석 간격이 좁고 테이블이 비좁음",
+        "시간이 지나면 튀김이 눅눅해짐"
+    ],
+    "rag_context": "하치고는 맛과 서비스 측면에서 높은 평가를 받고 있으며, 특히 히레카츠와 미니카레의 품질이 뛰어나다는 평가가 많습니다. 사장님의 친절함과 매장의 청결함이 고객 만족도를 높이는 요인으로 작용하고 있습니다. 그러나 좌석 간격이 좁고 테이블이 비좁아 불편함을 느끼는 고객들이 있으며, 시간이 지나면서 튀김의 질감이 떨어지는 점은 개선이 필요할 것으로 보입니다. 주차 공간 부족 문제도 일부 고객들에게 불편함을 주고 있습니다.",
+    "review_count": 10
+}

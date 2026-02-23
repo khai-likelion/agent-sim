@@ -114,25 +114,24 @@ def estimate_simulation(agent_count: int, days: int = 7, time_slots: int = 4,
 
     total_llm_calls = step1_calls + step2_calls + step3_calls + step4_calls
 
-    # LLM 비용 계산 (provider별 가격)
-    # - GPT-4o-mini: Input $0.15/1M, Output $0.60/1M
-    # - Gemini 2.0 Flash: Input $0.10/1M, Output $0.40/1M
+    # LLM 비용 계산 (하이브리드 전략)
+    # - Gemini 2.5 Flash-Lite (Step 1,2,3): Input $0.05/1M, Output $0.20/1M
+    # - Gemini 3 Flash (Step 4): Input $0.50/1M, Output $3.00/1M
     avg_input_tokens = 500
     avg_output_tokens = 100
 
-    llm_settings = get_settings().llm
-    if llm_settings.provider == "gemini":
-        input_cost_per_million = 0.10
-        output_cost_per_million = 0.40
-    else:
-        input_cost_per_million = 0.15
-        output_cost_per_million = 0.60
+    # Lite 모델 비용 (Step 1,2,3)
+    lite_calls = step1_calls + step2_calls + step3_calls
+    lite_input_cost = (lite_calls * avg_input_tokens / 1_000_000) * 0.05
+    lite_output_cost = (lite_calls * avg_output_tokens / 1_000_000) * 0.20
 
-    total_input_tokens = total_llm_calls * avg_input_tokens
-    total_output_tokens = total_llm_calls * avg_output_tokens
+    # Eval 모델 비용 (Step 4)
+    eval_calls = step4_calls
+    eval_input_cost = (eval_calls * avg_input_tokens / 1_000_000) * 0.50
+    eval_output_cost = (eval_calls * avg_output_tokens / 1_000_000) * 3.00
 
-    input_cost = (total_input_tokens / 1_000_000) * input_cost_per_million
-    output_cost = (total_output_tokens / 1_000_000) * output_cost_per_million
+    input_cost = lite_input_cost + eval_input_cost
+    output_cost = lite_output_cost + eval_output_cost
     total_cost = input_cost + output_cost
 
     # 예상 시간 (API 호출당 평균 1초 + 0.5초 딜레이)
@@ -182,10 +181,13 @@ def print_estimates(estimates: Dict[str, Any]):
     print()
     # LLM 모델 정보
     llm_settings = get_settings().llm
-    model_name = f"{llm_settings.provider.upper()}/{llm_settings.model_name}"
+    lite_model = llm_settings.lite_model_name
+    eval_model = llm_settings.eval_model_name
 
     cost = estimates["estimated_cost_usd"]
-    print(f"예상 비용 ({model_name}):")
+    print(f"예상 비용 (Hybrid Gemini Strategy):")
+    print(f"  - Lite Model (Step 1-3): {lite_model}")
+    print(f"  - Eval Model (Step 4):   {eval_model}")
     print(f"  Input: ${cost['input']:.4f}")
     print(f"  Output: ${cost['output']:.4f}")
     print(f"  Total: ${cost['total']:.4f} (약 {cost['total'] * 1400:.0f}원)")
@@ -705,7 +707,7 @@ async def async_main():
     print("Generative Agents 시뮬레이션")
     print(f"시드: {args.seed}")
     print("=" * 60)
-    print(f"LLM: {settings.llm.provider} / {settings.llm.model_name}")
+    print(f"LLM 전략: Hybrid Gemini (Lite: {settings.llm.lite_model_name} / Eval: {settings.llm.eval_model_name})")
 
     # 예상치 계산 및 출력 (160명 기준: 상주 47 + 유동 113)
     estimates = estimate_simulation(agent_count, days, resident_count=47, floating_count=113)

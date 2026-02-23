@@ -1,0 +1,84 @@
+{
+    "id": "망원1동_망원역_패스트푸드점_20253",
+    "market_analysis": {
+        "phase": "보합",
+        "trend_review": "망원1동 망원역 패스트푸드점 시장은 2024년부터 2025년까지 점포 수 변화가 없고, 객단가는 약간 증가하는 추세를 보이며, 시장 성장이 둔화된 상태입니다.",
+        "competition_intensity": "중간"
+    },
+    "revenue_analysis": "객단가는 8,533원이며, 주말 비중은 29.6%로 주중보다 높습니다. 시간대별로는 저녁 시간대(17:00-21:00)가 가장 높은 비중(28.9%)을 차지하고 있습니다.",
+    "customer_analysis": "주요 고객층은 30대(31.8%)이며, 남성(54.4%)이 여성(45.6%)보다 많습니다.",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.55,
+            "label": "Neutral",
+            "comparison": "Reviews contain both positive and negative feedback regarding taste, service, cleanliness, and specific incidents affecting customer experience."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.65,
+                "label": "Average",
+                "avg_score": 0.7429429429429429
+            },
+            "price_value": {
+                "score": 0.45,
+                "label": "Below Average",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.8,
+                "label": "Good",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.6,
+                "label": "Average",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.4,
+                "label": "Below Average",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.6,
+                "label": "Average",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포7개(개업0%/폐업0%)|객단가:8,396원 -> [20251] 점포7개(개업0%/폐업0%)|객단가:8,679원 -> [20252] 점포7개(개업0%/폐업0%)|객단가:8,577원 -> [20253] 점포7개(개업0%/폐업0%)|객단가:8,533원",
+        "metrics": {
+            "store_count": 7,
+            "net_change": 0,
+            "close_rate": 0,
+            "has_sales_data": true
+        }
+    },
+    "metadata": {
+        "area": "망원1동",
+        "section": "망원역",
+        "sector": "패스트푸드점",
+        "quarter": "20253"
+    },
+    "store_id": "7861587",
+    "store_name": "맥도날드 망원점",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "친절",
+        "청결",
+        "맛",
+        "서비스",
+        "질",
+        "환불",
+        "주문 오류",
+        "분위기"
+    ],
+    "critical_feedback": [
+        "일부 리뷰에서는 맥플러리의 상태와 양이 불만족스럽다고 언급되었으며, 특히 한 리뷰에서는 번의 오버쿡 문제와 탄 맛이 나는 햄버거에 대한 불만이 제기되었습니다.",
+        "주문 오류와 느린 회전율에 대한 불만이 여러 리뷰에서 나타났습니다. 특히 배달 시간 지연과 주문 처리 과정에서의 문제들이 지적되었습니다.",
+        "서비스 측면에서는 친절한 직원들에 대한 긍정적인 피드백과 함께, 일부 부정적인 경험이 있는 리뷰들이 있었습니다 (예: 주문 누락, 환불 처리 방식에 대한 불만)."
+    ],
+    "rag_context": "맥도날드 망원점은 지역사회에 대한 긍정적인 기여와 함께 청결하고 편리한 환경을 제공하는 것으로 평가받고 있습니다. 그러나 맛에 대한 평가는 혼재되어 있으며, 일부 고객은 특정 메뉴의 품질과 양에 대해 불만을 표시했습니다. 서비스 측면에서는 직원들의 친절함이 강조되지만, 주문 처리 과정에서의 오류와 느린 회전율은 개선이 필요한 부분으로 지적되었습니다. 긍정적인 측면으로는 노인들을 위한 배려와 분위기, 그리고 일부 고객에게는 뛰어난 맛과 가치를 제공한다는 평가가 있습니다.",
+    "review_count": 44
+}

@@ -82,27 +82,27 @@ class StrategyBridge:
         r'\([^)]*위해[^)]*\)',
     ]
 
-    def __init__(self, api_key: str, base_url: str = None, model_name: str = None):
+    def __init__(self, api_key: str = None, base_url: str = None, model_name: str = None):
         """
         Args:
-            api_key: API 키 (OpenAI or Gemini)
-            base_url: API 엔드포인트 (Gemini 사용 시 자동 감지)
-            model_name: 모델 이름 (None이면 환경변수 또는 기본값)
+            api_key: API 키 (None이면 설정에서 가져옴)
+            base_url: API 엔드포인트
+            model_name: 모델 이름
         """
-        provider = os.getenv("LLM_PROVIDER", "gemini").lower()
+        from config import get_settings
+        settings = get_settings()
 
-        if base_url is None and provider == "gemini":
-            base_url = "https://generativelanguage.googleapis.com/v1beta/openai/"
+        if api_key is None:
+            api_key = settings.llm.api_key
 
         if model_name is None:
-            model_name = os.getenv("LLM_MODEL_NAME", "gemini-2.0-flash")
+            model_name = settings.llm.model_name
+
+        if base_url is None:
+            base_url = "https://generativelanguage.googleapis.com/v1beta/openai/"
 
         self.model_name = model_name
-
-        if base_url:
-            self.client = AsyncOpenAI(api_key=api_key, base_url=base_url)
-        else:
-            self.client = AsyncOpenAI(api_key=api_key)
+        self.client = AsyncOpenAI(api_key=api_key, base_url=base_url)
 
     async def _parse_json_with_retry(
         self,

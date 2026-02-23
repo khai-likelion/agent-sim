@@ -1,0 +1,79 @@
+{
+    "id": "망원1동_망리단길_제과점_20253",
+    "market_analysis": {
+        "phase": "성장",
+        "trend_review": "망원1동 망리단길 제과점 시장은 지난 1년 동안 점포 수가 지속적으로 증가하고 있으며, 개업률 또한 꾸준히 높은 수준을 유지하고 있습니다. 이는 시장의 성장 가능성이 높음을 시사합니다.",
+        "competition_intensity": "중간"
+    },
+    "revenue_analysis": "객단가는 12,880원으로, 주말에 집중되는 경향이 있으며, 오후 11시부터 오후 2시 사이가 가장 높은 매출을 기록합니다.",
+    "customer_analysis": "주요 고객층은 20대 여성으로, 30대 여성도 상당한 비중을 차지합니다.",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.95,
+            "label": "매우 긍정적",
+            "comparison": "리뷰 대부분이 매우 만족스러운 경험을 강조하고 있어 높은 점수를 받았습니다."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.98,
+                "label": "매우 좋음",
+                "avg_score": 0.8104166666666666
+            },
+            "price_value": {
+                "score": 0.85,
+                "label": "좋음",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.8,
+                "label": "좋음",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.9,
+                "label": "매우 좋음",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.6,
+                "label": "보통",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.75,
+                "label": "좋음",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포38개(개업8%/폐업0%)|객단가:13,111원 -> [20251] 점포40개(개업8%/폐업3%)|객단가:12,692원 -> [20252] 점포44개(개업9%/폐업0%)|객단가:12,587원 -> [20253] 점포47개(개업11%/폐업4%)|객단가:12,880원",
+        "metrics": {
+            "store_count": 47,
+            "net_change": 3,
+            "close_rate": 4,
+            "has_sales_data": true
+        }
+    },
+    "metadata": {
+        "area": "망원1동",
+        "section": "망리단길",
+        "sector": "제과점",
+        "quarter": "20253"
+    },
+    "store_id": "1674322635",
+    "store_name": "위켄드케이크",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "맛",
+        "디자인",
+        "친절",
+        "만족",
+        "특별한",
+        "귀엽다",
+        "서비스"
+    ],
+    "critical_feedback": [],
+    "rag_context": "위켄드케이크는 고객들로부터 압도적으로 긍정적인 평가를 받고 있습니다. 특히 케이크의 맛과 디자인은 높은 평가를 받았으며, 직원들의 친절한 서비스와 빠른 요청사항 반영 능력이 돋보입니다. 청결 상태도 대체로 좋은 편이며, 가게 분위기는 아늑하고 매력적이라는 의견이 많습니다. 고객들은 기념일이나 특별한 날에 이 곳을 강력히 추천하며, 재방문 의향이 매우 높습니다. 다만, 회전율에 대한 직접적인 언급은 적어 정확한 평가는 어렵습니다.",
+    "review_count": 25
+}

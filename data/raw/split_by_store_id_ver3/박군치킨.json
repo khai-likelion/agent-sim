@@ -1,0 +1,77 @@
+{
+    "id": "망원1동_망원나들목체육관_치킨전문점_20253",
+    "market_analysis": {
+        "phase": "성장",
+        "trend_review": "2024년부터 점포 수가 증가하는 추세를 보이며, 2025년에는 4개로 증가했습니다. 개업률과 폐업률은 0%로 나타나 안정적인 시장 상황을 보입니다.",
+        "competition_intensity": "낮음"
+    },
+    "revenue_analysis": "분석 불가 (데이터 부족)",
+    "customer_analysis": "분석 불가 (데이터 부족)",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.85,
+            "label": "매우 긍정적",
+            "comparison": "리뷰들은 주로 맛과 치킨의 품질에 대해 매우 긍정적인 평가를 내렸으며, 인테리어나 청결에 대한 직접적인 비판은 없었습니다."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.9,
+                "label": "매우 좋음",
+                "avg_score": 0.7080597014925373
+            },
+            "price_value": {
+                "score": 0.6,
+                "label": "보통",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.7,
+                "label": "보통",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.7,
+                "label": "보통",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.5,
+                "label": "보통",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.6,
+                "label": "보통",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포3개(개업0%/폐업0%)|객단가:정보없음 -> [20251] 점포3개(개업0%/폐업0%)|객단가:정보없음 -> [20252] 점포4개(개업25%/폐업0%)|객단가:정보없음 -> [20253] 점포4개(개업0%/폐업0%)|객단가:정보없음",
+        "metrics": {
+            "store_count": 4,
+            "net_change": 0,
+            "close_rate": 0,
+            "has_sales_data": false
+        }
+    },
+    "metadata": {
+        "area": "망원1동",
+        "section": "망원나들목체육관",
+        "sector": "치킨전문점",
+        "quarter": "20253"
+    },
+    "store_id": "1860817413",
+    "store_name": "박군치킨",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "매콤한 튀김옷",
+        "옛날치킨",
+        "맛있어요",
+        "단골",
+        "별 5개"
+    ],
+    "critical_feedback": [],
+    "rag_context": "박군치킨은 특히 매콤하고 두꺼운 튀김옷의 치킨으로 유명하며, 고객들은 그 맛에 대해 매우 만족하고 있습니다. 이모님들의 친절한 서비스와 함께 맛에 집중하는 분위기가 돋보입니다. 인테리어가 허름하다는 점이 지적되었지만, 대부분의 리뷰어들은 맛에 초점을 맞추고 이 부분을 크게 고려하지 않는 것으로 보입니다. 가성비와 청결은 보통 수준으로 평가되며, 빠른 회전율은 언급되지 않았지만, 고객들이 주로 맛과 경험에 만족하고 있다는 점에서 긍정적인 평가를 받고 있습니다.",
+    "review_count": 4
+}

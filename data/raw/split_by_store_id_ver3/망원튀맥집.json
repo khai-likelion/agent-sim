@@ -1,0 +1,84 @@
+{
+    "id": "망원1동_망원시장_호프-간이주점_20253",
+    "market_analysis": {
+        "phase": "분석 불가 (데이터 부족)",
+        "trend_review": "시장 활력은 총 점포 2개로, 1년 동안 개업/폐업률 변화는 없었습니다. 객단가 정보는 부족합니다.",
+        "competition_intensity": "분석 불가 (데이터 부족)"
+    },
+    "revenue_analysis": "분석 불가 (데이터 부족)",
+    "customer_analysis": "분석 불가 (데이터 부족)",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.45,
+            "label": "Neutral",
+            "comparison": "Reviews show mixed experiences with positive notes on taste and atmosphere but significant criticisms regarding service timing, cleanliness issues, and inconsistent service quality."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.75,
+                "label": "Good",
+                "avg_score": 0.8580739299610896
+            },
+            "price_value": {
+                "score": 0.4,
+                "label": "Average",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.6,
+                "label": "Moderate",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.55,
+                "label": "Mixed",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.45,
+                "label": "Average",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.6,
+                "label": "Moderate",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포2개(개업0%/폐업0%)|객단가:정보없음 -> [20251] 점포2개(개업0%/폐업0%)|객단가:정보없음 -> [20252] 점포2개(개업0%/폐업0%)|객단가:정보없음 -> [20253] 점포2개(개업0%/폐업0%)|객단가:정보없음",
+        "metrics": {
+            "store_count": 2,
+            "net_change": 0,
+            "close_rate": 0,
+            "has_sales_data": false
+        }
+    },
+    "metadata": {
+        "area": "망원1동",
+        "section": "망원시장",
+        "sector": "호프-간이주점",
+        "quarter": "20253"
+    },
+    "store_id": "1126380174",
+    "store_name": "망원튀맥집",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "고추튀김",
+        "떡볶이",
+        "튀김",
+        "맥주",
+        "서비스",
+        "가성비",
+        "분위기"
+    ],
+    "critical_feedback": [
+        "서비스 타이밍과 메뉴 조합이 개선 필요",
+        "일부 메뉴의 신선도 및 맛에 대한 일관성 부족",
+        "청결 문제와 일부 직원의 불친절한 서비스",
+        "가격 대비 양에 대한 만족도 차이"
+    ],
+    "rag_context": "망원튀맥집은 맛 측면에서 특히 고추튀김과 일부 튀김 메뉴가 호평을 받았지만, 서비스 타이밍과 메뉴 조합의 일관성 부족으로 인해 고객 경험에 영향을 미치고 있습니다. 청결 상태와 직원 서비스 품질 또한 다양한 리뷰에서 지적되었으며, 특히 일부 직원의 불친절함이 부정적인 인상을 남겼습니다. 가성비는 평균적인 평가를 받았으며, 떡볶이의 양은 다소 부족하다는 의견이 있었습니다. 분위기는 대체로 긍정적이지만, 혼잡한 환경과 일부 위생 문제로 인해 완벽한 경험을 제공하지 못하고 있습니다. 재방문 여부는 개인의 경험과 기대치에 따라 달라질 것으로 보입니다.",
+    "review_count": 22
+}

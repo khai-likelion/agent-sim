@@ -1,0 +1,83 @@
+{
+    "id": "망원2동_KB국민은행 망원동지점_한식음식점_20253",
+    "market_analysis": {
+        "phase": "성장",
+        "trend_review": "망원2동 KB국민은행 망원동지점 근처 한식음식점 시장은 총 점포 수가 2년 동안 증가하는 추세이며, 개업률이 폐업률을 압도하고 있습니다. 특히 20253년에는 5%의 높은 개업률을 기록하며 시장의 성장 가능성이 높다고 판단됩니다.",
+        "competition_intensity": "중간"
+    },
+    "revenue_analysis": "객단가는 36,100원으로 나타났으며, 주말 고객 비중이 32.7%로 높습니다. 시간대별로는 저녁 시간대(17:00-21:00)가 46.5%로 가장 높은 비중을 차지하고 있습니다.",
+    "customer_analysis": "고객은 남성이 62.6%, 여성이 37.4%로 남성 고객이 다수를 차지합니다. 연령대별로는 30대(25.9%)와 50대(24.1%)가 가장 많은 비중을 차지하며, 40대, 60대 이상 고객도 각각 19.7%, 19.0%로 상당한 비중을 차지합니다.",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.3,
+            "label": "Neutral to Negative",
+            "comparison": "Several reviews highlight significant issues with meat quality and service, while others praise aspects like taste and atmosphere, leading to a mixed sentiment overall."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.55,
+                "label": "Moderate",
+                "avg_score": 0.7912822517591869
+            },
+            "price_value": {
+                "score": 0.4,
+                "label": "Below Average",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.65,
+                "label": "Good",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.45,
+                "label": "Below Average",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.5,
+                "label": "Average",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.6,
+                "label": "Moderate",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포41개(개업2%/폐업0%)|객단가:36,625원 -> [20251] 점포41개(개업2%/폐업2%)|객단가:36,890원 -> [20252] 점포40개(개업0%/폐업3%)|객단가:35,864원 -> [20253] 점포42개(개업5%/폐업0%)|객단가:36,100원",
+        "metrics": {
+            "store_count": 42,
+            "net_change": 2,
+            "close_rate": 0,
+            "has_sales_data": true
+        }
+    },
+    "metadata": {
+        "area": "망원2동",
+        "section": "KB국민은행 망원동지점",
+        "sector": "한식음식점",
+        "quarter": "20253"
+    },
+    "store_id": "26378258",
+    "store_name": "왕뼈감자탕 망원직영점",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "고기 퍽퍽",
+        "국물",
+        "서비스",
+        "청결",
+        "맛",
+        "가격"
+    ],
+    "critical_feedback": [
+        "고기 품질 저하로 인해 퍽퍽함이 느껴짐",
+        "서비스 품질이 낮아 고객 불만이 있음 (예: 불필요한 물리적 접촉)",
+        "일부 리뷰에서는 청결 상태에 대한 우려 제기",
+        "가격 대비 만족도가 낮다는 의견"
+    ],
+    "rag_context": "왕뼈감자탕 망원직영점은 맛에 대한 평가가 혼재되어 있습니다. 일부 고객은 깔끔한 국물과 맛있는 김치, 고소한 밥을 칭찬하지만, 고기의 품질이 크게 떨어져 퍽퍽하다는 불만이 다수 제기되었습니다. 특히 최근 고기의 상태가 나빠져 만족도가 떨어졌다는 의견이 많습니다. 서비스 측면에서는 직원의 불친절한 태도로 인해 고객 불만이 있었으며, 이는 장기 고객들 사이에서도 지적되었습니다. 청결 상태는 대체로 양호하지만, 일부 테이블의 끈적임 문제는 개선이 필요해 보입니다. 가격 대비 가치에 대한 평가는 혼재되어 있으나, 전반적으로 만족도가 낮은 편으로 보입니다.",
+    "review_count": 13
+}

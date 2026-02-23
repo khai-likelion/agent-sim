@@ -1,0 +1,81 @@
+{
+    "id": "망원1동_망리단길_호프-간이주점_20253",
+    "market_analysis": {
+        "phase": "보합",
+        "trend_review": "망원1동 망리단길 지역의 점포 수는 꾸준히 감소하는 추세이며, 개업률은 폐업률보다 낮아 시장이 성장보다는 보합 상태로 분석됩니다. 하지만 객단가는 지속적으로 증가하는 추세를 보여 수익성은 유지되고 있습니다.",
+        "competition_intensity": "중간"
+    },
+    "revenue_analysis": "객단가는 51,728원으로 나타났으며, 주말에 매출이 집중되는 경향이 있습니다. 시간대별로는 저녁 시간대(21:00-24:00)와 밤 시간대(00:00-06:00)에 매출이 높게 나타납니다.",
+    "customer_analysis": "주요 고객층은 30대 남성이며, 20대 남성 또한 상당한 비중을 차지합니다.",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.3,
+            "label": "Neutral to Negative",
+            "comparison": "리뷰들 사이에서 일관된 부정적인 피드백과 긍정적인 요소가 혼재되어 있어 전체적인 만족도는 중간 수준으로 평가됩니다."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.4,
+                "label": "Below Average",
+                "avg_score": 0.8580739299610896
+            },
+            "price_value": {
+                "score": 0.3,
+                "label": "Average",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.2,
+                "label": "Below Average",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.5,
+                "label": "Average",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.4,
+                "label": "Below Average",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.6,
+                "label": "Above Average",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포45개(개업0%/폐업2%)|객단가:47,723원 -> [20251] 점포44개(개업0%/폐업2%)|객단가:50,497원 -> [20252] 점포45개(개업7%/폐업4%)|객단가:49,330원 -> [20253] 점포43개(개업7%/폐업12%)|객단가:51,728원",
+        "metrics": {
+            "store_count": 43,
+            "net_change": -2,
+            "close_rate": 12,
+            "has_sales_data": true
+        }
+    },
+    "metadata": {
+        "area": "망원1동",
+        "section": "망리단길",
+        "sector": "호프-간이주점",
+        "quarter": "20253"
+    },
+    "store_id": "270288078",
+    "store_name": "휴식당",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "친절",
+        "애견동반",
+        "곰팡이",
+        "맛",
+        "청결",
+        "분위기"
+    ],
+    "critical_feedback": [
+        "일부 리뷰에서는 음식의 맛이 보통이거나 나쁘다고 언급되었으며, 특히 곰팡이가 발견된 빵과 토마토 스튜의 맛에 대한 부정적인 피드백이 있었습니다.",
+        "청결 문제가 지적되었는데, 특히 수저의 상태와 곰팡이 발견이 주요 문제점으로 제기되었습니다."
+    ],
+    "rag_context": "휴식당은 애견동반이 가능해 다양한 고객들에게 인기가 있지만, 맛에 대한 평가는 혼재되어 있습니다. 일부 리뷰에서는 음식의 맛이 보통이거나 나쁘다고 지적하며, 특히 곰팡이가 발견된 빵과 토마토 스튜의 품질에 대한 우려가 제기되었습니다. 청결 측면에서는 부정적인 피드백이 있었는데, 특히 식기의 상태가 문제가 되었습니다. 반면 서비스와 분위기는 대체로 긍정적으로 평가되며, 젊은 사장님의 친절함이 강조되었습니다. 그러나 청결과 맛에 대한 지속적인 개선이 필요할 것으로 보입니다.",
+    "review_count": 9
+}

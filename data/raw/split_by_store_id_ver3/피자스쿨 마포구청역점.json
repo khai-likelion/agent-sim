@@ -1,0 +1,81 @@
+{
+    "id": "망원2동_마포구청역 7번_양식음식점_20253",
+    "market_analysis": {
+        "phase": "분석 불가 (데이터 부족)",
+        "trend_review": "총 점포 2개로, 1년 동안 개업/폐업률 변화는 없었습니다. 객단가 정보는 부족합니다.",
+        "competition_intensity": "분석 불가 (데이터 부족)"
+    },
+    "revenue_analysis": "분석 불가 (데이터 부족)",
+    "customer_analysis": "분석 불가 (데이터 부족)",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.9,
+            "label": "매우 긍정적",
+            "comparison": "리뷰 대부분이 긍정적인 평가를 담고 있으며, 재방문 의사와 친절한 서비스, 맛에 대한 높은 평가가 두드러집니다."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.95,
+                "label": "매우 좋음",
+                "avg_score": 0.868498727735369
+            },
+            "price_value": {
+                "score": 0.7,
+                "label": "좋음",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.8,
+                "label": "좋음",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.85,
+                "label": "매우 좋음",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.6,
+                "label": "보통",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.7,
+                "label": "보통",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포2개(개업0%/폐업0%)|객단가:정보없음 -> [20251] 점포2개(개업0%/폐업0%)|객단가:정보없음 -> [20252] 점포2개(개업0%/폐업0%)|객단가:정보없음 -> [20253] 점포2개(개업0%/폐업0%)|객단가:정보없음",
+        "metrics": {
+            "store_count": 2,
+            "net_change": 0,
+            "close_rate": 0,
+            "has_sales_data": false
+        }
+    },
+    "metadata": {
+        "area": "망원2동",
+        "section": "마포구청역 7번",
+        "sector": "양식음식점",
+        "quarter": "20253"
+    },
+    "store_id": "11817213",
+    "store_name": "피자스쿨 마포구청역점",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "맛",
+        "친절",
+        "재방문",
+        "토핑",
+        "가성비",
+        "치즈피자",
+        "단골"
+    ],
+    "critical_feedback": [
+        "리뷰 8번에서 별점 대신 벌점을 주고 싶다는 부정적인 피드백이 있으나, 전체적으로 긍정적인 리뷰가 주를 이루고 있습니다."
+    ],
+    "rag_context": "피자스쿨 마포구청역점은 고객들로부터 높은 만족도를 받는 피자집으로, 특히 맛과 친절한 서비스가 강점으로 꼽힙니다. 리뷰어들은 피자의 맛과 토핑의 풍부함을 칭찬하며, 특히 치즈피자를 기본으로 꼽는 경우가 많습니다. 이모님들의 친절함과 빠른 배달 서비스 또한 긍정적으로 평가받고 있습니다. 몇몇 리뷰에서는 재방문 의사를 분명히 표현하며, 장기적인 고객 충성도를 보여줍니다. 다만, 회전율과 분위기에 대한 직접적인 언급은 적어 이 부분은 상대적으로 덜 강조되고 있습니다.",
+    "review_count": 15
+}

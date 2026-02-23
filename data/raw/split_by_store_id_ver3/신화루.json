@@ -1,0 +1,85 @@
+{
+    "id": "망원2동_망원월드컵시장_중식음식점_20253",
+    "market_analysis": {
+        "phase": "분석 불가 (데이터 부족)",
+        "trend_review": "총 점포 수는 1개로, 1년 동안 개업/폐업이 없었습니다. 객단가 정보는 부족합니다.",
+        "competition_intensity": "분석 불가 (데이터 부족)"
+    },
+    "revenue_analysis": "분석 불가 (데이터 부족)",
+    "customer_analysis": "분석 불가 (데이터 부족)",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.35,
+            "label": "Mixed",
+            "comparison": "리뷰들은 긍정적인 평가와 부정적인 평가가 혼재되어 있으며, 특히 청결 문제와 서비스 불만이 일부 리뷰에서 두드러집니다."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.75,
+                "label": "Good",
+                "avg_score": 0.7241830065359477
+            },
+            "price_value": {
+                "score": 0.6,
+                "label": "Moderate",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.65,
+                "label": "Fair",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.55,
+                "label": "Average",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.5,
+                "label": "Moderate",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.6,
+                "label": "Average",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포1개(개업0%/폐업0%)|객단가:정보없음 -> [20251] 점포1개(개업0%/폐업0%)|객단가:정보없음 -> [20252] 점포1개(개업0%/폐업0%)|객단가:정보없음 -> [20253] 점포1개(개업0%/폐업0%)|객단가:정보없음",
+        "metrics": {
+            "store_count": 1,
+            "net_change": 0,
+            "close_rate": 0,
+            "has_sales_data": false
+        }
+    },
+    "metadata": {
+        "area": "망원2동",
+        "section": "망원월드컵시장",
+        "sector": "중식음식점",
+        "quarter": "20253"
+    },
+    "store_id": "416545491",
+    "store_name": "신화루",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "짬뽕",
+        "플라스틱 조각",
+        "맛",
+        "가격",
+        "친절",
+        "밍밍",
+        "탕수육",
+        "불친절",
+        "회전율"
+    ],
+    "critical_feedback": [
+        "플라스틱 조각 발견으로 인한 위생 문제",
+        "일부 리뷰에서 나타나는 불친절한 서비스",
+        "음식의 간이 일정하지 않아 맛에 대한 일관성이 떨어짐"
+    ],
+    "rag_context": "신화루는 맛과 가격 측면에서 대체로 긍정적인 평가를 받지만, 위생 문제로 인해 플라스틱 조각이 발견된 경험이 일부 고객에게 부정적인 인상을 남겼습니다. 긍정적인 리뷰에서는 저렴한 가격에 비해 풍부한 양과 맛있는 음식을 칭찬하며, 특히 짬뽕과 탕수육의 품질을 높이 평가했습니다. 그러나 일부 리뷰에서는 음식의 간이 일정하지 않고밍밍하다는 지적과 함께 서비스의 질이 떨어진다는 불만이 제기되었습니다. 분위기와 회전율은 보통 수준으로 평가되며, 특히 늦은 시간까지 운영되는 점이 장점으로 꼽힙니다. 그러나 서비스의 불친절함과 일부 고객의 불만이 지속적으로 언급되어 개선이 필요할 것으로 보입니다.",
+    "review_count": 16
+}

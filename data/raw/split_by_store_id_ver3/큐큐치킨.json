@@ -1,0 +1,82 @@
+{
+    "id": "망원1동_망원나들목체육관_치킨전문점_20253",
+    "market_analysis": {
+        "phase": "성장",
+        "trend_review": "2024년부터 점포 수가 증가하는 추세를 보이며, 2025년에는 4개로 증가했습니다. 개업률과 폐업률은 0%로 나타나 안정적인 시장 상황을 보입니다.",
+        "competition_intensity": "낮음"
+    },
+    "revenue_analysis": "분석 불가 (데이터 부족)",
+    "customer_analysis": "분석 불가 (데이터 부족)",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.85,
+            "label": "매우 긍정적",
+            "comparison": "대부분의 리뷰가 긍정적인 평가를 내렸으며, 맛과 가성비에 대한 칭찬이 주를 이루고 있습니다."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.9,
+                "label": "매우 좋음",
+                "avg_score": 0.7080597014925373
+            },
+            "price_value": {
+                "score": 0.75,
+                "label": "좋음",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.8,
+                "label": "좋음",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.8,
+                "label": "좋음",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.6,
+                "label": "보통",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.7,
+                "label": "보통",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포3개(개업0%/폐업0%)|객단가:정보없음 -> [20251] 점포3개(개업0%/폐업0%)|객단가:정보없음 -> [20252] 점포4개(개업25%/폐업0%)|객단가:정보없음 -> [20253] 점포4개(개업0%/폐업0%)|객단가:정보없음",
+        "metrics": {
+            "store_count": 4,
+            "net_change": 0,
+            "close_rate": 0,
+            "has_sales_data": false
+        }
+    },
+    "metadata": {
+        "area": "망원1동",
+        "section": "망원나들목체육관",
+        "sector": "치킨전문점",
+        "quarter": "20253"
+    },
+    "store_id": "967541611",
+    "store_name": "큐큐치킨",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "맛있는 치킨",
+        "가성비",
+        "바삭한",
+        "친절한 서비스",
+        "포장",
+        "카레치킨",
+        "생맥주"
+    ],
+    "critical_feedback": [
+        "카레치킨의 맛에 대한 의견이 분분하며, 일부에서는 예전보다 맛이 떨어졌다고 언급",
+        "포장 주문 시 대기 시간이 길다는 피드백"
+    ],
+    "rag_context": "큐큐치킨은 주로 맛있는 치킨과 바삭한 감자튀김으로 호평을 받고 있으며, 특히 갓 튀긴 치킨의 품질과 깔끔한 맛이 강조됩니다. 가성비 측면에서도 긍정적인 평가가 많아 가격 대비 만족도가 높은 편입니다. 매장의 청결도와 서비스 친절함도 좋은 평가를 받고 있지만, 일부 리뷰에서는 카레치킨의 맛에 대한 의견이 갈리고 있으며, 포장 주문 시 대기 시간이 길다는 점이 지적되었습니다. 분위기는 대체로 쾌적하다는 평가가 많으나, 특별히 돋보이는 특징은 없는 것으로 보입니다.",
+    "review_count": 15
+}

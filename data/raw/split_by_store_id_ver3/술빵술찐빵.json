@@ -1,0 +1,78 @@
+{
+    "id": "망원2동_KB국민은행 망원동지점_제과점_20253",
+    "market_analysis": {
+        "phase": "분석 불가 (데이터 부족)",
+        "trend_review": "총 점포 3개로, 개업률과 폐업률은 모두 0%입니다. 1년 동안 점포 수 변화는 없었으며, 객단가 정보는 없습니다.",
+        "competition_intensity": "분석 불가 (데이터 부족)"
+    },
+    "revenue_analysis": "분석 불가 (데이터 부족)",
+    "customer_analysis": "분석 불가 (데이터 부족)",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.65,
+            "label": "중립적",
+            "comparison": "리뷰에서 긍정적인 맛 평가와 부정적인 서비스 경험 사이에서 균형을 이루고 있습니다."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.9,
+                "label": "매우 좋음",
+                "avg_score": 0.8104166666666666
+            },
+            "price_value": {
+                "score": 0.4,
+                "label": "보통",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.7,
+                "label": "보통",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.6,
+                "label": "보통",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.5,
+                "label": "보통",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.6,
+                "label": "보통",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포3개(개업0%/폐업33%)|객단가:정보없음 -> [20251] 점포3개(개업0%/폐업0%)|객단가:정보없음 -> [20252] 점포3개(개업0%/폐업0%)|객단가:정보없음 -> [20253] 점포3개(개업0%/폐업0%)|객단가:정보없음",
+        "metrics": {
+            "store_count": 3,
+            "net_change": 0,
+            "close_rate": 0,
+            "has_sales_data": false
+        }
+    },
+    "metadata": {
+        "area": "망원2동",
+        "section": "KB국민은행 망원동지점",
+        "sector": "제과점",
+        "quarter": "20253"
+    },
+    "store_id": "891467317",
+    "store_name": "술빵술찐빵",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "맛",
+        "서비스",
+        "기다리기"
+    ],
+    "critical_feedback": [
+        "사장님의 부재와 연락 불량으로 인한 불편함",
+        "가격 대비 가치에 대한 명확한 평가 부족"
+    ],
+    "rag_context": "술빵술찐빵은 맛 측면에서 높은 평가를 받고 있지만, 서비스 품질이 다소 떨어집니다. 특히 사장님의 부재와 연락이 잘 되지 않는 점이 고객 경험에 부정적인 영향을 미치고 있습니다. 청결과 분위기는 보통 수준으로 유지되고 있으며, 회전율 또한 평균적입니다. 그러나 맛이 뛰어나다는 점은 분명한 강점으로 작용하고 있습니다.",
+    "review_count": 2
+}

@@ -75,14 +75,14 @@ class ActionAlgorithm:
     """
 
     def __init__(self, rate_limit_delay: float = 0.5, semaphore: Optional[asyncio.Semaphore] = None):
+        settings = get_settings()
         self.rate_limit_delay = rate_limit_delay ## LLM 호출 후 대기 시간(초)
         self.llm_client: Optional[LLMClient] = None ## 지연 초기화 (asyncio 루프 안에서 생성)
         self.global_store: GlobalStore = get_global_store() ## 전역 매장 DB 싱글턴
-        # None이면 호출 시 생성 (asyncio.run() 내부에서 생성해야 함)
         self._semaphore = semaphore ## 동시 LLM 호출 수 제한용
-        # 단계별 모델 라우팅 (env 우선, 없으면 기본값)
-        self.step_lite_model: str = os.getenv("STEP_LITE_MODEL", "gemini-2.5-flash-lite")  ## Step2/3/5 경량 모델
-        self.step4_model: str = os.getenv("STEP4_MODEL", "gemini-2.5-flash")               ## Step4 고품질 모델
+        # 단계별 모델 라우팅 (settings 우선, 없으면 env/기본값)
+        self.step_lite_model: str = settings.llm.lite_model_name or os.getenv("STEP_LITE_MODEL", "gemini-2.5-flash-lite")
+        self.step4_model: str = settings.llm.eval_model_name or os.getenv("STEP4_MODEL", "gemini-2.5-flash")
 
     ## llm_client가 None이면 그때 생성. asyncio 루프 안에서 처음 호출될 때 생성되도록 지연.
     def _get_llm_client(self) -> LLMClient:
@@ -124,13 +124,13 @@ class ActionAlgorithm:
             return await _attempt()
 
     ## 동기 LLM 호출 - asyncio 없이 동기 버전. __main__ 테스트에서만 사용.
-    def _call_llm(self, prompt: str, max_retries: int = 3) -> str:
+    def _call_llm(self, prompt: str, model: Optional[str] = None, max_retries: int = 3) -> str:
         """동기 LLM 호출 (하위 호환 / __main__ 테스트용). 실패 시 LLMCallFailedError 발생."""
         client = self._get_llm_client()
 
         for attempt in range(max_retries):
             try:
-                response = client.generate_sync(prompt)
+                response = client.generate_sync(prompt, model=model)
                 time.sleep(self.rate_limit_delay)
                 return response
             except Exception as e:
@@ -195,7 +195,6 @@ class ActionAlgorithm:
 
         return "\n".join(lines)
 
-    # ==================== Step 1: 망원동 내 식사 여부 결정 ====================
     ## LLM 미사용
     def step1_eat_in_mangwon(
         self,
@@ -257,7 +256,6 @@ class ActionAlgorithm:
 
         return {"eat_in_mangwon": eat_out, "reason": reason}
 
-    # ==================== Step 2: 업종 선택 ====================
     ## LLM 호출
     ## 시간대에 맞는 카테고리 풀 + 에이전트 페르소나 + 방문 메모리를 LLM에 주고 업종 선택.
     async def step2_category_selection(
@@ -293,11 +291,9 @@ class ActionAlgorithm:
             time_slot=time_slot,
             destination_type=time_slot,  # 하위 호환: 프롬프트 변수명 유지
             available_categories=", ".join(available_categories),
-            memory_context=agent.get_memory_context(current_date),
             time_hint=hint,
         )
 
-        response = await self._call_llm_async(prompt, model=self.step_lite_model)
         result = self._parse_json_response(response)
 
         ## 반환 : {"category": "한식", "reason": "..."}
@@ -306,7 +302,6 @@ class ActionAlgorithm:
 
         raise LLMCallFailedError("Step2: Failed to parse LLM response")
 
-    # ==================== Step 3: 매장 선택 ====================
     ## LLM 호출
     async def step3_store_selection(
         self,
@@ -366,12 +361,9 @@ class ActionAlgorithm:
             agent_name=agent.persona_id,
             persona_summary=agent.get_persona_summary(),
             time_slot=time_slot,
-            category=category,
-            memory_context=agent.get_memory_context(current_date),
             stores_text=stores_text,
         )
 
-        response = await self._call_llm_async(prompt, model=self.step_lite_model)
         result = self._parse_json_response(response)
 
         ## 선택한 매장명이 목록에 없으면 부분 매칭 시도 -> 그래도 없으면 예외
@@ -391,7 +383,6 @@ class ActionAlgorithm:
 
         raise LLMCallFailedError("Step3: Failed to parse LLM response or invalid store name")
 
-    # ==================== Step 4: 평가 및 피드백 ====================
     ## LLM 호출
     async def step4_evaluate_and_feedback(
         self,
@@ -440,6 +431,7 @@ class ActionAlgorithm:
             focus_aspect=selected_focus,
         )
 
+        # Step 4: 하이브리드 전략 - 최고 성능 모델(Gemini 3 Flash) 사용
         response = await self._call_llm_async(prompt, model=self.step4_model)
         result = self._parse_json_response(response)
 
@@ -478,7 +470,6 @@ class ActionAlgorithm:
 
         raise LLMCallFailedError("Step4: Failed to parse LLM response")
 
-    # ==================== Step 5: 다음 행동 결정 ====================
     ## LLM 호출
     async def step5_next_action(
         self,
@@ -563,11 +554,9 @@ class ActionAlgorithm:
             next_time_slot=next_time_slot,
             session_activity=session_activity,
             memory_context=agent.get_memory_context(current_date),
-            available_actions=available_actions,
             action_options=action_options,
         )
 
-        response = await self._call_llm_async(prompt, model=self.step_lite_model)
         result = self._parse_json_response(response)
 
         if result and result.get("action"):
@@ -709,7 +698,6 @@ class ActionAlgorithm:
         store = self.global_store.get_store(store_id)
         return store
 
-    # ==================== Main Process ====================
 
     # Step 5에서 매장 방문이 수반되는 행동 → Step 3→4 루프 트리거
     STORE_VISIT_ACTIONS = {

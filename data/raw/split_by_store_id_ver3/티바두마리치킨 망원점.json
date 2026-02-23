@@ -1,0 +1,80 @@
+{
+    "id": "망원1동_망원나들목체육관_치킨전문점_20253",
+    "market_analysis": {
+        "phase": "성장",
+        "trend_review": "2024년부터 점포 수가 증가하는 추세를 보이며, 2025년에는 4개로 증가했습니다. 개업률과 폐업률은 0%로 나타나 안정적인 시장 상황을 보입니다.",
+        "competition_intensity": "낮음"
+    },
+    "revenue_analysis": "분석 불가 (데이터 부족)",
+    "customer_analysis": "분석 불가 (데이터 부족)",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.85,
+            "label": "매우 긍정적",
+            "comparison": "리뷰들은 주로 긍정적인 경험을 공유하고 있으며, 맛과 서비스에 대한 칭찬이 주를 이루고 있습니다."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.9,
+                "label": "매우 좋음",
+                "avg_score": 0.7080597014925373
+            },
+            "price_value": {
+                "score": 0.7,
+                "label": "좋음",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.8,
+                "label": "좋음",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.8,
+                "label": "좋음",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.5,
+                "label": "보통",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.6,
+                "label": "보통",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포3개(개업0%/폐업0%)|객단가:정보없음 -> [20251] 점포3개(개업0%/폐업0%)|객단가:정보없음 -> [20252] 점포4개(개업25%/폐업0%)|객단가:정보없음 -> [20253] 점포4개(개업0%/폐업0%)|객단가:정보없음",
+        "metrics": {
+            "store_count": 4,
+            "net_change": 0,
+            "close_rate": 0,
+            "has_sales_data": false
+        }
+    },
+    "metadata": {
+        "area": "망원1동",
+        "section": "망원나들목체육관",
+        "sector": "치킨전문점",
+        "quarter": "20253"
+    },
+    "store_id": "1732440983",
+    "store_name": "티바두마리치킨 망원점",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "친절",
+        "맛",
+        "후라이드",
+        "양념",
+        "꿀간장",
+        "가성비",
+        "깔끔한 맛",
+        "한강"
+    ],
+    "critical_feedback": [],
+    "rag_context": "티바두마리치킨 망원점은 고객들로부터 높은 만족도를 받고 있는 곳으로, 특히 맛에 대한 평가가 매우 긍정적입니다. 리뷰어들은 후라이드, 양념, 꿀간장 등 다양한 메뉴의 맛을 칭찬하며, 사장님의 친절한 서비스와 함께 매장의 청결 상태도 좋다고 언급하고 있습니다. 가성비 측면에서도 긍정적인 평가를 받고 있으며, 특히 매장에서 직접 주문할 경우 추가 혜택을 제공하는 점이 돋보입니다. 그러나 홀이 없는 포장 및 배달 전문점이라는 점과 회전율에 대한 직접적인 언급은 제한적입니다. 분위기는 주로 동네 치킨집의 편안한 느낌을 전달하며, 한강 근처에서 즐기기 좋은 장소로 추천되고 있습니다.",
+    "review_count": 5
+}
