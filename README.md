@@ -180,7 +180,7 @@ Step 5 (LLM)  다음 행동 결정 + 걷는 속도(km/h) 결정
 ```
 
 - **Step 1은 LLM 순수 판단** — 확률 기반 폐기. memory_context(당일 식사 이력)를 보고 결정
-- **asyncio 병렬 처리** — Semaphore로 동시 LLM 호출 제한 (run_before_after_sim: 60동시)
+- **asyncio 병렬 처리** — Semaphore로 동시 LLM 호출 제한 (run_before_after_sim: 20동시)
 - **OSMnx 보행자 도로망** — 망원동 반경 2km, 한강 위 노드(lat < 37.550) 제거
 
 ### StrategyBridge (`X_to_Sim.py`)
@@ -230,9 +230,9 @@ X-Report(`.md` 전략 문서)를 읽어 LLM이 매장 JSON 4개 필드를 자동
 
 ---
 
-## 비용 & 속도 (Gemini 2.0 Flash 기준, 160에이전트 7일 before/after)
+## 비용 & 속도 (Gemini 2.5 Flash Lite 기준, 160에이전트 7일 before/after)
 
-| 항목 | 순차 실행 | 병렬 60동시 |
+| 항목 | 순차 실행 | 병렬 20동시 |
 |------|:---------:|:----------:|
 | 소요 시간 | ~2시간 | **~9분** |
 | 비용 | — | **~840원** |
