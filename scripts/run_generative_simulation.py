@@ -2,10 +2,10 @@
 Generative Agents 기반 시뮬레이션 실행 스크립트.
 
 Stanford Generative Agents 논문 구조를 참조한 시뮬레이션:
-- Persona Generation Module: 고유 조합의 에이전트 생성
-- Memory Module: recent_history 기반 의사결정
-- Action Algorithm: 4단계 LLM 기반 의사결정
-- Global Store: 실시간 평점 축적
+- Persona Generation Module: 고유 조합의 에이전트 생성 (160명, 상주47/유동113)
+- Memory Module: recent_history + memory_context(당일 식사 + 과거 평점/코멘트) 기반 의사결정
+- Action Algorithm: 5단계 LLM 기반 의사결정 + 다중 방문 루프 (MAX=3)
+- Global Store: 실시간 평점 축적 (Softmax 계층화 샘플링, 10개마다 LLM 요약)
 
 사용법:
     python scripts/run_generative_simulation.py [--agents N] [--dry-run]
@@ -73,7 +73,7 @@ DAILY_FLOATING_COUNT_BY_DAY = {
 DAILY_FLOATING_AGENT_COUNT = 53  # 기본값 (fallback)
 REVISIT_RATE = 0.10  # 재방문율: 전날 방문자 중 10% 다음날 포함
 
-# OSM 네트워크 설정 (서울 강남역 주변 기준)
+# OSM 네트워크 설정 (망원동 기준 — run_generative_simulation에서 실제 망원동 좌표로 재설정됨)
 DEFAULT_NETWORK_CENTER_LAT = 37.4980
 DEFAULT_NETWORK_CENTER_LNG = 127.0276
 DEFAULT_NETWORK_RADIUS_M = 800.0  # 망원동 구역 내로 제한
@@ -84,15 +84,17 @@ def estimate_simulation(agent_count: int, days: int = 7, time_slots: int = 4,
     """
     시뮬레이션 전 예상치 계산.
 
-    LLM 호출 수 계산:
-    - Step 1: 모든 에이전트 × 모든 타임슬롯 (외출 여부)
-    - Step 2: 외출하는 에이전트만 (업종 선택)
-    - Step 3: 외출하는 에이전트만 (매장 선택)
-    - Step 4: 방문한 에이전트만 (평가)
+    LLM 호출 수 계산 (타임슬롯당 기본):
+    - Step 1: 모든 에이전트 × 모든 타임슬롯 (LLM 기반 외식 여부 결정)
+    - Step 2: 외출하는 에이전트만 (업종 선택, 약 50%)
+    - Step 3: 외출하는 에이전트만 (매장 선택, Step 2와 동일)
+    - Step 4: 실제 방문한 에이전트만 (평가, 외출 중 약 90%)
+    - Step 5: Step 4와 동일 (다음 행동 결정)
+    ※ 다중 방문 루프(카페_가기 등) 시 Step 3~5 추가 호출됨 (최대 3회)
 
     가정:
     - 상주 에이전트: 매일 전원 활동
-    - 유동 에이전트: 매일 53명만 활동 (하루짜리)
+    - 유동 에이전트: 평일 51명 / 주말 58명 (DAILY_FLOATING_COUNT_BY_DAY 기준)
     - 외출 확률 약 50%
     - 방문 성공률 약 90% (외출 결정 중)
     """

@@ -1,21 +1,22 @@
 """
-Global Store - 에이전트 평점 시스템.
+Global Store - 에이전트 평점 시스템 및 매장 데이터 관리.
 
-평점 체계 (0~5):
-- 0: 방문 없음/평가 없음 (기본값)
+평점 체계 (1~5):
 - 1: 매우별로
 - 2: 별로
 - 3: 보통
 - 4: 좋음
 - 5: 매우좋음
 
-에이전트가 매장 인식 시 사용하는 필드:
-- store_id, store_name, category
-- market_analysis, revenue_analysis, customer_analysis
-- review_metrics.overall_sentiment.comparison
-- raw_data_context.trend_history
-- metadata, top_keywords, critical_feedback, rag_context
-- 에이전트 평점 (agent_ratings)
+에이전트가 매장 인식 시 사용하는 주요 필드:
+- store_id, store_name, category, average_price
+- top_keywords, critical_feedback, rag_context
+- agent_ratings (에이전트 누적 평점), agent_review (Summary + Buffer 구조)
+
+매장 선택 최적화:
+- CATEGORY_ALIAS: LLM 선택 카테고리 ↔ JSON 카테고리 명칭 불일치 매핑
+- search_ranked_stores(): Softmax T=0.5 계층화 샘플링 (상위60%+중위20%+하위20%)
+- 리뷰 버퍼 10개 초과 시 LLM 자동 요약 (flush_and_summarize_async)
 """
 
 from dataclasses import dataclass, field

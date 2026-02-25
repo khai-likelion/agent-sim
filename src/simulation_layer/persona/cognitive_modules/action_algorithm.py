@@ -1,14 +1,15 @@
 """
-Action Algorithm Module - Stanford Generative Agents 기반 4단계 의사결정.
+Action Algorithm Module - Stanford Generative Agents 기반 5단계 의사결정 + 다중 방문 루프.
 
-매 timeslot마다 수행하는 4단계 로직:
-- Step 1: 목적지 유형 결정 (아침/점심: 식당/카페, 저녁/야식: 식당/주점/카페)
-- Step 2: 업종 선택 (메모리 + 건강추구 성향 기반)
-- Step 3: 매장 선택 (매장 정보 + 에이전트 평점 기반)
-- Step 4: 평가 및 피드백 (맛/가성비/분위기 평점 생성, LLM 기반)
+매 timeslot마다 수행하는 5단계 로직:
+- Step 1: 외식 여부 결정 (LLM 순수 판단 — memory_context의 당일 식사 이력 참고)
+- Step 2: 업종 선택 (시간대별 카테고리 풀 기반 LLM 선택, TIME_SLOT_CATEGORIES)
+- Step 3: 매장 선택 (Softmax T=0.5 계층화 샘플링 + random.shuffle 위치 편향 방지)
+- Step 4: 평가 및 피드백 (종합 rating 1~5 + selected_tags + comment, 세대별 tone_instruction)
+- Step 5: 다음 행동 결정 (걷는 속도 포함, 상주/유동 선택지 분리)
+  → 카페_가기 등 STORE_VISIT_ACTIONS 선택 시 Step 3→4→5 루프 (MAX_VISIT_LOOP=3)
 
-평점 체계: 0~5점
-- 0: 방문 없음 (기본값)
+평점 체계: 1~5점
 - 1: 매우별로
 - 2: 별로
 - 3: 보통
@@ -63,9 +64,9 @@ class LLMCallFailedError(Exception):
 
 class ActionAlgorithm:
     """
-    4단계 의사결정 알고리즘.
-    LLM을 사용하여 에이전트의 페르소나와 메모리를 기반으로 결정.
-    Fallback 없음 - LLM 실패 시 예외 발생.
+    5단계 의사결정 알고리즘 + 다중 방문 루프.
+    LLM을 사용하여 에이전트의 페르소나와 memory_context를 기반으로 결정.
+    Fallback 없음 - LLM 실패 시 LLMCallFailedError 발생.
     """
 
     def __init__(self, rate_limit_delay: float = 0.5, semaphore: Optional[asyncio.Semaphore] = None):
@@ -535,17 +536,18 @@ class ActionAlgorithm:
     ) -> Dict[str, Any]:
         """
         Step 4: 평가 및 피드백
-        LLM을 사용하여 맛/가성비/분위기 평점(0~5)을 생성
+        LLM을 사용하여 종합 rating(1~5) + selected_tags + comment 생성.
+        세대별 tone_instruction으로 리뷰 말투 분기 (Z/Y/X/S).
+        평가 관점 6개 중 LLM이 페르소나에 맞게 자율 선택.
 
         평점 체계:
-        - 0: 방문 없음 (기본값, 평가 시에는 사용 안 함)
         - 1: 매우별로
         - 2: 별로
         - 3: 보통
         - 4: 좋음
         - 5: 매우좋음
 
-        Returns: {"taste_rating": int, "value_rating": int, "atmosphere_rating": int, "comment": str}
+        Returns: {"rating": int, "selected_tags": list, "comment": str}
         """
         store_info = self._get_store_info_for_prompt(store)
 
