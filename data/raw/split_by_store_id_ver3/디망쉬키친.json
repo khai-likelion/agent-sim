@@ -1,0 +1,80 @@
+{
+    "id": "망원2동_마포구청역 7번_제과점_20253",
+    "market_analysis": {
+        "phase": "쇠퇴",
+        "trend_review": "망원2동 마포구청역 7번 지역의 제과점 시장은 점포 수가 감소하고 폐업률이 높아지는 추세를 보이며 쇠퇴 중입니다. 특히 2023년부터 점포 수가 지속적으로 감소하고 있으며, 2025년에는 2개의 점포로 축소되었습니다.",
+        "competition_intensity": "낮음"
+    },
+    "revenue_analysis": "분석 불가 (데이터 부족)",
+    "customer_analysis": "분석 불가 (데이터 부족)",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.85,
+            "label": "매우 긍정적",
+            "comparison": "리뷰어들은 디망쉬 키친의 디저트 품질과 분위기에 대해 매우 만족하는 것으로 보입니다."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.9,
+                "label": "매우 우수",
+                "avg_score": 0.8104166666666666
+            },
+            "price_value": {
+                "score": 0.6,
+                "label": "보통",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.75,
+                "label": "양호",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.7,
+                "label": "양호",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.4,
+                "label": "개선 필요",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.7,
+                "label": "양호",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포5개(개업20%/폐업0%)|객단가:10,087원 -> [20251] 점포4개(개업0%/폐업25%)|객단가:9,539원 -> [20252] 점포3개(개업0%/폐업0%)|객단가:9,513원 -> [20253] 점포2개(개업0%/폐업50%)|객단가:정보없음",
+        "metrics": {
+            "store_count": 2,
+            "net_change": -1,
+            "close_rate": 50,
+            "has_sales_data": false
+        }
+    },
+    "metadata": {
+        "area": "망원2동",
+        "section": "마포구청역 7번",
+        "sector": "제과점",
+        "quarter": "20253"
+    },
+    "store_id": "911552927",
+    "store_name": "디망쉬키친",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "디저트",
+        "베이킹 클래스",
+        "딸기 프레지에",
+        "코코넛 튀일",
+        "살구 밀크티",
+        "친절",
+        "아늑",
+        "망원동"
+    ],
+    "critical_feedback": [],
+    "rag_context": "디망쉬 키친은 망원동에서 디저트와 베이킹 클래스로 유명한 곳으로, 방문객들은 특히 디저트의 맛에 대해 매우 만족하고 있습니다. 리뷰어들은 딸기 프레지에와 코코넛 튀일 같은 디저트의 품질을 높이 평가하며, 살구 밀크티의 독특한 향미도 칭찬했습니다. 사장님의 친절함과 아늑하면서도 깔끔한 매장 분위기도 긍정적으로 언급되었습니다. 그러나 가격 대비 가치와 회전율 측면에서는 약간의 개선이 필요할 것으로 보입니다. 그럼에도 불구하고, 디망쉬 키친은 디저트 애호가들에게 강력히 추천되는 장소로 자리매김하고 있습니다.",
+    "review_count": 2
+}

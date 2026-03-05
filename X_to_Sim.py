@@ -82,27 +82,27 @@ class StrategyBridge:
         r'\([^)]*위해[^)]*\)',
     ]
 
-    def __init__(self, api_key: str, base_url: str = None, model_name: str = None):
+    def __init__(self, api_key: str = None, base_url: str = None, model_name: str = None):
         """
         Args:
-            api_key: API 키 (OpenAI or Gemini)
-            base_url: API 엔드포인트 (Gemini 사용 시 자동 감지)
-            model_name: 모델 이름 (None이면 환경변수 또는 기본값)
+            api_key: API 키 (None이면 설정에서 가져옴)
+            base_url: API 엔드포인트
+            model_name: 모델 이름
         """
-        provider = os.getenv("LLM_PROVIDER", "gemini").lower()
+        from config import get_settings
+        settings = get_settings()
 
-        if base_url is None and provider == "gemini":
-            base_url = "https://generativelanguage.googleapis.com/v1beta/openai/"
+        if api_key is None:
+            api_key = settings.llm.api_key
 
         if model_name is None:
-            model_name = os.getenv("LLM_MODEL_NAME", "gemini-2.5-flash-lite")
+            model_name = settings.llm.model_name
+
+        if base_url is None:
+            base_url = "https://generativelanguage.googleapis.com/v1beta/openai/"
 
         self.model_name = model_name
-
-        if base_url:
-            self.client = AsyncOpenAI(api_key=api_key, base_url=base_url)
-        else:
-            self.client = AsyncOpenAI(api_key=api_key)
+        self.client = AsyncOpenAI(api_key=api_key, base_url=base_url)
 
     async def _parse_json_with_retry(
         self,
@@ -154,23 +154,6 @@ class StrategyBridge:
                     continue
 
         raise last_error
-
-    @staticmethod
-    def _cleanup_punctuation(text: str) -> str:
-        """문장 대체 후 발생하는 이중 구두점·공백을 정리."""
-        import re as _re
-        # 마침표+쉼표, 쉼표+마침표 → 마침표
-        text = _re.sub(r'\.\s*,', '. ', text)
-        text = _re.sub(r',\s*\.', '. ', text)
-        # 마침표 중복
-        text = _re.sub(r'\.{2,}', '.', text)
-        # 쉼표 중복
-        text = _re.sub(r',{2,}', ',', text)
-        # 공백 앞 구두점
-        text = _re.sub(r'\s+([.,])', r'\1', text)
-        # 다중 공백
-        text = _re.sub(r' {2,}', ' ', text)
-        return text.strip()
 
     def find_similar_segment(self, text: str, target: str, threshold: float = 0.6) -> Tuple[str, float]:
         """
@@ -442,25 +425,17 @@ class StrategyBridge:
 - **고객 경험 관점**으로만 서술 (운영/사장님 관점 금지)
 - "~를 유도한다", "~를 공지한다", "~문구를 고정한다" 같은 운영 행위 금지
 - 고객이 직접 인지/체험할 수 있는 팩트만 서술
-- **반드시 자연스러운 손님 리뷰/후기 말투**로 작성 (공지문·정책문 금지)
-  - ✅ 리뷰 말투: "깔끔한 편이에요", "청결하게 잘 관리되더라고요", "음식이 일관되게 맛있었어요"
-  - ❌ 공지문 말투: "~관리되고 있다", "~확인할 수 있다", "~기준에 따라 관리되어", "~제공한다"
 
 ## 예시
 - 원본: "짠맛이 강한 편으로 일부 고객에게는 적응하기 어려울 수 있습니다"
 - 전략: "짠맛 이슈 대응 옵션화 - 주문 시 '기본/덜짭게' 선택"
-- ❌ 잘못된 해결: "염도 조절 옵션을 제공한다" (공지문)
-- ✅ 올바른 해결: "진한 맛이 특징인데, 주문할 때 덜짭게도 선택할 수 있어서 좋았어요" (리뷰 말투)
-
-- 원본: "위생 상태와 청결함이 다소 떨어진다는 점을 지적하며"
-- 전략: "청결 3포인트 표준(테이블·바닥·화장실) + 체크리스트 공개"
-- ❌ 잘못된 해결: "테이블, 바닥, 화장실은 청결하게 관리되고, 청소 완료 상태를 확인할 수 있다" (공지문)
-- ✅ 올바른 해결: "전에 위생 지적이 있었는데, 요즘은 테이블이랑 화장실 모두 꽤 깨끗한 편이에요" (리뷰 말투)
+- ❌ 잘못된 해결: "짠맛 이슈 대응을 위해 염도 조절 옵션을 제공한다" (운영 관점)
+- ✅ 올바른 해결: "진한 맛이 특징이며, 주문 시 염도 조절(기본/덜짭게)을 선택할 수 있다" (고객 경험)
 
 - 원본: "웨이팅 시간이 길 수 있으니 미리 예약하는 것이 좋습니다"
 - 전략: "웨이팅 안내를 플레이스/인스타에 먼저 공지"
 - ❌ 잘못된 해결: "웨이팅 안내를 플레이스에 공지하여 대기 방식을 안내한다" (운영 관점)
-- ✅ 올바른 해결: "웨이팅이 있긴 한데 미리 대기 등록하고 가면 훨씬 수월해요" (리뷰 말투)
+- ✅ 올바른 해결: "예상 대기시간이 안내되며, 원격 줄서기 시스템을 이용할 수 있다" (고객 경험)
 
 # 출력 (JSON만, 코드 블록 없이)
 {{
@@ -593,13 +568,12 @@ class StrategyBridge:
 - "~를 해결하기 위해", "~를 개선하고자" 같은 의도 설명 금지
 - 결과물에는 **현재 상태의 팩트만** 서술
 
-## 3. ✅ 반드시 사용 (자연스러운 리뷰 말투)
-- "~인 편이에요", "~더라고요", "~했어요", "~좋았어요", "~괜찮았어요"
+## 3. ✅ 반드시 사용 (현재 상태 서술)
+- "~이다", "~가 있다", "~을 제공한다", "~이 특징이다"
 - 구체적 팩트만, 새로운 근거 없는 수치 생성 금지
-- ❌ 공지문/정책문 금지: "~관리되고 있다", "~확인할 수 있다", "~기준에 따라", "~제공한다", "~운영한다"
 
 ## 4. 🔍 핵심 특징 유지
-- '맛(짠맛)', '면의 질감' 등 매장의 고유한 정체성은 삭제하지 말고, 부정적 표현을 자연스러운 리뷰 말투의 중립/긍정 표현으로 전환
+- '맛(짠맛)', '면의 질감' 등 매장의 고유한 정체성은 삭제하지 말고, 부정적 표현을 중립적 팩트로 전환
 
 # 작업
 위 텍스트에서 **규칙을 위반하는 문장만** 찾아서, 수정된 문장으로 반환하세요.
@@ -689,15 +663,15 @@ class StrategyBridge:
                 print("  ✅ GPT 추가 수정 없음 (규칙 준수)")
 
             return {
-                "updated_comparison": self._cleanup_punctuation(working_comparison),
-                "updated_rag_context": self._cleanup_punctuation(working_rag)
+                "updated_comparison": working_comparison,
+                "updated_rag_context": working_rag
             }
 
         except Exception as e:
             print(f"⚠️ 텍스트 업데이트 오류: {e}")
             return {
-                "updated_comparison": self._cleanup_punctuation(working_comparison),
-                "updated_rag_context": self._cleanup_punctuation(working_rag)
+                "updated_comparison": working_comparison,
+                "updated_rag_context": working_rag
             }
 
     def validate_no_time_expressions(self, text: str) -> tuple[bool, List[str]]:

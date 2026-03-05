@@ -1,0 +1,88 @@
+{
+    "id": "망원1동_망원역_커피-음료_20253",
+    "market_analysis": {
+        "phase": "성장",
+        "trend_review": "망원1동 망원역 커피-음료 시장은 총 점포 수가 증가하고 있으며, 개업률이 폐업률을 압도하고 있어 성장 단계에 있다. 특히 2024년과 2025년 초반까지 점포 수가 증가하는 추세를 보였으나, 2025년 중반부터 점포 수가 감소하는 추세를 보이고 있다. 객단가는 2024년부터 2025년까지 증가하다가 2025년 중반부터 감소하는 추세를 보이고 있다.",
+        "competition_intensity": "중간"
+    },
+    "revenue_analysis": "객단가는 7,212원으로 나타났으며, 주말 비중은 31.5%로 높은 수치를 보인다. 시간대별로는 오후 11시부터 오후 2시 사이가 가장 높은 매출을 기록하며, 오후 2시부터 오후 5시 사이, 오후 5시부터 오후 9시 사이 순으로 매출이 높다. 낮 시간대와 밤 시간대의 매출은 상대적으로 낮다.",
+    "customer_analysis": "고객층은 여성이 59.4%, 남성이 40.6%로 여성 고객이 다수를 차지한다. 연령대별로는 30대가 28.4%로 가장 높으며, 20대가 24.5%, 40대가 20.4%로 이어진다. 50대 이상 고객은 8%로, 10대 고객은 1%로 나타났다.",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.3,
+            "label": "Neutral",
+            "comparison": "Reviews contain a mix of positive feedback regarding taste and service, alongside significant criticisms about cleanliness, service attitude, and operational issues like insect presence and turnover efficiency."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.7,
+                "label": "Good",
+                "avg_score": 0.853
+            },
+            "price_value": {
+                "score": 0.4,
+                "label": "Average",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.3,
+                "label": "Poor",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.5,
+                "label": "Mixed",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.4,
+                "label": "Below Average",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.5,
+                "label": "Mixed",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포28개(개업4%/폐업7%)|객단가:7,454원 -> [20251] 점포28개(개업0%/폐업0%)|객단가:7,995원 -> [20252] 점포26개(개업4%/폐업12%)|객단가:7,164원 -> [20253] 점포27개(개업4%/폐업0%)|객단가:7,212원",
+        "metrics": {
+            "store_count": 27,
+            "net_change": 1,
+            "close_rate": 0,
+            "has_sales_data": true
+        }
+    },
+    "metadata": {
+        "area": "망원1동",
+        "section": "망원역",
+        "sector": "커피-음료",
+        "quarter": "20253"
+    },
+    "store_id": "350204016",
+    "store_name": "설빙 서울망원점",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "망고 신선도",
+        "불친절",
+        "벌레",
+        "청결",
+        "맛",
+        "서비스",
+        "시끄러움",
+        "에어컨"
+    ],
+    "critical_feedback": [
+        "망고의 신선도 문제",
+        "직원의 불친절한 태도",
+        "매장 내 벌레 출현",
+        "청결 상태 미흡 (접시 관리 부족)",
+        "키오스크 부족으로 인한 불편",
+        "운영 효율성 저하 (회전율 낮음)",
+        "소음 문제로 인한 불편한 분위기"
+    ],
+    "rag_context": "설빙 서울망원점은 맛 측면에서는 긍정적인 평가를 받고 있으며, 특히 인절미 아이스크림과 빙수의 맛에 대한 호평이 많습니다. 그러나 청결도와 서비스 측면에서는 여러 비판이 제기되었습니다. 일부 리뷰에서는 매장 내 벌레 출현과 직원의 불친절한 태도를 지적하며, 청결 관리 부족과 키오스크 부족으로 인한 고객 불편함을 언급했습니다. 회전율과 소음 문제 또한 부정적인 요소로 작용하고 있습니다. 그럼에도 불구하고, 사장님의 친절함과 빙수의 품질에 대한 긍정적인 평가가 일부 리뷰에서 확인되며, 이는 매장의 개선 가능성과 함께 고객들의 지속적인 관심을 받을 수 있는 잠재력을 시사합니다.",
+    "review_count": 19
+}

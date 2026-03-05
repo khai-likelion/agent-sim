@@ -2,10 +2,10 @@
 Generative Agents 기반 시뮬레이션 실행 스크립트.
 
 Stanford Generative Agents 논문 구조를 참조한 시뮬레이션:
-- Persona Generation Module: 고유 조합의 에이전트 생성 (160명, 상주47/유동113)
-- Memory Module: recent_history + memory_context(당일 식사 + 과거 평점/코멘트) 기반 의사결정
-- Action Algorithm: 5단계 LLM 기반 의사결정 + 다중 방문 루프 (MAX=3)
-- Global Store: 실시간 평점 축적 (Softmax 계층화 샘플링, 10개마다 LLM 요약)
+- Persona Generation Module: 고유 조합의 에이전트 생성
+- Memory Module: recent_history 기반 의사결정
+- Action Algorithm: 4단계 LLM 기반 의사결정
+- Global Store: 실시간 평점 축적
 
 사용법:
     python scripts/run_generative_simulation.py [--agents N] [--dry-run]
@@ -14,7 +14,6 @@ Stanford Generative Agents 논문 구조를 참조한 시뮬레이션:
 import argparse
 import asyncio
 import json
-import pickle
 import sys
 import random
 import numpy as np
@@ -73,7 +72,7 @@ DAILY_FLOATING_COUNT_BY_DAY = {
 DAILY_FLOATING_AGENT_COUNT = 53  # 기본값 (fallback)
 REVISIT_RATE = 0.10  # 재방문율: 전날 방문자 중 10% 다음날 포함
 
-# OSM 네트워크 설정 (망원동 기준 — run_generative_simulation에서 실제 망원동 좌표로 재설정됨)
+# OSM 네트워크 설정 (서울 강남역 주변 기준)
 DEFAULT_NETWORK_CENTER_LAT = 37.4980
 DEFAULT_NETWORK_CENTER_LNG = 127.0276
 DEFAULT_NETWORK_RADIUS_M = 800.0  # 망원동 구역 내로 제한
@@ -84,17 +83,15 @@ def estimate_simulation(agent_count: int, days: int = 7, time_slots: int = 4,
     """
     시뮬레이션 전 예상치 계산.
 
-    LLM 호출 수 계산 (타임슬롯당 기본):
-    - Step 1: 모든 에이전트 × 모든 타임슬롯 (LLM 기반 외식 여부 결정)
-    - Step 2: 외출하는 에이전트만 (업종 선택, 약 50%)
-    - Step 3: 외출하는 에이전트만 (매장 선택, Step 2와 동일)
-    - Step 4: 실제 방문한 에이전트만 (평가, 외출 중 약 90%)
-    - Step 5: Step 4와 동일 (다음 행동 결정)
-    ※ 다중 방문 루프(카페_가기 등) 시 Step 3~5 추가 호출됨 (최대 3회)
+    LLM 호출 수 계산:
+    - Step 1: 모든 에이전트 × 모든 타임슬롯 (외출 여부)
+    - Step 2: 외출하는 에이전트만 (업종 선택)
+    - Step 3: 외출하는 에이전트만 (매장 선택)
+    - Step 4: 방문한 에이전트만 (평가)
 
     가정:
     - 상주 에이전트: 매일 전원 활동
-    - 유동 에이전트: 평일 51명 / 주말 58명 (DAILY_FLOATING_COUNT_BY_DAY 기준)
+    - 유동 에이전트: 매일 53명만 활동 (하루짜리)
     - 외출 확률 약 50%
     - 방문 성공률 약 90% (외출 결정 중)
     """
@@ -102,7 +99,8 @@ def estimate_simulation(agent_count: int, days: int = 7, time_slots: int = 4,
     daily_active = resident_count + daily_floating
     total_slots = daily_active * days * time_slots
 
-    # Step 1: 모든 슬롯에서 호출 (LLM 기반 외식 여부 결정)
+    # Step 1: 모든 슬롯에서 호출
+    ## Step 1은 모든 타임슬롯에서 호출 (확률 계산이지만 나중에 보면 실제론 LLM 미사용)
     step1_calls = total_slots
 
     # Step 2, 3: 외출하는 경우만 (약 50%)
@@ -116,25 +114,24 @@ def estimate_simulation(agent_count: int, days: int = 7, time_slots: int = 4,
 
     total_llm_calls = step1_calls + step2_calls + step3_calls + step4_calls
 
-    # LLM 비용 계산 (provider별 가격)
-    # - GPT-4o-mini: Input $0.15/1M, Output $0.60/1M
-    # - Gemini 2.0 Flash: Input $0.10/1M, Output $0.40/1M
+    # LLM 비용 계산 (하이브리드 전략)
+    # - Gemini 2.5 Flash-Lite (Step 1,2,3): Input $0.05/1M, Output $0.20/1M
+    # - Gemini 3 Flash (Step 4): Input $0.50/1M, Output $3.00/1M
     avg_input_tokens = 500
     avg_output_tokens = 100
 
-    llm_settings = get_settings().llm
-    if llm_settings.provider == "gemini":
-        input_cost_per_million = 0.10
-        output_cost_per_million = 0.40
-    else:
-        input_cost_per_million = 0.15
-        output_cost_per_million = 0.60
+    # Lite 모델 비용 (Step 1,2,3)
+    lite_calls = step1_calls + step2_calls + step3_calls
+    lite_input_cost = (lite_calls * avg_input_tokens / 1_000_000) * 0.05
+    lite_output_cost = (lite_calls * avg_output_tokens / 1_000_000) * 0.20
 
-    total_input_tokens = total_llm_calls * avg_input_tokens
-    total_output_tokens = total_llm_calls * avg_output_tokens
+    # Eval 모델 비용 (Step 4)
+    eval_calls = step4_calls
+    eval_input_cost = (eval_calls * avg_input_tokens / 1_000_000) * 0.50
+    eval_output_cost = (eval_calls * avg_output_tokens / 1_000_000) * 3.00
 
-    input_cost = (total_input_tokens / 1_000_000) * input_cost_per_million
-    output_cost = (total_output_tokens / 1_000_000) * output_cost_per_million
+    input_cost = lite_input_cost + eval_input_cost
+    output_cost = lite_output_cost + eval_output_cost
     total_cost = input_cost + output_cost
 
     # 예상 시간 (API 호출당 평균 1초 + 0.5초 딜레이)
@@ -184,10 +181,13 @@ def print_estimates(estimates: Dict[str, Any]):
     print()
     # LLM 모델 정보
     llm_settings = get_settings().llm
-    model_name = f"{llm_settings.provider.upper()}/{llm_settings.model_name}"
+    lite_model = llm_settings.lite_model_name
+    eval_model = llm_settings.eval_model_name
 
     cost = estimates["estimated_cost_usd"]
-    print(f"예상 비용 ({model_name}):")
+    print(f"예상 비용 (Hybrid Gemini Strategy):")
+    print(f"  - Lite Model (Step 1-3): {lite_model}")
+    print(f"  - Eval Model (Step 4):   {eval_model}")
     print(f"  Input: ${cost['input']:.4f}")
     print(f"  Output: ${cost['output']:.4f}")
     print(f"  Total: ${cost['total']:.4f} (약 {cost['total'] * 1400:.0f}원)")
@@ -351,8 +351,7 @@ async def agent_task(
         reason_short = reason[:40] + "..." if len(reason) > 40 else reason
         print(f"  [{agent.persona_id}] {slot_name} | 외출안함 | {reason_short}")
     elif decision == "llm_failed":
-        err_msg = result.get("error", "")
-        print(f"  [{agent.persona_id}] {slot_name} | LLM오류 | {err_msg}")
+        print(f"  [{agent.persona_id}] {slot_name} | LLM오류")
 
     return {
         "agent": agent,
@@ -368,8 +367,6 @@ async def run_simulation(
     settings,
     days: int = 7,
     max_concurrent_llm_calls: int = 10,
-    checkpoint_dir: Optional[Path] = None,
-    resume_from_day: int = 0,
 ) -> pd.DataFrame:
     """
     OSM 네트워크 기반 시뮬레이션 실행.
@@ -411,43 +408,13 @@ async def run_simulation(
     _days_since_monday = _today.weekday()  # 월=0
     start_date = _today - timedelta(days=_days_since_monday)
 
-    # 체크포인트 디렉토리 준비
-    if checkpoint_dir:
-        checkpoint_dir = Path(checkpoint_dir)
-        checkpoint_dir.mkdir(parents=True, exist_ok=True)
-
-    # Resume: 체크포인트에서 상태 복원
-    if resume_from_day > 0 and checkpoint_dir:
-        cp_path = checkpoint_dir / f"checkpoint_day{resume_from_day:03d}"
-        if cp_path.exists():
-            print(f"  ♻️  체크포인트 복원: {cp_path.name} (Day {resume_from_day + 1}부터 재개)")
-            with open(cp_path / "results.pkl", "rb") as f:
-                results = pickle.load(f)
-            with open(cp_path / "agents.pkl", "rb") as f:
-                saved_agents = pickle.load(f)
-                agent_map = {a.id: a for a in saved_agents}
-                for agent in agents:
-                    if agent.id in agent_map:
-                        agent.__dict__.update(agent_map[agent.id].__dict__)
-            with open(cp_path / "global_store.pkl", "rb") as f:
-                saved_gs = pickle.load(f)
-                global_store.__dict__.update(saved_gs.__dict__)
-            with open(cp_path / "metadata.json", encoding="utf-8") as f:
-                meta = json.load(f)
-                start_date = datetime.fromisoformat(meta["start_date"])
-                prev_ids = set(meta.get("prev_visitor_ids", []))
-                run_simulation._prev_day_visitors = [a for a in agents if a.id in prev_ids]
-        else:
-            print(f"  [경고] 체크포인트 없음: {cp_path} → Day 1부터 시작")
-            resume_from_day = 0
-
     # 타임슬롯 리스트 (시간 순서대로 정렬)
     time_slot_list = sorted(TIME_SLOTS.items(), key=lambda x: x[1])
 
     # 에이전트 초기 위치 딕셔너리
     agent_locations = {}
 
-    day_pbar = tqdm(range(resume_from_day, days), desc="전체 진행", unit="day", position=0)
+    day_pbar = tqdm(range(days), desc="전체 진행", unit="day", position=0)
     for day_idx in day_pbar:
         day_start_time = time_module.perf_counter()
         current_date = start_date + timedelta(days=day_idx)
@@ -548,7 +515,6 @@ async def run_simulation(
                 position=1,
                 leave=False,
             )
-            slot_llm_failed = 0
             for agent, output in slot_pbar:
                 day_processed += 1
 
@@ -602,17 +568,6 @@ async def run_simulation(
                         "reason": result.get("reason", ""),
                     }
                     results.append(record)
-                    if result["decision"] == "llm_failed":
-                        slot_llm_failed += 1
-
-            # llm_failed 감지: 1건이라도 발생 시 즉시 중단
-            if slot_llm_failed > 0:
-                raise RuntimeError(
-                    f"\n[시뮬레이션 중단] LLM 오류 발생!\n"
-                    f"  Day {day_idx+1} / {slot_name} 슬롯\n"
-                    f"  실패: {slot_llm_failed}/{len(daily_agents)}명\n"
-                    f"  마지막 오류는 위 로그의 'LLM오류' 항목을 확인하세요."
-                )
 
         # 하루 종료: 소요시간 출력
         day_elapsed = time_module.perf_counter() - day_start_time
@@ -629,24 +584,6 @@ async def run_simulation(
         ]
         if run_simulation._prev_day_visitors:
             tqdm.write(f"      재방문 풀: 유동 {len(run_simulation._prev_day_visitors)}명 (내일 {REVISIT_RATE*100:.0f}% 확률로 재방문)")
-
-        # 7일마다 체크포인트 저장 (+ 마지막 날)
-        if checkpoint_dir and ((day_idx + 1) % 7 == 0 or day_idx + 1 == days):
-            cp_dir = checkpoint_dir / f"checkpoint_day{day_idx+1:03d}"
-            cp_dir.mkdir(parents=True, exist_ok=True)
-            with open(cp_dir / "results.pkl", "wb") as f:
-                pickle.dump(results, f)
-            with open(cp_dir / "agents.pkl", "wb") as f:
-                pickle.dump(agents, f)
-            with open(cp_dir / "global_store.pkl", "wb") as f:
-                pickle.dump(global_store, f)
-            with open(cp_dir / "metadata.json", "w", encoding="utf-8") as f:
-                json.dump({
-                    "day_idx_next": day_idx + 1,
-                    "start_date": start_date.isoformat(),
-                    "prev_visitor_ids": [a.id for a in run_simulation._prev_day_visitors] if hasattr(run_simulation, '_prev_day_visitors') else []
-                }, f, ensure_ascii=False)
-            tqdm.write(f"  💾 체크포인트 저장: {cp_dir.name} (Day {day_idx+1})")
 
     # 마지막 타임슬롯 평점 반영 + 잔여 buffer 요약
     flush_result = await global_store.flush_and_summarize_async()
@@ -770,7 +707,7 @@ async def async_main():
     print("Generative Agents 시뮬레이션")
     print(f"시드: {args.seed}")
     print("=" * 60)
-    print(f"LLM: {settings.llm.provider} / {settings.llm.model_name}")
+    print(f"LLM 전략: Hybrid Gemini (Lite: {settings.llm.lite_model_name} / Eval: {settings.llm.eval_model_name})")
 
     # 예상치 계산 및 출력 (160명 기준: 상주 47 + 유동 113)
     estimates = estimate_simulation(agent_count, days, resident_count=47, floating_count=113)

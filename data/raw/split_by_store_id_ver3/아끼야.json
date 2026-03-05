@@ -1,0 +1,76 @@
+{
+    "id": "망원2동_마포구청역 7번_일식음식점_20253",
+    "market_analysis": {
+        "phase": "성장",
+        "trend_review": "망원2동 마포구청역 7번 일식음식점 시장은 총 1개의 점포로 구성되어 있으며, 1년 동안 개업 및 폐업이 없었다. 점포 수 변화는 없지만, 객단가 정보는 부족하여 시장의 성장 가능성을 정확히 판단하기 어렵다.",
+        "competition_intensity": "낮음"
+    },
+    "revenue_analysis": "분석 불가 (데이터 부족)",
+    "customer_analysis": "분석 불가 (데이터 부족)",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.8,
+            "label": "매우 긍정적",
+            "comparison": "리뷰어들이 주로 긍정적인 경험을 공유하며 재방문 의사를 표현하고 있어 긍정적인 평가를 받고 있습니다."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.8,
+                "label": "매우 좋음",
+                "avg_score": 0.83464
+            },
+            "price_value": {
+                "score": 0.6,
+                "label": "보통",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.7,
+                "label": "양호",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.7,
+                "label": "양호",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.5,
+                "label": "보통",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.6,
+                "label": "보통",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포1개(개업0%/폐업0%)|객단가:정보없음 -> [20251] 점포1개(개업0%/폐업0%)|객단가:정보없음 -> [20252] 점포1개(개업0%/폐업0%)|객단가:정보없음 -> [20253] 점포1개(개업0%/폐업0%)|객단가:정보없음",
+        "metrics": {
+            "store_count": 1,
+            "net_change": 0,
+            "close_rate": 0,
+            "has_sales_data": false
+        }
+    },
+    "metadata": {
+        "area": "망원2동",
+        "section": "마포구청역 7번",
+        "sector": "일식음식점",
+        "quarter": "20253"
+    },
+    "store_id": "1323062498",
+    "store_name": "아끼야",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "맛있어요",
+        "재방문",
+        "친절",
+        "맛집"
+    ],
+    "critical_feedback": [],
+    "rag_context": "아끼야는 고객들에게 맛과 친절한 서비스로 호평을 받고 있는 식당입니다. 특히 튀김과 돈까스의 맛이 뛰어나 재방문을 결정하게 만드는 요소로 작용하고 있습니다. 일부 리뷰에서는 히레까스와 모밀의 맛에 대해 약간의 아쉬움을 표현했지만, 전반적으로 긍정적인 분위기가 지배적입니다. 청결도와 분위기는 보통 수준으로 평가되며, 빠른 회전율과 함께 친절한 직원들이 고객 경험을 향상시키는 데 기여하고 있습니다. 특히 외국인 방문객에게도 친절하게 대해주는 모습이 인상적이었습니다.",
+    "review_count": 3
+}

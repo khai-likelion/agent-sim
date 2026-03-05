@@ -1,0 +1,82 @@
+{
+    "id": "망원1동_망원역_치킨전문점_20253",
+    "market_analysis": {
+        "phase": "분석 불가 (데이터 부족)",
+        "trend_review": "총 점포 1개로, 개업률과 폐업률은 0%입니다. 1년 추세는 점포 수 변화가 없고, 객단가 정보는 없습니다.",
+        "competition_intensity": "분석 불가 (데이터 부족)"
+    },
+    "revenue_analysis": "분석 불가 (데이터 부족)",
+    "customer_analysis": "분석 불가 (데이터 부족)",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.3,
+            "label": "Neutral to Negative",
+            "comparison": "리뷰 중 긍정적인 평가가 있지만, 가격 불만과 서비스 문제 등으로 인해 전체적으로는 부정적인 경향이 두드러진다."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.8,
+                "label": "Good",
+                "avg_score": 0.7080597014925373
+            },
+            "price_value": {
+                "score": 0.3,
+                "label": "Poor",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.7,
+                "label": "Good",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.4,
+                "label": "Fair",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.4,
+                "label": "Average",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.6,
+                "label": "Moderate",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포1개(개업0%/폐업0%)|객단가:정보없음 -> [20251] 점포1개(개업0%/폐업0%)|객단가:정보없음 -> [20252] 점포1개(개업0%/폐업0%)|객단가:정보없음 -> [20253] 점포1개(개업0%/폐업0%)|객단가:정보없음",
+        "metrics": {
+            "store_count": 1,
+            "net_change": 0,
+            "close_rate": 0,
+            "has_sales_data": false
+        }
+    },
+    "metadata": {
+        "area": "망원1동",
+        "section": "망원역",
+        "sector": "치킨전문점",
+        "quarter": "20253"
+    },
+    "store_id": "410524575",
+    "store_name": "또바기치킨 망원시장점",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "맛있는 치킨",
+        "가격 불만",
+        "서비스",
+        "영수증 누락",
+        "배탈",
+        "대기 시간"
+    ],
+    "critical_feedback": [
+        "메뉴판과 실제 결제 금액의 불일치로 인한 가격 불만",
+        "서비스 품질 저하: 주문 후 대기 시간 길고, 고객 질문에 대한 무성의한 대응",
+        "일부 고객의 배탈 사례로 인한 음식 안전성 의문"
+    ],
+    "rag_context": "또바기치킨 망원시장점은 맛 측면에서는 긍정적인 평가를 받고 있으며, 특히 바삭하고 옛날 통닭 맛의 치킨이 호평을 받았습니다. 그러나 여러 리뷰에서 가격 불만이 제기되었는데, 메뉴판과 실제 결제 금액의 차이가 크게 지적되었습니다. 특히 한 리뷰에서는 영수증 누락과 가격 인상에 대한 불만을 강하게 표현했습니다. 서비스 측면에서는 주문 후 긴 대기 시간과 고객 응대의 부족함이 문제점으로 지적되었습니다. 청결과 분위기는 대체적으로 양호한 평가를 받았으나, 일부 고객의 배탈 사례는 음식의 안전성에 대한 의문을 제기했습니다. 이러한 요인들로 인해 재방문 의사가 낮아지는 경향이 보입니다.",
+    "review_count": 11
+}

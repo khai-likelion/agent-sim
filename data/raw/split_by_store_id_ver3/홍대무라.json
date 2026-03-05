@@ -1,0 +1,83 @@
+{
+    "id": "망원2동_마포구청역 7번_일식음식점_20253",
+    "market_analysis": {
+        "phase": "성장",
+        "trend_review": "망원2동 마포구청역 7번 일식음식점 시장은 총 1개의 점포로 구성되어 있으며, 1년 동안 개업 및 폐업이 없었다. 점포 수 변화는 없지만, 객단가 정보는 부족하여 시장의 성장 가능성을 정확히 판단하기 어렵다.",
+        "competition_intensity": "낮음"
+    },
+    "revenue_analysis": "분석 불가 (데이터 부족)",
+    "customer_analysis": "분석 불가 (데이터 부족)",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.85,
+            "label": "매우 긍정적",
+            "comparison": "리뷰 대부분이 긍정적인 평가를 담고 있으며, 맛과 서비스에 대한 칭찬이 주를 이루고 있습니다."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.95,
+                "label": "매우 좋음",
+                "avg_score": 0.83464
+            },
+            "price_value": {
+                "score": 0.7,
+                "label": "좋음",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.8,
+                "label": "좋음",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.75,
+                "label": "좋음",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.6,
+                "label": "보통",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.7,
+                "label": "좋음",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포1개(개업0%/폐업0%)|객단가:정보없음 -> [20251] 점포1개(개업0%/폐업0%)|객단가:정보없음 -> [20252] 점포1개(개업0%/폐업0%)|객단가:정보없음 -> [20253] 점포1개(개업0%/폐업0%)|객단가:정보없음",
+        "metrics": {
+            "store_count": 1,
+            "net_change": 0,
+            "close_rate": 0,
+            "has_sales_data": false
+        }
+    },
+    "metadata": {
+        "area": "망원2동",
+        "section": "마포구청역 7번",
+        "sector": "일식음식점",
+        "quarter": "20253"
+    },
+    "store_id": "1698974915",
+    "store_name": "홍대무라",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "맛있음",
+        "냉라멘",
+        "친절",
+        "분위기",
+        "가성비",
+        "추억",
+        "양",
+        "추천"
+    ],
+    "critical_feedback": [
+        "리뷰 8번에서 음식 맛의 변화와 조리사의 영향에 대한 부정적인 피드백이 있습니다.",
+        "리뷰 8번에서 양이 적다는 의견이 있습니다."
+    ],
+    "rag_context": "홍대무라 식당은 방문객들로부터 높은 만족도를 받고 있으며, 특히 맛과 냉라멘에 대한 칭찬이 많습니다. 많은 리뷰어들이 추억을 떠올리게 하는 맛과 친절한 서비스를 강조하고 있습니다. 가격대비 양이 많고 맛있다는 평가가 주를 이루지만, 일부 리뷰에서는 음식의 맛 변화와 양이 적다는 의견이 제기되었습니다. 분위기와 청결도 대체로 긍정적으로 평가되었지만, 회전율은 보통 수준으로 보입니다.",
+    "review_count": 17
+}

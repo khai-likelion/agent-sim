@@ -1,0 +1,84 @@
+{
+    "id": "망원2동_KB국민은행 망원동지점_한식음식점_20253",
+    "market_analysis": {
+        "phase": "성장",
+        "trend_review": "망원2동 KB국민은행 망원동지점 근처 한식음식점 시장은 총 점포 수가 2년 동안 증가하는 추세이며, 개업률이 폐업률을 압도하고 있습니다. 특히 20253년에는 5%의 높은 개업률을 기록하며 시장의 성장 가능성이 높다고 판단됩니다.",
+        "competition_intensity": "중간"
+    },
+    "revenue_analysis": "객단가는 36,100원으로 나타났으며, 주말 고객 비중이 32.7%로 높습니다. 시간대별로는 저녁 시간대(17:00-21:00)가 46.5%로 가장 높은 비중을 차지하고 있습니다.",
+    "customer_analysis": "고객은 남성이 62.6%, 여성이 37.4%로 남성 고객이 다수를 차지합니다. 연령대별로는 30대(25.9%)와 50대(24.1%)가 가장 많은 비중을 차지하며, 40대, 60대 이상 고객도 각각 19.7%, 19.0%로 상당한 비중을 차지합니다.",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.35,
+            "label": "Neutral to Negative",
+            "comparison": "Several reviews highlight significant issues with service and value for money, despite acknowledging good food quality, leading to an overall sentiment leaning towards negative."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.8,
+                "label": "Good",
+                "avg_score": 0.7912822517591869
+            },
+            "price_value": {
+                "score": 0.4,
+                "label": "Poor",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.7,
+                "label": "Average",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.6,
+                "label": "Below Average",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.5,
+                "label": "Moderate",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.6,
+                "label": "Average",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포41개(개업2%/폐업0%)|객단가:36,625원 -> [20251] 점포41개(개업2%/폐업2%)|객단가:36,890원 -> [20252] 점포40개(개업0%/폐업3%)|객단가:35,864원 -> [20253] 점포42개(개업5%/폐업0%)|객단가:36,100원",
+        "metrics": {
+            "store_count": 42,
+            "net_change": 2,
+            "close_rate": 0,
+            "has_sales_data": true
+        }
+    },
+    "metadata": {
+        "area": "망원2동",
+        "section": "KB국민은행 망원동지점",
+        "sector": "한식음식점",
+        "quarter": "20253"
+    },
+    "store_id": "1540353497",
+    "store_name": "성미골",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "고기 맛",
+        "서비스",
+        "가격",
+        "기름",
+        "친절",
+        "회전율",
+        "분위기"
+    ],
+    "critical_feedback": [
+        "서비스가 느리며 요청사항 반영이 늦어짐.",
+        "가격 대비 가치가 낮음.",
+        "환기 시스템에서 기름이 떨어져 음식에 영향을 줌.",
+        "사과나 잘못 인정에 대한 태도 부족."
+    ],
+    "rag_context": "성미골은 고기의 맛으로는 긍정적인 평가를 받지만, 서비스 속도와 가격 대비 가치가 크게 감점 요인으로 작용하고 있습니다. 특히, 환기 시스템에서 떨어지는 기름이 음식에 부정적인 영향을 미치는 문제와 직원들의 사과나 잘못 인정의 부재는 고객 만족도를 크게 떨어뜨립니다. 청결과 분위기는 평균 수준으로 유지되고 있으나, 여러 리뷰에서 지적된 서비스와 가격 문제는 식당의 재방문 의사 결정에 결정적인 영향을 미치고 있습니다.",
+    "review_count": 23
+}

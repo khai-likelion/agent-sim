@@ -1,0 +1,84 @@
+{
+    "id": "망원2동_마포구청역 7번_제과점_20253",
+    "market_analysis": {
+        "phase": "쇠퇴",
+        "trend_review": "망원2동 마포구청역 7번 지역의 제과점 시장은 점포 수가 감소하고 폐업률이 높아지는 추세를 보이며 쇠퇴 중입니다. 특히 2023년부터 점포 수가 지속적으로 감소하고 있으며, 2025년에는 2개의 점포로 축소되었습니다.",
+        "competition_intensity": "낮음"
+    },
+    "revenue_analysis": "분석 불가 (데이터 부족)",
+    "customer_analysis": "분석 불가 (데이터 부족)",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.2,
+            "label": "Negative",
+            "comparison": "Reviews predominantly highlight negative experiences with service and staff behavior overshadowing positive aspects like taste and cleanliness."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.7,
+                "label": "Good",
+                "avg_score": 0.8104166666666666
+            },
+            "price_value": {
+                "score": 0.4,
+                "label": "Average",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.6,
+                "label": "Moderate",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.4,
+                "label": "Poor",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.3,
+                "label": "Below Average",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.5,
+                "label": "Mixed",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포5개(개업20%/폐업0%)|객단가:10,087원 -> [20251] 점포4개(개업0%/폐업25%)|객단가:9,539원 -> [20252] 점포3개(개업0%/폐업0%)|객단가:9,513원 -> [20253] 점포2개(개업0%/폐업50%)|객단가:정보없음",
+        "metrics": {
+            "store_count": 2,
+            "net_change": -1,
+            "close_rate": 50,
+            "has_sales_data": false
+        }
+    },
+    "metadata": {
+        "area": "망원2동",
+        "section": "마포구청역 7번",
+        "sector": "제과점",
+        "quarter": "20253"
+    },
+    "store_id": "7849196",
+    "store_name": "뚜레쥬르 마포구청역점",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "불친절",
+        "서비스",
+        "빵",
+        "직원",
+        "분위기",
+        "운영시간",
+        "맛"
+    ],
+    "critical_feedback": [
+        "지속적인 불친절한 직원 서비스",
+        "운영 시간 준수 미흡",
+        "일관성 없는 제품 품질",
+        "고객 응대 교육 필요성"
+    ],
+    "rag_context": "마포구청역점은 맛 있는 빵으로 주목받지만, 서비스 품질이 크게 감점 요인입니다. 많은 리뷰에서 직원들의 불친절과 부적절한 고객 응대를 지적하고 있으며, 특히 오후 늦은 시간의 운영 문제와 일관성 없는 제품 품질이 문제점으로 제기되었습니다. 긍정적인 측면으로는 일부 리뷰에서 맛있는 빵과 깔끔한 분위기를 언급하고 있지만, 전반적으로 고객 만족도는 낮은 편입니다. 뚜레쥬르 본사의 직원 교육 강화와 운영 시간 준수가 필요할 것으로 보입니다.",
+    "review_count": 23
+}

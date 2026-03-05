@@ -1,0 +1,86 @@
+{
+    "id": "망원2동_동교초등학교_중식음식점_20253",
+    "market_analysis": {
+        "phase": "분석 불가 (데이터 부족)",
+        "trend_review": "총 점포 2개로, 1년간 개업/폐업률 변화는 없었습니다. 객단가 정보는 부족합니다.",
+        "competition_intensity": "분석 불가 (데이터 부족)"
+    },
+    "revenue_analysis": "분석 불가 (데이터 부족)",
+    "customer_analysis": "분석 불가 (데이터 부족)",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.65,
+            "label": "긍정적",
+            "comparison": "리뷰 중 긍정적인 평가가 많지만, 부정적인 의견도 상당수 존재하여 평균적으로 중립에서 긍정적인 경향을 보임"
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.8,
+                "label": "매우 좋음",
+                "avg_score": 0.7241830065359477
+            },
+            "price_value": {
+                "score": 0.7,
+                "label": "좋음",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.75,
+                "label": "보통에서 좋음",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.6,
+                "label": "보통",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.55,
+                "label": "보통",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.6,
+                "label": "보통",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포2개(개업0%/폐업0%)|객단가:정보없음 -> [20251] 점포2개(개업0%/폐업0%)|객단가:정보없음 -> [20252] 점포2개(개업0%/폐업0%)|객단가:정보없음 -> [20253] 점포2개(개업0%/폐업0%)|객단가:정보없음",
+        "metrics": {
+            "store_count": 2,
+            "net_change": 0,
+            "close_rate": 0,
+            "has_sales_data": false
+        }
+    },
+    "metadata": {
+        "area": "망원2동",
+        "section": "동교초등학교",
+        "sector": "중식음식점",
+        "quarter": "20253"
+    },
+    "store_id": "752232889",
+    "store_name": "망원동칼짬뽕",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "짬뽕",
+        "탕수육",
+        "가성비",
+        "면",
+        "불향",
+        "칼국수",
+        "맛",
+        "웨이팅"
+    ],
+    "critical_feedback": [
+        "위생 문제",
+        "가게 협소함",
+        "기대에 미치지 못한 맛",
+        "가격 대비 만족도 낮음",
+        "서비스 불만족"
+    ],
+    "rag_context": "망원동칼짬뽕은 주로 짬뽕과 탕수육의 맛으로 호평을 받고 있으며, 특히 칼국수 면의 쫄깃함과 불향이 강점으로 꼽힌다. 많은 리뷰어들이 가성비 측면에서 긍정적인 평가를 내리지만, 일부는 위생 상태와 가게의 협소함에 대해 우려를 표한다. 맛에 대한 평가는 대체로 긍정적이지만, 기대에 미치지 못한 맛이나 가격 대비 만족도가 낮다는 의견도 존재한다. 서비스와 회전율은 보통 수준으로 평가되며, 분위기는 보통으로 다양한 의견이 혼재되어 있다.",
+    "review_count": 32
+}

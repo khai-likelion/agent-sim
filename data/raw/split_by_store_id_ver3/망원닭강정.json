@@ -1,0 +1,86 @@
+{
+    "id": "망원1동_망원시장_제과점_20253",
+    "market_analysis": {
+        "phase": "분석 불가 (데이터 부족)",
+        "trend_review": "망원1동 망원시장 제과점 시장은 총 4개의 점포로 구성되어 있으며, 1년 동안 개업 및 폐업률은 0%로 나타났습니다. ",
+        "competition_intensity": "분석 불가 (데이터 부족)"
+    },
+    "revenue_analysis": "분석 불가 (데이터 부족)",
+    "customer_analysis": "분석 불가 (데이터 부족)",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.75,
+            "label": "긍정적",
+            "comparison": "리뷰 중 긍정적인 평가가 많지만, 가격 대비 가치와 일부 제품 품질에 대한 비판도 존재한다."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.85,
+                "label": "매우 좋음",
+                "avg_score": 0.8104166666666666
+            },
+            "price_value": {
+                "score": 0.45,
+                "label": "보통",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.75,
+                "label": "보통",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.65,
+                "label": "보통",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.4,
+                "label": "낮음",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.6,
+                "label": "보통",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포4개(개업0%/폐업0%)|객단가:정보없음 -> [20251] 점포4개(개업0%/폐업0%)|객단가:정보없음 -> [20252] 점포4개(개업0%/폐업0%)|객단가:정보없음 -> [20253] 점포4개(개업0%/폐업0%)|객단가:정보없음",
+        "metrics": {
+            "store_count": 4,
+            "net_change": 0,
+            "close_rate": 0,
+            "has_sales_data": false
+        }
+    },
+    "metadata": {
+        "area": "망원1동",
+        "section": "망원시장",
+        "sector": "제과점",
+        "quarter": "20253"
+    },
+    "store_id": "1905207814",
+    "store_name": "망원닭강정",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "맛있음",
+        "잡내 없음",
+        "가격",
+        "양",
+        "친절",
+        "바삭함",
+        "양념",
+        "질김",
+        "포장"
+    ],
+    "critical_feedback": [
+        "가격 대비 양이 적다",
+        "일부 제품의 질이 떨어진다 (질긴 부분, 딱딱한 떡)",
+        "포장 시 내용물 양이 부족할 수 있다",
+        "서비스에 대한 일관성 부족 (친절함과 불친절함의 대비)"
+    ],
+    "rag_context": "망원닭강정은 맛 측면에서 높은 평가를 받고 있으며, 특히 양념의 맛과 바삭한 식감이 호평을 받고 있다. 그러나 가격 대비 가치에 대한 비판이 있으며, 일부 리뷰에서는 닭강정의 양이 적고 질이 일정하지 않다는 지적이 있다. 서비스는 대체로 친절하다는 평가가 많지만, 일관성에 대한 의문이 제기되기도 한다. 청결과 분위기는 보통 수준으로, 전반적으로 긍정적인 평가가 많지만 개선의 여지가 있는 부분도 존재한다.",
+    "review_count": 40
+}

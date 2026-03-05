@@ -1278,8 +1278,6 @@ class ComparisonReportGenerator:
 
         def add(metric: str, before_val: float, after_val: float,
                 delta: float, unit: str, verdict: str, message: str):
-            if before_val == 0 and after_val == 0:
-                return  # 둘 다 0이면 의미없는 행 제외
             findings.append({
                 "metric":  metric,
                 "before":  before_val,
@@ -1458,49 +1456,43 @@ class ComparisonReportGenerator:
         def _bucket(delta: float, label: str, fmt: str) -> Dict:
             return {"metric": label, "delta": fmt.format(delta)}
 
-        def _append_if_nonzero(delta: float, label: str, fmt: str):
-            """delta가 0이면 추가하지 않음 (의미없는 0→0 행 방지)."""
-            if delta == 0:
-                return
-            (gains if delta > 0 else losses).append(_bucket(delta, label, fmt))
-
         # Z세대 비중
         z_b = gen_b.get("Z1", 0) + gen_b.get("Z2", 0)
         z_a = gen_a.get("Z1", 0) + gen_a.get("Z2", 0)
         dz  = z_a - z_b
-        _append_if_nonzero(dz, "Z세대(Z1+Z2) 유입", "{:+.1f}%p")
+        (gains if dz >= 0 else losses).append(_bucket(dz, "Z세대(Z1+Z2) 유입", "{:+.1f}%p"))
 
         # Y세대 비중
         dy = gen_a.get("Y", 0) - gen_b.get("Y", 0)
-        _append_if_nonzero(dy, "Y세대 비중", "{:+.1f}%p")
+        (gains if dy >= 0 else losses).append(_bucket(dy, "Y세대 비중", "{:+.1f}%p"))
 
         # 사적모임형
         dsp = pr_a.get("사적모임형", 0) - pr_b.get("사적모임형", 0)
-        _append_if_nonzero(dsp, "사적모임형 방문", "{:+.1f}%p")
+        (gains if dsp >= 0 else losses).append(_bucket(dsp, "사적모임형 방문", "{:+.1f}%p"))
 
         # 생활베이스형
         dlb = pr_a.get("생활베이스형", 0) - pr_b.get("생활베이스형", 0)
-        _append_if_nonzero(dlb, "생활베이스형 비중", "{:+.1f}%p")
+        (gains if dlb >= 0 else losses).append(_bucket(dlb, "생활베이스형 비중", "{:+.1f}%p"))
 
         # 저녁 트래픽
         ev_b, ev_a = tr_b.get(18, 0), tr_a.get(18, 0)
-        if ev_b > 0 or ev_a > 0:
+        if ev_b > 0:
             dev = _pct(ev_a, ev_b)
-            _append_if_nonzero(dev, "저녁 트래픽", "{:+.0f}%")
+            (gains if dev >= 0 else losses).append(_bucket(dev, "저녁 트래픽", "{:+.0f}%"))
 
         # 점심 트래픽
         ln_b, ln_a = tr_b.get(12, 0), tr_a.get(12, 0)
-        if ln_b > 0 or ln_a > 0:
+        if ln_b > 0:
             dln = _pct(ln_a, ln_b)
-            _append_if_nonzero(dln, "점심 트래픽", "{:+.0f}%")
+            (gains if dln >= 0 else losses).append(_bucket(dln, "점심 트래픽", "{:+.0f}%"))
 
         # 분위기 태그
         da = float(tags_a.get("분위기", 0) - tags_b.get("분위기", 0))
-        _append_if_nonzero(da, "분위기 만족도", "{:+.0f}건")
+        (gains if da >= 0 else losses).append(_bucket(da, "분위기 만족도", "{:+.0f}건"))
 
         # 가성비 태그
         dg = float(tags_a.get("가성비", 0) - tags_b.get("가성비", 0))
-        _append_if_nonzero(dg, "가성비 인식", "{:+.0f}건")
+        (gains if dg >= 0 else losses).append(_bucket(dg, "가성비 인식", "{:+.0f}건"))
 
         result = {"gains": gains, "losses": losses}
         self.metrics_summary["tradeoff"] = result
@@ -1512,7 +1504,7 @@ class ComparisonReportGenerator:
     # ──────────────────────────────────────────────────────────────
 
     def analysis_8_llm_summary(self) -> str:
-        """전략 효과와 주 고객층 변화를 Gemini로 서술."""
+        """전략 효과와 주 고객층 변화를 GPT로 서술. Gemini fallback."""
         system_msg = (
             "당신은 마케팅 전략 분석 전문가입니다. "
             "ABM 시뮬레이션 데이터를 기반으로 전략의 효과와 "
@@ -1520,11 +1512,37 @@ class ComparisonReportGenerator:
         )
         prompt = self._build_llm_prompt()
 
+        # 1순위: GPT (SUMMARY_OPENAI_API_KEY 설정 시)
+        openai_key = os.getenv("SUMMARY_OPENAI_API_KEY", "")
+        openai_model = os.getenv("SUMMARY_OPENAI_MODEL", "gpt-5.2")
+        if openai_key:
+            try:
+                with httpx.Client(timeout=60.0) as client:
+                    resp = client.post(
+                        "https://api.openai.com/v1/chat/completions",
+                        headers={"Authorization": f"Bearer {openai_key}", "Content-Type": "application/json"},
+                        json={
+                            "model": openai_model,
+                            "messages": [
+                                {"role": "system", "content": system_msg},
+                                {"role": "user", "content": prompt},
+                            ],
+                            "temperature": 0.7,
+                            "max_tokens": 1200,
+                        },
+                    )
+                    resp.raise_for_status()
+                    summary = resp.json()["choices"][0]["message"]["content"]
+                    print(f"  [8] GPT Summary ({openai_model}): 완료 ({len(summary)}자)")
+                    return summary
+            except Exception as e:
+                print(f"  [8] GPT 오류 ({e}) → Gemini fallback")
+
+        # 2순위: Gemini fallback
         try:
             llm = LLMClient()
-            llm.max_tokens = 2048  # 요약문은 충분한 토큰 필요
             summary = llm.generate_sync(prompt, system_msg)
-            print(f"  [8] LLM Summary ({llm.model}): 완료 ({len(summary)}자)")
+            print(f"  [8] LLM Summary (fallback): 완료 ({len(summary)}자)")
             return summary
         except Exception as e:
             print(f"  [8] LLM Summary: 오류 ({e}) → 규칙 기반 요약 사용")

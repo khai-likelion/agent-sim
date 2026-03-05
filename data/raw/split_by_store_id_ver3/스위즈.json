@@ -1,0 +1,78 @@
+{
+    "id": "망원2동_KB국민은행 망원동지점_제과점_20253",
+    "market_analysis": {
+        "phase": "분석 불가 (데이터 부족)",
+        "trend_review": "총 점포 3개로, 개업률과 폐업률은 모두 0%입니다. 1년 동안 점포 수 변화는 없었으며, 객단가 정보는 없습니다.",
+        "competition_intensity": "분석 불가 (데이터 부족)"
+    },
+    "revenue_analysis": "분석 불가 (데이터 부족)",
+    "customer_analysis": "분석 불가 (데이터 부족)",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.85,
+            "label": "매우 긍정적",
+            "comparison": "평균 점수 대비 높은 만족도를 보임"
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.9,
+                "label": "매우 우수",
+                "avg_score": 0.8104166666666666
+            },
+            "price_value": {
+                "score": 0.6,
+                "label": "보통",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.8,
+                "label": "매우 청결",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.7,
+                "label": "양호",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.5,
+                "label": "보통",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.75,
+                "label": "양호",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포3개(개업0%/폐업33%)|객단가:정보없음 -> [20251] 점포3개(개업0%/폐업0%)|객단가:정보없음 -> [20252] 점포3개(개업0%/폐업0%)|객단가:정보없음 -> [20253] 점포3개(개업0%/폐업0%)|객단가:정보없음",
+        "metrics": {
+            "store_count": 3,
+            "net_change": 0,
+            "close_rate": 0,
+            "has_sales_data": false
+        }
+    },
+    "metadata": {
+        "area": "망원2동",
+        "section": "KB국민은행 망원동지점",
+        "sector": "제과점",
+        "quarter": "20253"
+    },
+    "store_id": "1170755892",
+    "store_name": "스위즈",
+    "analysis_date": "2026-02-13",
+    "top_keywords": [
+        "바스크 치즈 케이크",
+        "망원동",
+        "케이크",
+        "디저트",
+        "깔끔한 분위기",
+        "예약 픽업"
+    ],
+    "critical_feedback": [],
+    "rag_context": "스위즈는 망원동에서 맛있는 바스크 치즈 케이크와 다양한 디저트로 유명한 카페입니다. 특히 바스크 치즈 케이크의 맛과 질감이 뛰어나며, 겉은 고소하고 은은한 스모키 향이, 속은 촉촉하면서도 꾸덕한 식감이 인상적입니다. 매장은 화이트와 우드톤으로 깔끔하고 따뜻한 분위기를 자랑하며, 내부 청결 상태가 매우 우수해 위생적인 면에서도 신뢰할 수 있습니다. 서비스는 예약과 픽업 위주로 운영되지만 친절하게 대응하며, 다양한 케이크와 함께 휘낭시에도 선택의 폭이 넓어 생일 파티나 기념일에 적합합니다. 가격대는 중간 수준으로, 특히 케이크 종류별로 조각 케이크와 보틀 케이크가 있어 다양한 맛을 즐기기에 좋습니다.",
+    "review_count": 3
+}

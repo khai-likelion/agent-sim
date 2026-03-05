@@ -1,0 +1,84 @@
+{
+    "id": "망원1동_망원시장_호프-간이주점_20253",
+    "market_analysis": {
+        "phase": "분석 불가 (데이터 부족)",
+        "trend_review": "시장 활력은 총 점포 2개로, 1년 동안 개업/폐업률 변화는 없었습니다. 객단가 정보는 부족합니다.",
+        "competition_intensity": "분석 불가 (데이터 부족)"
+    },
+    "revenue_analysis": "분석 불가 (데이터 부족)",
+    "customer_analysis": "분석 불가 (데이터 부족)",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.75,
+            "label": "긍정적",
+            "comparison": "리뷰 중 고추튀김에 대한 호평이 많으나, 서비스와 대기 시간에 대한 부정적인 의견도 상당수 존재한다."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.9,
+                "label": "매우 좋음",
+                "avg_score": 0.8580739299610896
+            },
+            "price_value": {
+                "score": 0.6,
+                "label": "보통",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.75,
+                "label": "보통",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.65,
+                "label": "보통 이하",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.5,
+                "label": "보통 이하",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.6,
+                "label": "보통",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포2개(개업0%/폐업0%)|객단가:정보없음 -> [20251] 점포2개(개업0%/폐업0%)|객단가:정보없음 -> [20252] 점포2개(개업0%/폐업0%)|객단가:정보없음 -> [20253] 점포2개(개업0%/폐업0%)|객단가:정보없음",
+        "metrics": {
+            "store_count": 2,
+            "net_change": 0,
+            "close_rate": 0,
+            "has_sales_data": false
+        }
+    },
+    "metadata": {
+        "area": "망원1동",
+        "section": "망원시장",
+        "sector": "호프-간이주점",
+        "quarter": "20253"
+    },
+    "store_id": "1088815991",
+    "store_name": "우이락 망원본점",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "고추튀김",
+        "대기시간",
+        "친절함",
+        "맛",
+        "포장",
+        "세트메뉴",
+        "가격"
+    ],
+    "critical_feedback": [
+        "직원의 불친절한 서비스",
+        "긴 대기 시간",
+        "일부 메뉴의 맛에 대한 일관성 부족",
+        "포장과 매장 이용 시 경험의 차이"
+    ],
+    "rag_context": "우이락 망원본점은 특히 고추튀김의 맛으로 호평을 받고 있지만, 서비스 품질과 긴 대기 시간이 주요 단점으로 지적되고 있습니다. 많은 리뷰어들이 고추튀김의 바삭함과 풍부한 내용물에 만족감을 표현하지만, 직원의 불친절과 대기 시간에 대한 불만이 상당수 있습니다. 일부 리뷰에서는 메뉴 간 맛의 일관성과 포장과 매장 이용 경험의 차이를 언급하며, 가격대비 만족도는 보통 수준으로 평가됩니다. 분위기는 대체로 긍정적이나, 대기 시간과 서비스 문제로 인해 완벽한 경험이라고 보기는 어렵습니다.",
+    "review_count": 198
+}

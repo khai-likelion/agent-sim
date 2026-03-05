@@ -1,0 +1,340 @@
+# 에이전트 설정·코드 통합 레퍼런스
+
+`에이전트-결정-흐름.md`(의사결정 흐름), `에이전트-고도화-요약.md`(고도화 상세), `에이전트-행동-알고리즘.md`(알고리즘 스펙)을 통합하여  
+**설정·이유·구현 개요**를 한 문서에서 파악할 수 있는 레퍼런스입니다.  
+코드는 수도 코드·간단 텍스트 위주로 정리했습니다.
+
+---
+
+## 목차
+
+| 영역 | 설정/개념 | 참고 |
+|------|----------|------|
+| [1. 의사결정 흐름](#1-의사결정-흐름-step-15) | Step 1~5, Loop, 종료 조건 | 에이전트-결정-흐름.md |
+| [2. 매장 선택](#2-매장-선택) | 카테고리, 샘플링, 필터 | action_algorithm, global_store |
+| [3. 리뷰·평가](#3-리뷰평가) | tone, 평가 관점 자율 선택, selected_tags 기준, comment | action_algorithm |
+| [4. 에이전트·위치](#4-에이전트위치) | 상주/유동, 초기위치, 교체 비율 | agent, run_generative_simulation |
+| [5. 루프·행동](#5-루프행동) | MAX_VISIT_LOOP, session_activity | action_algorithm |
+| [6. 코드·환경](#6-코드환경) | LLM, 병렬, 대시보드 | run_generative_simulation |
+
+---
+
+## 1. 의사결정 흐름 (Step 1~5)
+
+### 1.1 Step 1: LLM 전면 전환
+
+| 항목 | 내용 |
+|------|------|
+| **설정** | Step 1을 확률 대신 **LLM 순수 의사결정**으로 전환 |
+| **이유** | 4끼 전부 외식 방지. LLM이 memory_context(당일 식사)를 보고 판단 |
+| **입력** | memory_context, 시간대별 외식 경향 수치 |
+| **출력** | eat_in_mangwon: bool, reason |
+
+<details>
+<summary>▶ 구현 개요</summary>
+
+- 프롬프트: `step1_destination.txt`
+- 선택지 3가지: 외식 / 안 먹음(배고픔·이전식사·다이어트 등) / 망원동 밖(집밥·배달 등)
+- 시간대별 경향: 아침~40%, 점심~70%, 저녁~60%, 야식~20%
+
+</details>
+
+### 1.2 memory_context (당일 식사 + 과거 경험)
+
+| 항목 | 내용 |
+|------|------|
+| **설정** | Step 1~5 공통으로 `memory_context` 전달 |
+| **이유** | "이전에 별로였다" 판단 가능. recent_categories/stores만으로는 평점·코멘트 없음 |
+| **구성** | 오늘 식사 기록 + recent_history[-5] (매장명, 평점, 코멘트) |
+
+<details>
+<summary>▶ 구현 개요</summary>
+
+- `agent.get_memory_context(current_date)` 반환
+- 오늘: get_meals_today() → 시간, 매장명, 카테고리
+- 과거: VisitRecord에서 rating_text(매우별로~매우좋음) + comment 일부
+
+</details>
+
+### 1.3 아침 "이전 식사로 충분" 제외
+
+| 항목 | 내용 |
+|------|------|
+| **설정** | 아침 또는 meals_today==0일 때 해당 사유 제외 |
+| **이유** | 아침 첫 끼에 "이전 식사로 충분"은 모순 |
+
+<details>
+<summary>▶ 구현 개요</summary>
+
+Step 1은 LLM 판단. 프롬프트에 선택지로 "이전 식사로 충분"을 포함하되, LLM이 아침+첫끼 맥락에서 비현실적이라 스스로 회피하도록 유도.
+
+</details>
+
+### 1.4 Step 5 루프 (매장 방문 시 Step 3→4→5 반복)
+
+| 항목 | 내용 |
+|------|------|
+| **설정** | action ∈ STORE_VISIT_ACTIONS(카페_가기 등) → Step 3→4→5 재실행 |
+| **이유** | 카페_가기가 실제 매장 선택·평가 없이 끝나던 문제 해결 |
+| **참고** | MAX_VISIT_LOOP=3, STORE_VISIT_ACTIONS={"카페_가기": "커피-음료"} |
+
+<details>
+<summary>▶ 구현 개요</summary>
+
+- Step 4 후 step5_next_action() 호출
+- action이 카페_가기 등 → loop_category로 Step 3 재실행 → Step 4 → Step 5
+- 3회 초과 또는 비매장 행동이면 루프 종료
+
+</details>
+
+### 1.5 session_activity (Step 5 맥락)
+
+| 항목 | 내용 |
+|------|------|
+| **설정** | last_action 대신 session_visits → session_activity 자연어 변환 |
+| **이유** | "이번 슬롯에서 뭘 했는지" 전체 맥락 부족 → 맥락 기반 판단 |
+| **예시** | "1. 스시요리하루(일식) 방문 → 4/5  2. 딥블루레이크(커피) 방문 → 5/5" |
+
+<details>
+<summary>▶ 구현 개요</summary>
+
+session_visits 리스트를 순회하여 "N. 매장명(카테고리) 방문 → rating/5" 형태로 한 줄씩 이어붙임. Step 5 프롬프트에 "이번 시간대 활동:"으로 전달.
+
+</details>
+
+### 1.6 [고려사항] 동적 경고 (카테고리 중복)
+
+| 항목 | 내용 |
+|------|------|
+| **설정** | 하드 가드(break) 제거. 동적 [고려사항] 문구 주입 |
+| **이유** | 카페 2차 등 현실적 선택 가능. 3연속은 부자연스럽다는 힌트만 |
+| **예시** | 카페 1회 후: "방금 카페 다녀왔습니다... 가능합니다" / 2회+: "이미 N번... 부자연스럽습니다" |
+
+<details>
+<summary>▶ 구현 개요</summary>
+
+Counter(visited_categories)로 카테고리별 횟수 집계. 1회(카페 등)·2회+일 때 경고 문구 생성 후 session_activity에 append. 프롬프트로 자연스럽게 판단 유도.
+
+</details>
+
+---
+
+## 2. 매장 선택
+
+### 2.1 TIME_SLOT_CATEGORIES
+
+| 항목 | 내용 |
+|------|------|
+| **설정** | destination_type 폐기. 시간대별 전체 카테고리 풀을 Step 2에 전달 |
+| **이유** | 아침 카페, 저녁 주점 등 선택 가능 (기존: 식당만) |
+| **맵핑** | 아침/점심: 식당+카페 / 저녁: 식당+주점+카페 / 야식: 식당+주점 |
+
+<details>
+<summary>▶ 구현 개요</summary>
+
+DESTINATION_CATEGORIES 조합. action_algorithm의 TIME_SLOT_CATEGORIES 딕셔너리. Step 2에 available_categories로 전달.
+
+</details>
+
+### 2.2 Softmax + 계층화 샘플링
+
+| 항목 | 내용 |
+|------|------|
+| **설정** | Softmax T=0.5 비복원 추출 20개 + 상위60%/중위20%/하위20% 계층화 |
+| **이유** | 롱테일 매장 후보 진입. 인기/롱테일 갭 8.8x→3.8x |
+| **참고** | search_ranked_stores(), 돼지야 포함율 0.7%→10.8% |
+
+<details>
+<summary>▶ 구현 개요</summary>
+
+- 스코어: 별점×1.5 + 에이전트평점×2.0 + log1p(min(리뷰,50))×0.3 - 거리×0.3
+- 점수순 정렬 → 상/중/하 1/3씩 분할 → 각 구간에서 비율에 맞게 k개 추출
+- Softmax 확률로 비복원 추출 (temperature=0.5)
+
+</details>
+
+### 2.3 CATEGORY_ALIAS + match_category
+
+| 항목 | 내용 |
+|------|------|
+| **설정** | LLM "카페" vs JSON "커피-음료" 매핑 테이블 |
+| **이유** | 명칭 불일치로 카페/주점 방문 0건 → alias로 매칭 |
+| **예시** | 카페→커피-음료, 디저트→제과점, 이자카야→호프-간이주점 |
+
+<details>
+<summary>▶ 구현 개요</summary>
+
+global_store에 CATEGORY_ALIAS 딕셔너리. match_category(query, store_category): 부분 문자열 매칭 실패 시 alias 변환 후 재매칭. search_ranked_stores, get_stores_by_category 등에 적용.
+
+</details>
+
+### 2.4 JSON metadata fallback
+
+| 항목 | 내용 |
+|------|------|
+| **설정** | JSON 최상위 x,y, category 없으면 metadata.x, metadata.y, metadata.sector 사용 |
+| **이유** | 상주 점심 전원 "적합한 매장 없음" — 좌표/카테고리 누락 |
+
+<details>
+<summary>▶ 구현 개요</summary>
+
+load_from_json_dir()에서 data.get("x") 없으면 data["metadata"]["x"] 등 fallback. category → metadata.sector.
+
+</details>
+
+### 2.5 random.shuffle (위치 편향 방지)
+
+| 항목 | 내용 |
+|------|------|
+| **설정** | 매장 후보 리스트를 LLM에 넣기 전 shuffle |
+| **이유** | 리스트 앞쪽 항목 선호(positional bias) 완화 |
+
+---
+
+## 3. 리뷰·평가
+
+### 3.1 tone_instruction (세대별 말투)
+
+| 세대 | 말투 |
+|------|------|
+| Z1/Z2 | 존나, 개꿀맛, ㅋ, 이모티콘, 친구한테 말하듯 |
+| Y | 트렌디+정보성 |
+| X | 점잖고 꼼꼼 |
+| S | 구체적·진중 |
+
+### 3.2 평가 관점 (LLM 자율 선택)
+
+6개 관점 제시 후 LLM이 페르소나에 맞는 하나를 스스로 선택: 맛/퀄리티, 가성비, 매장 분위기·인테리어, 직원 서비스·친절도, 매장 청결·위생, 특색있는 메뉴
+
+### 3.3 comment 규칙
+
+키워드 나열 금지. 구체적 상황·감정 유도. 개인 감상.
+
+### 3.4 평가 항목
+
+rating 1개 + selected_tags (기준 충족 시에만 선택, 0~4개 가능)
+
+---
+
+## 4. 에이전트·위치
+
+### 4.1 entry_point, entry_time_slot (유동)
+
+| 항목 | 내용 |
+|------|------|
+| **설정** | 유동은 entry_point 사용. 세그먼트별 entry_time_slot (아침/점심/저녁) |
+| **이유** | 역/정류장을 집으로 인식 방지. 직장인→점심, 데이트→저녁 등 현실적 진입 |
+| **참고** | entry_time_slot 이전 타임슬롯 스킵. 망원동_떠나기 선택 시 left_mangwon=True |
+
+<details>
+<summary>▶ 구현 개요</summary>
+
+agent 필드: entry_point, entry_time_slot, left_mangwon. load_personas_from_json에서 유동일 때 FLOATING_LOCATIONS 랜덤 → entry_point. run_generative_simulation에서 유동 매일 초기화(entry_point에서 시작, left_mangwon 리셋).
+
+</details>
+
+### 4.2 Step 5 선택지 (상주/유동)
+
+상주: 집에서_쉬기 O, 망원동_떠나기 X / 유동: 집에서_쉬기 X, 망원동_떠나기 O
+
+### 4.3 상주 초기위치 오프셋 (150m)
+
+| 항목 | 내용 |
+|------|------|
+| **설정** | 주거유형별 고정 3좌표 → 중심점 + 반경 150m 랜덤 오프셋 |
+| **이유** | 같은 좌표에 6~7명 겹침 → 반경 검색 결과 다양화 |
+
+<details>
+<summary>▶ 구현 개요</summary>
+
+_apply_location_offset(base_lat, base_lng): offset_m=random(0,150), angle=random(0,2π). 위도·경도 변환(111320m/degree) 후 좌표 보정.
+
+</details>
+
+### 4.4 유동인구 교체 (요일별 + 재방문 10%)
+
+| 항목 | 내용 |
+|------|------|
+| **설정** | 평일 51명 / 주말 58명. 전날 방문자 10% 재방문 우선 포함 |
+| **이유** | 인구DB 비율. 재방문으로 연속성 |
+
+<details>
+<summary>▶ 구현 개요</summary>
+
+DAILY_FLOATING_COUNT_BY_DAY 딕셔너리. 전날 _prev_day_visitors에서 10% 샘플 → revisit_agents. 나머지는 remaining_pool에서 랜덤.
+
+</details>
+
+### 4.5 유동 [0,0] fallback
+
+home_location이 [0,0]이면 entry_point 사용. 없으면 FLOATING_LOCATIONS 랜덤. _is_valid_loc() 3중 체크.
+
+### 4.6 한강 위 노드 제거
+
+load_graph()에서 lat < 37.550 노드 제거. street_network.py.
+
+---
+
+## 5. 루프·행동
+
+- MAX_VISIT_LOOP = 3
+- STORE_VISIT_ACTIONS = {"카페_가기": "커피-음료"}
+
+---
+
+## 6. 코드·환경
+
+### 6.1 LLM (Gemini 기본)
+
+LLM_PROVIDER=gemini, LLM_MODEL_NAME=gemini-2.0-flash. .env, config/settings.
+
+### 6.2 asyncio 병렬 + Semaphore
+
+| 항목 | 내용 |
+|------|------|
+| **설정** | asyncio.gather + Semaphore. max_concurrent_llm_calls |
+| **값** | run_before_after_sim: 60 / run_batch_10stores: 20 / 기본: 10 |
+| **예상시간** | 총호출×1.5초 / 병렬수 (estimate_simulation) |
+
+### 6.3 대시보드 좌표
+
+results_df의 agent_lat/agent_lng 사용. random.uniform() 폐기.
+
+### 6.4 시뮬 시작 날짜 (KST 금요일)
+
+한국 시간 기준 가장 가까운 과거 금요일 자동 계산.
+
+---
+
+## 요약표: 설정 → 고도화 # 매핑
+
+| # | 핵심 설정 | 한 줄 |
+|:---:|---|----------|
+| 1 | tone_instruction, 평가 관점 자율 선택, selected_tags 기준 | 리뷰 다양성 |
+| 2 | Step 1 LLM, memory_context 당일 | 4끼 외식 방지 |
+| 3 | entry_point, entry_time_slot | 유동 초기위치 |
+| 4 | LLM_PROVIDER=gemini | LLM 모델 |
+| 5 | DAILY_FLOATING_COUNT_BY_DAY, REVISIT_RATE | 유동 교체 |
+| 6 | RESIDENT_OFFSET_RADIUS_M | 상주 오프셋 |
+| 7 | asyncio.gather, Semaphore, 예상시간 병렬 반영 | 시뮬 속도 |
+| 8 | results_df 좌표 | 대시보드 좌표 |
+| 9 | apply_x_report_strategy_async | X-report to Sim |
+| 10 | memory_context 과거 | 과거 경험 기반 |
+| 11 | Softmax, 계층화 | 유동 매장 선택 |
+| 13 | JSON fallback, CATEGORY_ALIAS | 상주 매장 검색, 카테고리 매칭 |
+| 14 | TIME_SLOT_CATEGORIES | 카페/주점 방문 |
+| 15 | lat<37.55 노드 제거 | 한강 위 방지 |
+| 25 | Step 5 루프, STORE_VISIT_ACTIONS | 다중 방문 |
+| 26 | session_activity | Step 5 맥락 |
+| 27 | [고려사항] 동적 경고 | 카테고리 중복 유연화 |
+
+---
+
+## 관련 문서
+
+| 문서 | 설명 |
+|------|------|
+| [에이전트-결정-흐름.md](./에이전트-결정-흐름.md) | Step 1~5 데이터 흐름, 프롬프트 예시 |
+| [에이전트-고도화-요약.md](./에이전트-고도화-요약.md) | 고도화 상세 (문제·원인·해결·변경 파일) |
+| [에이전트-행동-알고리즘.md](./에이전트-행동-알고리즘.md) | 의사결정 알고리즘 기술 스펙 |
+| [에이전트-고도화-코드-레퍼런스.md](./에이전트-고도화-코드-레퍼런스.md) | 코드 블록 상세 (원본 필요 시) |

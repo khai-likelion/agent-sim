@@ -18,14 +18,12 @@ class LLMClient:
 
     def __init__(self):
         settings = get_settings()
-        self.model = settings.llm.model_name        ## 모델명
-        self.api_key = settings.llm.api_key         ## 인증 키
-        self.temperature = settings.llm.temperature ## 창의성(0~1)
-        self.max_tokens = settings.llm.max_tokens   ## 응답 최대 토큰 수
-        self.provider = settings.llm.provider       ## "openai" or "gemini"
-        self.base_url = PROVIDER_URLS.get(
-            self.provider, PROVIDER_URLS["openai"]  ## provider 없으면 openai 기본값
-        )
+        self.model = settings.llm.model_name
+        self.api_key = settings.llm.api_key
+        self.temperature = 0.7  # 기본값
+        self.max_tokens = 4096  # 기본값
+        self.provider = "gemini"
+        self.base_url = PROVIDER_URLS["gemini"]
 
     ## 메시지 포맷([{role, content}, ...]) 조립. system_prompt는 선택적으로 앞에 삽입.
     def _build_messages(self, prompt: str, system_prompt: Optional[str] = None) -> list:
@@ -37,30 +35,22 @@ class LLMClient:
 
     ## 시뮬레이션에서 여러 에이전트를 asyncio.gather()로 동시 실행할 때 사용.
     ## model 인자로 호출별 모델 오버라이드 가능 (None이면 self.model 사용).
-    ## response_format 인자로 OpenAI-compatible structured output 스키마 전달 가능.
     async def generate(
-        self,
-        prompt: str,
-        system_prompt: Optional[str] = None,
-        model: Optional[str] = None,
-        response_format: Optional[dict] = None,
+        self, prompt: str, system_prompt: Optional[str] = None, model: Optional[str] = None
     ) -> str:
         async with httpx.AsyncClient(timeout=60.0) as client:
-            body = {
-                "model": model or self.model,
-                "messages": self._build_messages(prompt, system_prompt),
-                "temperature": self.temperature,
-                "max_tokens": self.max_tokens,
-            }
-            if response_format:
-                body["response_format"] = response_format
             response = await client.post(
                 self.base_url,
                 headers={
                     "Authorization": f"Bearer {self.api_key}",
                     "Content-Type": "application/json",
                 },
-                json=body,
+                json={
+                    "model": model or self.model,
+                    "messages": self._build_messages(prompt, system_prompt),
+                    "temperature": self.temperature,
+                    "max_tokens": self.max_tokens,
+                },
             )
             response.raise_for_status()
             data = response.json()

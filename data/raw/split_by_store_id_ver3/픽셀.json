@@ -1,0 +1,82 @@
+{
+    "id": "망원2동_KB국민은행 망원동지점_제과점_20253",
+    "market_analysis": {
+        "phase": "분석 불가 (데이터 부족)",
+        "trend_review": "총 점포 3개로, 개업률과 폐업률은 모두 0%입니다. 1년 동안 점포 수 변화는 없었으며, 객단가 정보는 없습니다.",
+        "competition_intensity": "분석 불가 (데이터 부족)"
+    },
+    "revenue_analysis": "분석 불가 (데이터 부족)",
+    "customer_analysis": "분석 불가 (데이터 부족)",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.85,
+            "label": "매우 긍정적",
+            "comparison": "리뷰어들은 픽셀 케이크의 디자인, 맛, 그리고 서비스에 대해 높은 만족도를 보였습니다."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.9,
+                "label": "매우 좋음",
+                "avg_score": 0.8104166666666666
+            },
+            "price_value": {
+                "score": 0.6,
+                "label": "보통",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.75,
+                "label": "양호",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.7,
+                "label": "양호",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.4,
+                "label": "개선 필요",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.6,
+                "label": "보통",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포3개(개업0%/폐업33%)|객단가:정보없음 -> [20251] 점포3개(개업0%/폐업0%)|객단가:정보없음 -> [20252] 점포3개(개업0%/폐업0%)|객단가:정보없음 -> [20253] 점포3개(개업0%/폐업0%)|객단가:정보없음",
+        "metrics": {
+            "store_count": 3,
+            "net_change": 0,
+            "close_rate": 0,
+            "has_sales_data": false
+        }
+    },
+    "metadata": {
+        "area": "망원2동",
+        "section": "KB국민은행 망원동지점",
+        "sector": "제과점",
+        "quarter": "20253"
+    },
+    "store_id": "636287285",
+    "store_name": "픽셀",
+    "analysis_date": "2026-02-13",
+    "top_keywords": [
+        "레터링 케이크",
+        "디자인",
+        "맛",
+        "주문",
+        "카카오톡",
+        "망원동",
+        "특별한 날"
+    ],
+    "critical_feedback": [
+        "주차 공간이 제한적일 수 있으니 미리 확인 필요",
+        "가격 대비 디자인과 맛이 훌륭하지만, 일부 디자인에 추가 요금이 발생할 수 있음"
+    ],
+    "rag_context": "픽셀 케이크는 망원동에서 인기 있는 레터링 케이크 전문점으로, 카카오톡을 통한 편리한 주문 시스템이 돋보입니다. 리뷰어들은 케이크의 창의적인 디자인과 균형 잡힌 맛에 높은 만족도를 보였습니다. 특히, 초코 시트와 오레오 맛의 조화가 칭찬받았습니다. 그러나 주차 공간이 제한적일 수 있으며, 일부 고급 디자인은 추가 비용이 발생할 수 있다는 점을 유의해야 합니다. 가게 내부는 아담하지만, 다양한 케이크 디자인을 감상할 수 있는 공간으로, 특별한 날을 위한 맞춤형 케이크 제작에 적합합니다.",
+    "review_count": 3
+}

@@ -1,0 +1,76 @@
+{
+    "id": "망원2동_마포구청역 7번_제과점_20253",
+    "market_analysis": {
+        "phase": "쇠퇴",
+        "trend_review": "망원2동 마포구청역 7번 지역의 제과점 시장은 점포 수가 감소하고 폐업률이 높아지는 추세를 보이며 쇠퇴 중입니다. 특히 2023년부터 점포 수가 지속적으로 감소하고 있으며, 2025년에는 2개의 점포로 축소되었습니다.",
+        "competition_intensity": "낮음"
+    },
+    "revenue_analysis": "분석 불가 (데이터 부족)",
+    "customer_analysis": "분석 불가 (데이터 부족)",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.9,
+            "label": "매우 긍정적",
+            "comparison": "리뷰어들은 레시피 제공과 제품의 맛에 대해 매우 만족하며 재방문 의향을 표현하고 있어 긍정적인 평가를 보여줍니다."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.9,
+                "label": "매우 좋음",
+                "avg_score": 0.8104166666666666
+            },
+            "price_value": {
+                "score": 0.6,
+                "label": "보통",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.7,
+                "label": "보통",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.7,
+                "label": "보통",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.5,
+                "label": "보통",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.6,
+                "label": "보통",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포5개(개업20%/폐업0%)|객단가:10,087원 -> [20251] 점포4개(개업0%/폐업25%)|객단가:9,539원 -> [20252] 점포3개(개업0%/폐업0%)|객단가:9,513원 -> [20253] 점포2개(개업0%/폐업50%)|객단가:정보없음",
+        "metrics": {
+            "store_count": 2,
+            "net_change": -1,
+            "close_rate": 50,
+            "has_sales_data": false
+        }
+    },
+    "metadata": {
+        "area": "망원2동",
+        "section": "마포구청역 7번",
+        "sector": "제과점",
+        "quarter": "20253"
+    },
+    "store_id": "460583990",
+    "store_name": "베잇킹",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "맛있음",
+        "친절",
+        "레시피",
+        "재방문"
+    ],
+    "critical_feedback": [],
+    "rag_context": "베잇킹은 고객들에게 매우 긍정적인 평가를 받고 있습니다. 특히 레시피 제공의 친절함과 제품의 맛에 대한 호평이 두드러집니다. 리뷰어들은 휘낭시에와 티그레 레시피가 초보자도 쉽게 따라 할 수 있도록 잘 정리되어 있으며, 만들기 과정에서 즐거운 경험을 했다고 언급했습니다. 그러나 가격 대비 가치와 회전율, 분위기에 대한 구체적인 언급은 적어 이 부분은 보통 수준으로 평가됩니다. 청결 상태에 대해서도 보통 수준의 평가를 받았습니다. 전반적으로 고객 만족도가 높아 재방문 의향을 보이는 것이 특징입니다.",
+    "review_count": 2
+}

@@ -1,0 +1,81 @@
+{
+    "id": "망원2동_마포구청역 7번_양식음식점_20253",
+    "market_analysis": {
+        "phase": "분석 불가 (데이터 부족)",
+        "trend_review": "총 점포 2개로, 1년 동안 개업/폐업률 변화는 없었습니다. 객단가 정보는 부족합니다.",
+        "competition_intensity": "분석 불가 (데이터 부족)"
+    },
+    "revenue_analysis": "분석 불가 (데이터 부족)",
+    "customer_analysis": "분석 불가 (데이터 부족)",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.9,
+            "label": "매우 긍정적",
+            "comparison": "리뷰어들은 피자의 맛과 다양성, 그리고 분위기에 대해 매우 만족하는 것으로 보입니다."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.95,
+                "label": "매우 좋음",
+                "avg_score": 0.868498727735369
+            },
+            "price_value": {
+                "score": 0.7,
+                "label": "양호",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.8,
+                "label": "좋음",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.75,
+                "label": "양호",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.6,
+                "label": "보통",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.7,
+                "label": "좋음",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포2개(개업0%/폐업0%)|객단가:정보없음 -> [20251] 점포2개(개업0%/폐업0%)|객단가:정보없음 -> [20252] 점포2개(개업0%/폐업0%)|객단가:정보없음 -> [20253] 점포2개(개업0%/폐업0%)|객단가:정보없음",
+        "metrics": {
+            "store_count": 2,
+            "net_change": 0,
+            "close_rate": 0,
+            "has_sales_data": false
+        }
+    },
+    "metadata": {
+        "area": "망원2동",
+        "section": "마포구청역 7번",
+        "sector": "양식음식점",
+        "quarter": "20253"
+    },
+    "store_id": "114090745",
+    "store_name": "피자먹다 망원점",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "피자",
+        "맛",
+        "다양성",
+        "빙수",
+        "분위기",
+        "가성비",
+        "재료",
+        "서비스",
+        "포장"
+    ],
+    "critical_feedback": [],
+    "rag_context": "피자먹다 망원점은 다양한 맛의 피자와 훌륭한 빙수로 유명하며, 특히 바질토마토, 바질쉬림프베이컨, 더블치즈베이컨 등 다양한 맛의 피자 플래터가 호평을 받았습니다. 매장은 카페 분위기와 잘 어우러져 있으며, 중년 부부가 운영하는 곳으로 알려져 있습니다. 고객들은 재료의 풍부함과 합리적인 가격에 만족하며, 특히 스테이크 피자와 베이컨콘치즈 사이드 메뉴에 대해 긍정적인 평가를 내렸습니다. 홀에서 즐길 수 있는 공간과 포장 옵션도 잘 마련되어 있어 편리함을 제공합니다. 다만, 회전율에 대한 직접적인 언급은 적었으나, 고객들이 자주 방문하고 포장해가는 것으로 보아 빠른 서비스와 재고 관리가 이루어지고 있는 것으로 보입니다.",
+    "review_count": 2
+}

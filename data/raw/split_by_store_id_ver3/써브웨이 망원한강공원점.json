@@ -1,0 +1,86 @@
+{
+    "id": "망원1동_망리단길_패스트푸드점_20253",
+    "market_analysis": {
+        "phase": "보합",
+        "trend_review": "망원1동 망리단길 패스트푸드 시장은 총 점포 수가 1년 동안 1개 감소했으며, 개업률과 폐업률 모두 높은 수치를 보이고 있습니다. 2024년 4월부터 2025년 3월까지 점포 수는 변동성을 보였지만, 2025년 3월 현재는 13개로 안정되고 있습니다. 객단가는 꾸준히 증가하는 추세를 보이고 있습니다.",
+        "competition_intensity": "중간"
+    },
+    "revenue_analysis": "객단가는 15,735원으로 나타났으며, 주말 비중은 39.7%로 높습니다. 시간대별로는 오후 5시부터 9시 사이(17:00-21:00)가 가장 높은 매출을 기록하며 46.7%를 차지합니다.",
+    "customer_analysis": "고객은 여성이 62.4%, 남성이 37.6%로 여성 고객이 다수를 차지합니다. 연령대는 30대가 30.2%, 20대가 27.1%로 젊은 층이 주를 이룹니다.",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.3,
+            "label": "Neutral to Slightly Negative",
+            "comparison": "Reviews show a mix of positive experiences with staff friendliness and positive ambiance, but are heavily weighed down by numerous complaints regarding service quality, cleanliness issues, and inconsistent product quality, leading to an overall sentiment that leans slightly negative."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.8,
+                "label": "Good",
+                "avg_score": 0.7429429429429429
+            },
+            "price_value": {
+                "score": 0.6,
+                "label": "Moderate",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.65,
+                "label": "Moderate",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.55,
+                "label": "Below Average",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.4,
+                "label": "Poor",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.7,
+                "label": "Good",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포14개(개업14%/폐업0%)|객단가:15,460원 -> [20251] 점포13개(개업8%/폐업15%)|객단가:15,707원 -> [20252] 점포14개(개업7%/폐업0%)|객단가:15,335원 -> [20253] 점포13개(개업15%/폐업23%)|객단가:15,735원",
+        "metrics": {
+            "store_count": 13,
+            "net_change": -1,
+            "close_rate": 23,
+            "has_sales_data": true
+        }
+    },
+    "metadata": {
+        "area": "망원1동",
+        "section": "망리단길",
+        "sector": "패스트푸드점",
+        "quarter": "20253"
+    },
+    "store_id": "1940070759",
+    "store_name": "써브웨이 망원한강공원점",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "친절",
+        "한강",
+        "신선한 재료",
+        "불친절",
+        "정량 부족",
+        "대기 시간",
+        "위생",
+        "키오스크"
+    ],
+    "critical_feedback": [
+        "불친절한 서비스 경험이 다수 보고됨",
+        "속재료 정량 부족 및 일관성 부족",
+        "위생 관리 미흡",
+        "대기 시간이 길고 회전율이 낮음",
+        "키오스크 주문 시스템 불편"
+    ],
+    "rag_context": "써브웨이 망원한강공원점은 친절한 직원들과 신선한 재료로 긍정적인 평가를 받지만, 서비스 품질과 위생 관리 측면에서 여러 비판을 받고 있습니다. 특히 직원들의 태도와 주문 처리 과정에서의 일관성 부족이 지적되었으며, 고객들은 대기 시간이 길고 회전율이 낮다는 점을 불만으로 제기했습니다. 한편으로는 한강 근처의 좋은 위치와 분위기가 장점으로 꼽히지만, 이러한 긍정적인 요소들이 부정적인 경험들로 인해 상대적으로 덜 강조되고 있습니다.",
+    "review_count": 19
+}

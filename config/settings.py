@@ -33,29 +33,68 @@ class PathSettings(BaseSettings):
     def stores_csv(self) -> Path:
         return self.data_dir / "stores.csv"
 
-    model_config = {"env_prefix": "PATH_", "env_file": ".env", "extra": "ignore"}
+    model_config = {
+        "env_prefix": "PATH_",
+        "env_file": str(Path(__file__).resolve().parent.parent / ".env"),
+        "extra": "ignore"
+    }
 
 
 class LLMSettings(BaseSettings):
-    """LLM API configuration."""
+    """LLM API configuration for Gemini."""
 
-    provider: str = Field(default="openai", description="LLM provider: openai | gemini")
-    model_name: str = Field(default="gemini-2.5-flash-lite", description="Model name")
-    api_key: str = Field(default="", description="API key")
-    temperature: float = Field(default=0.7)
-    max_tokens: int = Field(default=512)
+    model_name: str = Field(default="gemini-2.0-flash")
+    lite_model_name: str = Field(default="gemini-2.5-flash-lite")
+    eval_model_name: str = Field(default="gemini-3-flash")
+    api_key: str = Field(default="")
 
-    model_config = {"env_prefix": "LLM_", "env_file": ".env", "extra": "ignore"}
+    model_config = {
+        "env_prefix": "GEMINI_",
+        "env_file": str(Path(__file__).resolve().parent.parent / ".env"),
+        "extra": "ignore"
+    }
 
-# PathSettings, LLMSettings를 하나로 묶는 루트 컨테이너
+
+class AreaSettings(BaseSettings):
+    """Area configuration for simulation."""
+
+    area_code: str = Field(default="11440690")
+    quarter: str = Field(default="20244")
+    lat_min: float = 37.550
+    lat_max: float = 37.560
+    lng_min: float = 126.900
+    lng_max: float = 126.915
+
+    model_config = {
+        "env_prefix": "AREA_",
+        "env_file": str(Path(__file__).resolve().parent.parent / ".env"),
+        "extra": "ignore"
+    }
+
+
+class SimSettings(BaseSettings):
+    """Simulation behavior configuration."""
+
+    agent_count: int = Field(default=160)
+    simulation_days: int = Field(default=7)
+
+    model_config = {
+        "env_prefix": "SIM_",
+        "env_file": str(Path(__file__).resolve().parent.parent / ".env"),
+        "extra": "ignore"
+    }
+
+
 class Settings(BaseSettings):
     """Root settings aggregator."""
 
     paths: PathSettings = Field(default_factory=PathSettings)
     llm: LLMSettings = Field(default_factory=LLMSettings)
+    area: AreaSettings = Field(default_factory=AreaSettings)
+    sim: SimSettings = Field(default_factory=SimSettings)
 
     model_config = {
-        "env_file": ".env",
+        "env_file": str(Path(__file__).resolve().parent.parent / ".env"),
         "env_file_encoding": "utf-8",
         "extra": "ignore",
     }

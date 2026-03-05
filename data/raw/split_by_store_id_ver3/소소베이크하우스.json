@@ -1,0 +1,84 @@
+{
+    "id": "망원2동_KB국민은행 망원동지점_제과점_20253",
+    "market_analysis": {
+        "phase": "분석 불가 (데이터 부족)",
+        "trend_review": "총 점포 3개로, 개업률과 폐업률은 모두 0%입니다. 1년 동안 점포 수 변화는 없었으며, 객단가 정보는 없습니다.",
+        "competition_intensity": "분석 불가 (데이터 부족)"
+    },
+    "revenue_analysis": "분석 불가 (데이터 부족)",
+    "customer_analysis": "분석 불가 (데이터 부족)",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.9,
+            "label": "매우 긍정적",
+            "comparison": "리뷰들 대부분에서 높은 만족도를 나타내고 있어 긍정적인 평가가 주를 이룬다."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.95,
+                "label": "매우 우수",
+                "avg_score": 0.8104166666666666
+            },
+            "price_value": {
+                "score": 0.7,
+                "label": "양호",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.75,
+                "label": "보통",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.8,
+                "label": "양호",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.4,
+                "label": "보통",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.6,
+                "label": "보통",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포3개(개업0%/폐업33%)|객단가:정보없음 -> [20251] 점포3개(개업0%/폐업0%)|객단가:정보없음 -> [20252] 점포3개(개업0%/폐업0%)|객단가:정보없음 -> [20253] 점포3개(개업0%/폐업0%)|객단가:정보없음",
+        "metrics": {
+            "store_count": 3,
+            "net_change": 0,
+            "close_rate": 0,
+            "has_sales_data": false
+        }
+    },
+    "metadata": {
+        "area": "망원2동",
+        "section": "KB국민은행 망원동지점",
+        "sector": "제과점",
+        "quarter": "20253"
+    },
+    "store_id": "1269165338",
+    "store_name": "소소베이크하우스",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "맛있는 빵",
+        "바게트",
+        "치아바타",
+        "가격",
+        "친절",
+        "테이크아웃",
+        "유럽 스타일"
+    ],
+    "critical_feedback": [
+        "주차가 어렵다",
+        "포장만 가능하다",
+        "일부 빵의 바질 존재감 부족",
+        "가격 대비 명성이 높지 않다"
+    ],
+    "rag_context": "소소베이크하우스는 특히 바게트와 치아바타 등 빵의 맛으로 높은 평가를 받고 있습니다. 리뷰어들은 빵의 맛과 품질에 대해 매우 만족하며, 특히 바게트의 바삭함과 재료 조합, 그리고 치즈 치아바타의 촉촉함을 칭찬했습니다. 그러나 테이크아웃 전용이라는 점과 주차의 어려움이 지적되었으며, 일부 빵의 맛에 대한 일관성 부족(예: 바질의 존재감 부족)도 언급되었습니다. 서비스와 친절함은 대체적으로 긍정적이지만, 회전율은 보통 수준으로 보입니다. 분위기는 보통으로, 빵집 특유의 냄새가 덜 난다는 의견도 있었습니다.",
+    "review_count": 32
+}

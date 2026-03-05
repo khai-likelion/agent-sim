@@ -1,15 +1,14 @@
 """
-Action Algorithm Module - Stanford Generative Agents 기반 5단계 의사결정 + 다중 방문 루프.
+Action Algorithm Module - Stanford Generative Agents 기반 4단계 의사결정.
 
-매 timeslot마다 수행하는 5단계 로직:
-- Step 1: 외식 여부 결정 (LLM 순수 판단 — memory_context의 당일 식사 이력 참고)
-- Step 2: 업종 선택 (시간대별 카테고리 풀 기반 LLM 선택, TIME_SLOT_CATEGORIES)
-- Step 3: 매장 선택 (Softmax T=0.5 계층화 샘플링 + random.shuffle 위치 편향 방지)
-- Step 4: 평가 및 피드백 (종합 rating 1~5 + selected_tags + comment, 세대별 tone_instruction)
-- Step 5: 다음 행동 결정 (걷는 속도 포함, 상주/유동 선택지 분리)
-  → 카페_가기 등 STORE_VISIT_ACTIONS 선택 시 Step 3→4→5 루프 (MAX_VISIT_LOOP=3)
+매 timeslot마다 수행하는 4단계 로직:
+- Step 1: 목적지 유형 결정 (아침/점심: 식당/카페, 저녁/야식: 식당/주점/카페)
+- Step 2: 업종 선택 (메모리 + 건강추구 성향 기반)
+- Step 3: 매장 선택 (매장 정보 + 에이전트 평점 기반)
+- Step 4: 평가 및 피드백 (맛/가성비/분위기 평점 생성, LLM 기반)
 
-평점 체계: 1~5점
+평점 체계: 0~5점
+- 0: 방문 없음 (기본값)
 - 1: 매우별로
 - 2: 별로
 - 3: 보통
@@ -21,14 +20,13 @@ import asyncio
 import json
 import os
 import random
-import re
 import time
 from collections import Counter
 from typing import Optional, List, Dict, Any
 from src.simulation_layer.persona.agent import GenerativeAgent
 from src.data_layer.global_store import get_global_store, GlobalStore, StoreRating, match_category
 from src.ai_layer.llm_client import create_llm_client, LLMClient
-from src.ai_layer.prompts import render_prompt, STEP1_DESTINATION, STEP2_CATEGORY, STEP3_STORE, STEP4_EVALUATE, STEP5_NEXT_ACTION
+from src.ai_layer.prompts import render_prompt, STEP2_CATEGORY, STEP3_STORE, STEP4_EVALUATE, STEP5_NEXT_ACTION
 
 
 # 시간대별 가능한 목적지 유형
@@ -39,6 +37,13 @@ DESTINATION_TYPES = {
     "야식": ["식당", "주점"],  # 야식에는 카페 제외
 }
 
+# 시간대별 기본 외식 확률 (현실적 수치)
+BASE_EATING_OUT_PROB = {
+    "아침": 0.40,
+    "점심": 0.70,
+    "저녁": 0.60,
+    "야식": 0.20,
+}
 
 # 목적지 유형과 카테고리 매핑
 DESTINATION_CATEGORIES = {
@@ -64,18 +69,20 @@ class LLMCallFailedError(Exception):
 
 class ActionAlgorithm:
     """
-    5단계 의사결정 알고리즘 + 다중 방문 루프.
-    LLM을 사용하여 에이전트의 페르소나와 memory_context를 기반으로 결정.
-    Fallback 없음 - LLM 실패 시 LLMCallFailedError 발생.
+    4단계 의사결정 알고리즘.
+    LLM을 사용하여 에이전트의 페르소나와 메모리를 기반으로 결정.
+    Fallback 없음 - LLM 실패 시 예외 발생.
     """
 
     def __init__(self, rate_limit_delay: float = 0.5, semaphore: Optional[asyncio.Semaphore] = None):
+        settings = get_settings()
         self.rate_limit_delay = rate_limit_delay ## LLM 호출 후 대기 시간(초)
         self.llm_client: Optional[LLMClient] = None ## 지연 초기화 (asyncio 루프 안에서 생성)
         self.global_store: GlobalStore = get_global_store() ## 전역 매장 DB 싱글턴
-        # None이면 호출 시 생성 (asyncio.run() 내부에서 생성해야 함)
         self._semaphore = semaphore ## 동시 LLM 호출 수 제한용
-        self.model: str = os.getenv("STEP_MODEL", "gemini-2.5-flash-lite")  ## 전 단계 공통 모델
+        # 단계별 모델 라우팅 (settings 우선, 없으면 env/기본값)
+        self.step_lite_model: str = settings.llm.lite_model_name or os.getenv("STEP_LITE_MODEL", "gemini-2.5-flash-lite")
+        self.step4_model: str = settings.llm.eval_model_name or os.getenv("STEP4_MODEL", "gemini-2.5-flash")
 
     ## llm_client가 None이면 그때 생성. asyncio 루프 안에서 처음 호출될 때 생성되도록 지연.
     def _get_llm_client(self) -> LLMClient:
@@ -85,14 +92,7 @@ class ActionAlgorithm:
 
     ## 비동기 LLM 호출 - 최대 3회 재시도
     ## model: None이면 LLMClient 기본값 사용, 지정 시 해당 모델로 오버라이드
-    ## response_format: OpenAI-compatible structured output 스키마 (None이면 미사용)
-    async def _call_llm_async(
-        self,
-        prompt: str,
-        max_retries: int = 3,
-        model: Optional[str] = None,
-        response_format: Optional[dict] = None,
-    ) -> str:
+    async def _call_llm_async(self, prompt: str, max_retries: int = 3, model: Optional[str] = None) -> str:
         """비동기 LLM 호출 with retry. Semaphore로 동시 호출 수를 제한."""
         client = self._get_llm_client()
         semaphore = self._semaphore
@@ -100,7 +100,7 @@ class ActionAlgorithm:
         async def _attempt():
             for attempt in range(max_retries):
                 try:
-                    response = await client.generate(prompt, model=model, response_format=response_format)
+                    response = await client.generate(prompt, model=model)
                     await asyncio.sleep(self.rate_limit_delay)
                     return response
                 except Exception as e:
@@ -124,13 +124,13 @@ class ActionAlgorithm:
             return await _attempt()
 
     ## 동기 LLM 호출 - asyncio 없이 동기 버전. __main__ 테스트에서만 사용.
-    def _call_llm(self, prompt: str, max_retries: int = 3) -> str:
+    def _call_llm(self, prompt: str, model: Optional[str] = None, max_retries: int = 3) -> str:
         """동기 LLM 호출 (하위 호환 / __main__ 테스트용). 실패 시 LLMCallFailedError 발생."""
         client = self._get_llm_client()
 
         for attempt in range(max_retries):
             try:
-                response = client.generate_sync(prompt)
+                response = client.generate_sync(prompt, model=model)
                 time.sleep(self.rate_limit_delay)
                 return response
             except Exception as e:
@@ -146,131 +146,16 @@ class ActionAlgorithm:
 
         raise LLMCallFailedError(f"LLM call failed after {max_retries} retries")
 
-    @staticmethod
-    def _repair_unclosed_string(s: str) -> str:
-        """
-        Gemini가 JSON 문자열을 닫지 않고 } 를 써버린 경우 자동 복구.
-        예: {"key": "val} → {"key": "val"}
-        열려있는 문자열이 감지되면 첫 번째 } 직전에 " 를 삽입한다.
-        """
-        in_string = False
-        escape_next = False
-        last_open_quote = -1
-        for i, c in enumerate(s):
-            if escape_next:
-                escape_next = False
-                continue
-            if c == '\\':
-                escape_next = True
-                continue
-            if c == '"':
-                if in_string:
-                    in_string = False
-                else:
-                    in_string = True
-                    last_open_quote = i
-        if not in_string:
-            return s  # 이미 닫혀 있음
-        # 마지막으로 열린 " 이후 첫 번째 } 앞에 " 삽입
-        close_pos = s.find('}', last_open_quote)
-        if close_pos != -1:
-            return s[:close_pos] + '"' + s[close_pos:]
-        return s
-
-    @staticmethod
-    def _fix_json_newlines(s: str) -> str:
-        """JSON 문자열 값 내 리터럴 개행/CR을 이스케이프 시퀀스로 교체."""
-        result = []
-        in_string = False
-        i = 0
-        while i < len(s):
-            c = s[i]
-            if c == '\\' and i + 1 < len(s):  # 이미 이스케이프된 문자는 그대로
-                result.append(c)
-                result.append(s[i + 1])
-                i += 2
-                continue
-            if c == '"':
-                in_string = not in_string
-            elif in_string and c == '\n':
-                result.append('\\n')
-                i += 1
-                continue
-            elif in_string and c == '\r':
-                result.append('\\r')
-                i += 1
-                continue
-            result.append(c)
-            i += 1
-        return ''.join(result)
-
     def _parse_json_response(self, response: str) -> Dict[str, Any]:
-        """LLM 응답에서 JSON 추출 (thinking 모델 대응: 마지막 유효 JSON 우선)"""
-        # 마크다운 코드 펜스 제거 (```json ... ``` 또는 ``` ... ```)
-        if '```' in response:
-            response = response.replace('```json', '').replace('```', '').strip()
-        response = response.strip()
-        # 1차: 직접 파싱 시도 (response_schema 적용 시 순수 JSON 반환)
+        """LLM 응답에서 JSON 추출"""
         try:
-            obj = json.loads(response)
-            if isinstance(obj, dict):
-                return obj
+            start = response.find('{')
+            end = response.rfind('}') + 1
+            if start != -1 and end > start:
+                return json.loads(response[start:end])
         except json.JSONDecodeError:
             pass
-        # 2차: JSON 문자열 내 리터럴 개행 수정 후 재시도
-        try:
-            obj = json.loads(self._fix_json_newlines(response))
-            if isinstance(obj, dict):
-                return obj
-        except json.JSONDecodeError:
-            pass
-        # 2.5차: 닫히지 않은 문자열 자동 복구 후 재시도
-        # Gemini가 reason 문자열을 " 로 닫지 않고 } 를 쓴 경우 수정
-        try:
-            repaired = self._repair_unclosed_string(response)
-            if repaired != response:
-                obj = json.loads(repaired)
-                if isinstance(obj, dict):
-                    return obj
-        except json.JSONDecodeError:
-            pass
-        # 3차: rfind 방식으로 JSON 추출
-        # 마지막 } 부터 역방향으로 모든 JSON 후보를 시도
-        candidates = []
-        pos = len(response)
-        while True:
-            end = response.rfind('}', 0, pos)
-            if end == -1:
-                break
-            start = response.rfind('{', 0, end)
-            if start == -1:
-                break
-            try:
-                obj = json.loads(response[start:end + 1])
-                if isinstance(obj, dict):
-                    candidates.append(obj)
-            except json.JSONDecodeError:
-                pass
-            pos = end
-        # 원하는 키가 있는 첫 번째 후보 반환 (없으면 첫 번째 dict)
-        for key in ("eat_in_mangwon", "rating", "store_name", "category", "action"):
-            for obj in candidates:
-                if key in obj:
-                    return obj
-        if candidates:
-            return candidates[0]
-        # 4차: regex로 키-값 쌍 추출 (JSON 불완전할 때 최후 수단)
-        fallback: Dict[str, Any] = {}
-        for m in re.finditer(r'"(\w+)":\s*"([^"]*)"', response):
-            fallback[m.group(1)] = m.group(2)
-        for m in re.finditer(r'"(\w+)":\s*(\d+(?:\.\d+)?)', response):
-            if m.group(1) not in fallback:
-                v = m.group(2)
-                fallback[m.group(1)] = int(v) if '.' not in v else float(v)
-        for m in re.finditer(r'"(\w+)":\s*(true|false)', response, re.IGNORECASE):
-            if m.group(1) not in fallback:
-                fallback[m.group(1)] = m.group(2).lower() == 'true'
-        return fallback
+        return {}
 
     ## LLM에 줄 매장 1개의 정보를 텍스트로 조립
     def _get_store_info_for_prompt(self, store: StoreRating) -> str:
@@ -294,7 +179,8 @@ class ActionAlgorithm:
 
         # RAG 컨텍스트 (매장 설명)
         if store.rag_context and len(store.rag_context) > 10:
-            lines.append(f"  설명: {store.rag_context}")
+            summary = store.rag_context[:250] + "..." if len(store.rag_context) > 250 else store.rag_context
+            lines.append(f"  설명: {summary}")
 
         # 에이전트 평점 (있으면 표시)
         if store.agent_rating_count > 0:
@@ -309,9 +195,8 @@ class ActionAlgorithm:
 
         return "\n".join(lines)
 
-    # ==================== Step 1: 망원동 내 식사 여부 결정 ====================
-    ## LLM 호출
-    async def step1_eat_in_mangwon(
+    ## LLM 미사용
+    def step1_eat_in_mangwon(
         self,
         agent: GenerativeAgent,
         time_slot: str,
@@ -319,49 +204,58 @@ class ActionAlgorithm:
         current_date: str = "",
     ) -> Dict[str, Any]:
         """
-        Step 1: 망원동 내 식사 여부 결정 (LLM 기반)
+        Step 1: 망원동 내 식사 여부 결정 (확률 기반)
 
-        LLM이 페르소나와 당일 식사 이력을 참고하여 외식 여부를 직접 판단.
-        LLM 실패 시 LLMCallFailedError 발생 (Fallback 없음).
+        시간대별 기본 확률에 보정을 적용.
+        - 오늘 식사 횟수가 2회 이상이면 확률 감소 (하루 2~3끼)
+        - 주말이면 확률 약간 증가
 
         Returns: {"eat_in_mangwon": bool, "reason": str}
         """
-        prompt = render_prompt(
-            STEP1_DESTINATION,
-            agent_name=agent.persona_id,
-            persona_summary=agent.get_persona_summary(),
-            weekday=weekday,
-            time_slot=time_slot,
-            memory_context=agent.get_memory_context(current_date),
-        )
+        base_prob = BASE_EATING_OUT_PROB.get(time_slot, 0.50)
 
-        step1_schema = {
-            "type": "json_schema",
-            "json_schema": {
-                "name": "step1_decision",
-                "schema": {
-                    "type": "object",
-                    "properties": {
-                        "eat_in_mangwon": {"type": "boolean"},
-                        "reason": {"type": "string", "maxLength": 80},
-                    },
-                    "required": ["eat_in_mangwon", "reason"],
-                    "additionalProperties": False,
-                },
-                "strict": True,
-            },
-        }
+        # 오늘 식사 횟수 보정 (하루 2~3끼 제한)
+        meals_today = len(agent.get_meals_today(current_date)) if current_date else len(agent.recent_history)
+        if meals_today >= 3:
+            base_prob *= 0.1  # 3끼 이상이면 크게 감소
+        elif meals_today >= 2:
+            base_prob *= 0.5  # 2끼면 절반
+        elif meals_today >= 1 and time_slot == "아침":
+            pass  # 아침에 이미 먹었으면 그대로
 
-        response = await self._call_llm_async(prompt, model=self.model, response_format=step1_schema)
-        result = self._parse_json_response(response)
+        # 주말 보정
+        if weekday in ["토", "일"]:
+            base_prob = min(1.0, base_prob * 1.15)
 
-        if result and "eat_in_mangwon" in result:
-            result["eat_in_mangwon"] = bool(result["eat_in_mangwon"])
-            return result
+        # 확률적 결정
+        eat_out = random.random() < base_prob
 
-        raise LLMCallFailedError("Step1: Failed to parse LLM response")
+        if eat_out:
+            reasons = {
+                "아침": "아침 식사를 위해 외출",
+                "점심": "점심 시간 외식",
+                "저녁": "저녁 외식",
+                "야식": "야식이 땡김",
+            }
+            reason = reasons.get(time_slot, "외식")
+        else:
+            if time_slot == "아침" or meals_today == 0:
+                reasons_skip = [
+                    "배가 안 고픔",
+                    "집에서 해결",
+                    "이 시간에는 안 먹음",
+                ]
+            else:
+                reasons_skip = [
+                    "배가 안 고픔",
+                    "이전 식사로 충분",
+                    "집에서 해결",
+                    "이 시간에는 안 먹음",
+                ]
+            reason = random.choice(reasons_skip)
 
-    # ==================== Step 2: 업종 선택 ====================
+        return {"eat_in_mangwon": eat_out, "reason": reason}
+
     ## LLM 호출
     ## 시간대에 맞는 카테고리 풀 + 에이전트 페르소나 + 방문 메모리를 LLM에 주고 업종 선택.
     async def step2_category_selection(
@@ -397,29 +291,9 @@ class ActionAlgorithm:
             time_slot=time_slot,
             destination_type=time_slot,  # 하위 호환: 프롬프트 변수명 유지
             available_categories=", ".join(available_categories),
-            memory_context=agent.get_memory_context(current_date),
             time_hint=hint,
         )
 
-        # response_schema: category를 실제 목록 enum으로 제한
-        category_schema = {
-            "type": "json_schema",
-            "json_schema": {
-                "name": "category_selection",
-                "schema": {
-                    "type": "object",
-                    "properties": {
-                        "category": {"type": "string", "enum": list(available_categories)},
-                        "reason": {"type": "string", "maxLength": 80},
-                    },
-                    "required": ["category", "reason"],
-                    "additionalProperties": False,
-                },
-                "strict": True,
-            },
-        }
-
-        response = await self._call_llm_async(prompt, model=self.model, response_format=category_schema)
         result = self._parse_json_response(response)
 
         ## 반환 : {"category": "한식", "reason": "..."}
@@ -428,7 +302,6 @@ class ActionAlgorithm:
 
         raise LLMCallFailedError("Step2: Failed to parse LLM response")
 
-    # ==================== Step 3: 매장 선택 ====================
     ## LLM 호출
     async def step3_store_selection(
         self,
@@ -483,50 +356,33 @@ class ActionAlgorithm:
 
         stores_text = "\n\n".join(store_info_lines)
 
-        valid_names = [s.store_name for s in display_stores]
-
         prompt = render_prompt(
             STEP3_STORE,
             agent_name=agent.persona_id,
             persona_summary=agent.get_persona_summary(),
             time_slot=time_slot,
-            category=category,
-            memory_context=agent.get_memory_context(current_date),
             stores_text=stores_text,
         )
 
-        # response_schema: store_name을 실제 목록 enum으로 제한 → hallucination 방지
-        # reason maxLength: 토큰 절약 및 JSON 파싱 안정성 확보
-        store_schema = {
-            "type": "json_schema",
-            "json_schema": {
-                "name": "store_selection",
-                "schema": {
-                    "type": "object",
-                    "properties": {
-                        "store_name": {"type": "string", "enum": valid_names},
-                        "reason": {"type": "string", "maxLength": 80},
-                    },
-                    "required": ["store_name", "reason"],
-                    "additionalProperties": False,
-                },
-                "strict": True,
-            },
-        }
-
-        response = await self._call_llm_async(prompt, model=self.model, response_format=store_schema)
         result = self._parse_json_response(response)
 
-        ## schema가 store_name을 enum으로 제한하므로 별도 검증 불필요
-        ## 단, 파싱 자체가 실패한 경우 예외 처리
+        ## 선택한 매장명이 목록에 없으면 부분 매칭 시도 -> 그래도 없으면 예외
         if result and result.get("store_name"):
-            return result
+            # 매장명 검증
+            selected_name = result["store_name"]
+            valid_names = [s.store_name for s in display_stores]
 
-        from tqdm import tqdm
-        tqdm.write(f"      [Step3 파싱실패] raw response: {response[:200]}")
-        raise LLMCallFailedError("Step3: Failed to parse LLM response")
+            if selected_name in valid_names:
+                return result
 
-    # ==================== Step 4: 평가 및 피드백 ====================
+            # 부분 매칭 시도
+            for name in valid_names:
+                if selected_name in name or name in selected_name:
+                    result["store_name"] = name
+                    return result
+
+        raise LLMCallFailedError("Step3: Failed to parse LLM response or invalid store name")
+
     ## LLM 호출
     async def step4_evaluate_and_feedback(
         self,
@@ -536,18 +392,17 @@ class ActionAlgorithm:
     ) -> Dict[str, Any]:
         """
         Step 4: 평가 및 피드백
-        LLM을 사용하여 종합 rating(1~5) + selected_tags + comment 생성.
-        세대별 tone_instruction으로 리뷰 말투 분기 (Z/Y/X/S).
-        평가 관점 6개 중 LLM이 페르소나에 맞게 자율 선택.
+        LLM을 사용하여 맛/가성비/분위기 평점(0~5)을 생성
 
         평점 체계:
+        - 0: 방문 없음 (기본값, 평가 시에는 사용 안 함)
         - 1: 매우별로
         - 2: 별로
         - 3: 보통
         - 4: 좋음
         - 5: 매우좋음
 
-        Returns: {"rating": int, "selected_tags": list, "comment": str}
+        Returns: {"taste_rating": int, "value_rating": int, "atmosphere_rating": int, "comment": str}
         """
         store_info = self._get_store_info_for_prompt(store)
 
@@ -576,29 +431,8 @@ class ActionAlgorithm:
             focus_aspect=selected_focus,
         )
 
-        # response_schema: rating(1~5 정수), selected_tags(enum 배열), comment(문자열) 강제
-        evaluate_schema = {
-            "type": "json_schema",
-            "json_schema": {
-                "name": "evaluation",
-                "schema": {
-                    "type": "object",
-                    "properties": {
-                        "rating": {"type": "integer", "minimum": 1, "maximum": 5},
-                        "selected_tags": {
-                            "type": "array",
-                            "items": {"type": "string", "enum": ["맛", "가성비", "분위기", "서비스"]},
-                        },
-                        "comment": {"type": "string", "maxLength": 100},
-                    },
-                    "required": ["rating", "selected_tags", "comment"],
-                    "additionalProperties": False,
-                },
-                "strict": True,
-            },
-        }
-
-        response = await self._call_llm_async(prompt, model=self.model, response_format=evaluate_schema)
+        # Step 4: 하이브리드 전략 - 최고 성능 모델(Gemini 3 Flash) 사용
+        response = await self._call_llm_async(prompt, model=self.step4_model)
         result = self._parse_json_response(response)
 
         if result and "rating" in result:
@@ -634,11 +468,8 @@ class ActionAlgorithm:
                 "comment": comment
             }
 
-        from tqdm import tqdm
-        tqdm.write(f"      [Step4 파싱실패] raw response: {response[:200]}")
         raise LLMCallFailedError("Step4: Failed to parse LLM response")
 
-    # ==================== Step 5: 다음 행동 결정 ====================
     ## LLM 호출
     async def step5_next_action(
         self,
@@ -723,29 +554,9 @@ class ActionAlgorithm:
             next_time_slot=next_time_slot,
             session_activity=session_activity,
             memory_context=agent.get_memory_context(current_date),
-            available_actions=available_actions,
             action_options=action_options,
         )
 
-        # response_schema: action을 실제 유효 목록 enum으로 제한
-        action_schema = {
-            "type": "json_schema",
-            "json_schema": {
-                "name": "next_action",
-                "schema": {
-                    "type": "object",
-                    "properties": {
-                        "action": {"type": "string", "enum": valid_actions},
-                        "reason": {"type": "string", "maxLength": 80},
-                    },
-                    "required": ["action", "reason"],
-                    "additionalProperties": False,
-                },
-                "strict": True,
-            },
-        }
-
-        response = await self._call_llm_async(prompt, model=self.model, response_format=action_schema)
         result = self._parse_json_response(response)
 
         if result and result.get("action"):
@@ -887,7 +698,6 @@ class ActionAlgorithm:
         store = self.global_store.get_store(store_id)
         return store
 
-    # ==================== Main Process ====================
 
     # Step 5에서 매장 방문이 수반되는 행동 → Step 3→4 루프 트리거
     STORE_VISIT_ACTIONS = {
@@ -925,55 +735,8 @@ class ActionAlgorithm:
         try:
             current_date = current_datetime[:10] if current_datetime else ""
 
-            # Step 1: 망원동 내 식사 여부 결정
-            # 시간대별 소프트 게이트: LLM 편향 보정
-            # - 아침: 20% 하한 보장 (하드 True) + 나머지 LLM (최대 ~20%)
-            # - 점심: 25% 확률로 바로 False 처리 (LLM 과도한 외식 선택 억제)
-            # - 저녁: 35% 확률로 바로 True 처리 (LLM 과소 선택 보정)
-            # - 야식: 15% 확률로 바로 True 처리 (LLM 과소 선택 보정)
-            r = random.random()
-            if time_slot == "아침":
-                if r < 0.20:
-                    step1 = {"eat_in_mangwon": True, "reason": "아침 외식 하한 게이트(20%) 보정"}
-                else:
-                    try:
-                        step1 = await self.step1_eat_in_mangwon(agent, time_slot, weekday, current_date)
-                    except LLMCallFailedError as e:
-                        print(f"  [{agent.persona_id}] Step1 parse 오류(stay_home 처리): {e}")
-                        step1 = {"eat_in_mangwon": False, "reason": "LLM 응답 파싱 오류"}
-            elif time_slot == "점심":
-                if r > 0.75:
-                    step1 = {"eat_in_mangwon": False, "reason": "점심 외식 상한 게이트(75%) 초과"}
-                else:
-                    try:
-                        step1 = await self.step1_eat_in_mangwon(agent, time_slot, weekday, current_date)
-                    except LLMCallFailedError as e:
-                        print(f"  [{agent.persona_id}] Step1 parse 오류(stay_home 처리): {e}")
-                        step1 = {"eat_in_mangwon": False, "reason": "LLM 응답 파싱 오류"}
-            elif time_slot == "저녁":
-                if r < 0.35:
-                    step1 = {"eat_in_mangwon": True, "reason": "저녁 외식 하한 게이트(35%) 보정"}
-                else:
-                    try:
-                        step1 = await self.step1_eat_in_mangwon(agent, time_slot, weekday, current_date)
-                    except LLMCallFailedError as e:
-                        print(f"  [{agent.persona_id}] Step1 parse 오류(stay_home 처리): {e}")
-                        step1 = {"eat_in_mangwon": False, "reason": "LLM 응답 파싱 오류"}
-            elif time_slot == "야식":
-                if r < 0.15:
-                    step1 = {"eat_in_mangwon": True, "reason": "야식 외식 하한 게이트(15%) 보정"}
-                else:
-                    try:
-                        step1 = await self.step1_eat_in_mangwon(agent, time_slot, weekday, current_date)
-                    except LLMCallFailedError as e:
-                        print(f"  [{agent.persona_id}] Step1 parse 오류(stay_home 처리): {e}")
-                        step1 = {"eat_in_mangwon": False, "reason": "LLM 응답 파싱 오류"}
-            else:
-                try:
-                    step1 = await self.step1_eat_in_mangwon(agent, time_slot, weekday, current_date)
-                except LLMCallFailedError as e:
-                    print(f"  [{agent.persona_id}] Step1 parse 오류(stay_home 처리): {e}")
-                    step1 = {"eat_in_mangwon": False, "reason": "LLM 응답 파싱 오류"}
+            # Step 1: 망원동 내 식사 여부 결정 (확률 기반, LLM 불필요)
+            step1 = self.step1_eat_in_mangwon(agent, time_slot, weekday, current_date)
 
             if not step1.get("eat_in_mangwon", False):
                 return {

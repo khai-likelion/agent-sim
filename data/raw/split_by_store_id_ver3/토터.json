@@ -1,0 +1,78 @@
+{
+    "id": "망원1동_망원시장_호프-간이주점_20253",
+    "market_analysis": {
+        "phase": "분석 불가 (데이터 부족)",
+        "trend_review": "시장 활력은 총 점포 2개로, 1년 동안 개업/폐업률 변화는 없었습니다. 객단가 정보는 부족합니다.",
+        "competition_intensity": "분석 불가 (데이터 부족)"
+    },
+    "revenue_analysis": "분석 불가 (데이터 부족)",
+    "customer_analysis": "분석 불가 (데이터 부족)",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.9,
+            "label": "매우 긍정적",
+            "comparison": "리뷰들은 모두 매우 긍정적이며, 음식의 맛과 서비스에 대한 칭찬이 주를 이루고 있습니다."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.95,
+                "label": "매우 좋음",
+                "avg_score": 0.8580739299610896
+            },
+            "price_value": {
+                "score": 0.6,
+                "label": "보통",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.7,
+                "label": "보통",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.7,
+                "label": "보통",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.4,
+                "label": "낮음",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.7,
+                "label": "보통",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포2개(개업0%/폐업0%)|객단가:정보없음 -> [20251] 점포2개(개업0%/폐업0%)|객단가:정보없음 -> [20252] 점포2개(개업0%/폐업0%)|객단가:정보없음 -> [20253] 점포2개(개업0%/폐업0%)|객단가:정보없음",
+        "metrics": {
+            "store_count": 2,
+            "net_change": 0,
+            "close_rate": 0,
+            "has_sales_data": false
+        }
+    },
+    "metadata": {
+        "area": "망원1동",
+        "section": "망원시장",
+        "sector": "호프-간이주점",
+        "quarter": "20253"
+    },
+    "store_id": "788925882",
+    "store_name": "토터",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "맛있는 음식",
+        "감칠맛",
+        "친절한 서비스",
+        "맥주",
+        "아늑한 분위기",
+        "재방문"
+    ],
+    "critical_feedback": [],
+    "rag_context": "토터는 맛과 분위기 측면에서 높은 평가를 받고 있는 맥주집입니다. 리뷰어들은 특히 피넛칠리누들과 치킨 스테이크의 맛에 대해 강력히 추천하며, 감칠맛과 맥주 메뉴의 품질을 칭찬하고 있습니다. 친절한 서빙과 따뜻한 분위기는 고객 경험을 더욱 향상시키는 요소로 작용하고 있습니다. 다만, 공간이 좁아 더 많은 사람들에게 알려지지 않았으면 하는 바람이 있어 회전율은 다소 낮아 보입니다. 가격 대비 가치는 보통 수준으로 평가되며, 청결도와 분위기 또한 만족스러운 수준입니다.",
+    "review_count": 5
+}

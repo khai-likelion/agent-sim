@@ -1,0 +1,77 @@
+{
+    "id": "망원2동_마포구청역 7번_양식음식점_20253",
+    "market_analysis": {
+        "phase": "분석 불가 (데이터 부족)",
+        "trend_review": "총 점포 2개로, 1년 동안 개업/폐업률 변화는 없었습니다. 객단가 정보는 부족합니다.",
+        "competition_intensity": "분석 불가 (데이터 부족)"
+    },
+    "revenue_analysis": "분석 불가 (데이터 부족)",
+    "customer_analysis": "분석 불가 (데이터 부족)",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.6,
+            "label": "중립적 긍정",
+            "comparison": "리뷰들은 대체로 만족스러운 경험을 전달하지만, '대단한 맛은 아니다'라는 표현으로 인해 완벽한 긍정보다는 중립적 긍정으로 평가됩니다."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.7,
+                "label": "양호",
+                "avg_score": 0.868498727735369
+            },
+            "price_value": {
+                "score": 0.4,
+                "label": "보통",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.6,
+                "label": "보통",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.6,
+                "label": "보통",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.5,
+                "label": "보통",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.6,
+                "label": "보통",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포2개(개업0%/폐업0%)|객단가:정보없음 -> [20251] 점포2개(개업0%/폐업0%)|객단가:정보없음 -> [20252] 점포2개(개업0%/폐업0%)|객단가:정보없음 -> [20253] 점포2개(개업0%/폐업0%)|객단가:정보없음",
+        "metrics": {
+            "store_count": 2,
+            "net_change": 0,
+            "close_rate": 0,
+            "has_sales_data": false
+        }
+    },
+    "metadata": {
+        "area": "망원2동",
+        "section": "마포구청역 7번",
+        "sector": "양식음식점",
+        "quarter": "20253"
+    },
+    "store_id": "752213712",
+    "store_name": "비긴자함바그",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "맛있음",
+        "함박",
+        "작은 양",
+        "피클",
+        "적당한 가격"
+    ],
+    "critical_feedback": [],
+    "rag_context": "비긴자함바그는 맛 측면에서는 긍정적인 평가를 받고 있으며, 특히 피클의 맛이 호평을 받았습니다. 그러나 한 그릇 분량이 한 사람에게 적당하다는 점은 양에 대한 제한성을 시사하며, 가격 대비 가치는 보통 수준으로 평가됩니다. 서비스와 분위기는 보통 수준으로, 특별히 부정적인 피드백은 없으나 특별한 인상을 남기지는 못하는 것으로 보입니다. 고객들은 이곳을 주기적으로 방문하는 곳으로 보이지만, 맛이 뛰어나다고는 할 수 없어 기대치를 완전히 충족시키는 데는 한계가 있는 것으로 해석됩니다.",
+    "review_count": 2
+}

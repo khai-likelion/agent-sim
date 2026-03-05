@@ -1,0 +1,88 @@
+{
+    "id": "망원1동_망원시장_일식음식점_20253",
+    "market_analysis": {
+        "phase": "분석 불가 (데이터 부족)",
+        "trend_review": "망원1동 망원시장 일식음식점 시장은 총 2개의 점포로 구성되어 있으며, 1년 동안 개업/폐업률 변화는 없었습니다. 객단가 정보는 제공되지 않았습니다.",
+        "competition_intensity": "분석 불가 (데이터 부족)"
+    },
+    "revenue_analysis": "분석 불가 (데이터 부족)",
+    "customer_analysis": "분석 불가 (데이터 부족)",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.2,
+            "label": "Negative",
+            "comparison": "Many reviews highlight significant issues with taste consistency, cleanliness, and service, indicating a predominantly negative sentiment despite some positive remarks."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.3,
+                "label": "Poor",
+                "avg_score": 0.8346
+            },
+            "price_value": {
+                "score": 0.4,
+                "label": "Below Average",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.4,
+                "label": "Fair",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.5,
+                "label": "Mixed",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.3,
+                "label": "Slow",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.4,
+                "label": "Mixed",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포2개(개업0%/폐업0%)|객단가:정보없음 -> [20251] 점포2개(개업0%/폐업0%)|객단가:정보없음 -> [20252] 점포2개(개업0%/폐업0%)|객단가:정보없음 -> [20253] 점포2개(개업0%/폐업0%)|객단가:정보없음",
+        "metrics": {
+            "store_count": 2,
+            "net_change": 0,
+            "close_rate": 0,
+            "has_sales_data": false
+        }
+    },
+    "metadata": {
+        "area": "망원1동",
+        "section": "망원시장",
+        "sector": "일식음식점",
+        "quarter": "20253"
+    },
+    "store_id": "1921224342",
+    "store_name": "원기정",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "고기",
+        "맛",
+        "위생",
+        "서비스",
+        "불친절",
+        "청결",
+        "웨이팅",
+        "가격",
+        "장어",
+        "로스트비프"
+    ],
+    "critical_feedback": [
+        "위생 상태가 좋지 않음 (담배 피우는 직원, 마스크 미착용 등)",
+        "음식의 맛과 품질이 일관되지 않음",
+        "서비스 품질이 낮고 불친절함",
+        "가격 대비 가치가 떨어짐",
+        "매장 청결 유지가 부족함"
+    ],
+    "rag_context": "원기정의 리뷰는 주로 부정적인 경향을 보입니다. 많은 고객들이 음식의 맛 일관성 부족, 특히 고기의 품질과 누린내, 그리고 장어와 비프덮밥의 품질에 대해 불만을 제기하고 있습니다. 위생 상태 또한 심각한 문제점으로 지적되며, 직원들의 흡연과 마스크 미착용은 고객 경험을 크게 저하시키는 요인으로 작용하고 있습니다. 서비스 측면에서도 불친절과 소음 문제로 인해 식사 환경이 불편하다는 의견이 많습니다. 그러나 일부 리뷰에서는 로스트비프와 장어덮밥의 맛에 대해 긍정적인 평가를 내리며, 매장 분위기나 특정 메뉴에 대한 긍정적인 피드백도 일부 존재합니다. 그럼에도 불구하고 전반적인 만족도는 낮으며, 특히 위생과 서비스 품질 개선이 시급해 보입니다.",
+    "review_count": 50
+}

@@ -1,0 +1,83 @@
+{
+    "id": "망원2동_KB국민은행 망원동지점_양식음식점_20253",
+    "market_analysis": {
+        "phase": "분석 불가 (데이터 부족)",
+        "trend_review": "총 점포 1개이며, 1년 동안 개업/폐업률 변화는 없었습니다. 객단가 정보는 부족합니다.",
+        "competition_intensity": "분석 불가 (데이터 부족)"
+    },
+    "revenue_analysis": "분석 불가 (데이터 부족)",
+    "customer_analysis": "분석 불가 (데이터 부족)",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.95,
+            "label": "매우 긍정적",
+            "comparison": "리뷰들 대부분에서 높은 만족도를 나타내고 있어 매우 긍정적인 평가를 받고 있습니다."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.98,
+                "label": "매우 우수",
+                "avg_score": 0.8685
+            },
+            "price_value": {
+                "score": 0.7,
+                "label": "양호",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.85,
+                "label": "매우 청결",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.85,
+                "label": "매우 친절",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.6,
+                "label": "보통",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.75,
+                "label": "쾌적한 분위기",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포1개(개업0%/폐업0%)|객단가:정보없음 -> [20251] 점포1개(개업0%/폐업0%)|객단가:정보없음 -> [20252] 점포1개(개업0%/폐업0%)|객단가:정보없음 -> [20253] 점포1개(개업0%/폐업0%)|객단가:정보없음",
+        "metrics": {
+            "store_count": 1,
+            "net_change": 0,
+            "close_rate": 0,
+            "has_sales_data": false
+        }
+    },
+    "metadata": {
+        "area": "망원2동",
+        "section": "KB국민은행 망원동지점",
+        "sector": "양식음식점",
+        "quarter": "20253"
+    },
+    "store_id": "1450813260",
+    "store_name": "하노이엔",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "맛있는",
+        "반미",
+        "쌀국수",
+        "친절",
+        "청결",
+        "하이볼",
+        "현지 맛",
+        "회전율"
+    ],
+    "critical_feedback": [
+        "화장실 상태 개선 필요",
+        "똠양꿍 맛이 강한 메뉴는 개인 취향에 따라 다를 수 있음"
+    ],
+    "rag_context": "하노이엔은 맛과 서비스 측면에서 높은 평가를 받고 있는 베트남 음식점입니다. 리뷰어들은 특히 쌀국수와 반미의 맛에 대해 매우 긍정적인 평가를 내렸으며, 직접 끓인 육수와 바삭하면서도 부드러운 반미의 식감이 특히 호평을 받았습니다. 매장의 청결도와 사장님의 친절한 서비스 또한 주요 강점으로 꼽힙니다. 일부 리뷰에서는 회전율과 화장실 상태에 대한 개선의 필요성을 제기했지만, 대부분의 고객들은 이곳을 망원동에서 맛있는 베트남 음식을 즐길 수 있는 최고의 장소로 추천하고 있습니다. 분위기는 쾌적하며, 다양한 메뉴와 함께 하이볼 등 주류 옵션도 제공되어 식사와 함께 즐기기 좋습니다.",
+    "review_count": 57
+}

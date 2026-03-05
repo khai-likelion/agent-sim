@@ -20,7 +20,6 @@ import sys
 import os
 import random
 import numpy as np
-import pandas as pd
 from pathlib import Path
 from datetime import datetime
 
@@ -180,10 +179,6 @@ async def main():
                         help="결과 폴더 접두사 (예: '돼지야' → 돼지야_before, 돼지야_after)")
     parser.add_argument("--skip-sim-to-y", action="store_true",
                         help="sim_to_y 비교 보고서 생성 건너뜀")
-    parser.add_argument("--resume-phase", type=str, choices=["before", "after"], default=None,
-                        help="재개할 단계 (before 또는 after)")
-    parser.add_argument("--resume-from-day", type=int, default=0,
-                        help="N일차 체크포인트부터 재개 (예: 7, 14, 21...)")
     args = parser.parse_args()
 
     # X-Report 경로 결정: 미지정이면 자동 탐색
@@ -230,52 +225,38 @@ async def main():
     # ============================================================
     # 시뮬레이션 1: 전략 적용 전 (원본)
     # ============================================================
+    print("\n" + "=" * 60)
+    print("▶ 시뮬레이션 1/2: 전략 적용 전 (Baseline)")
+    print("=" * 60)
 
+    # 원본 복원 (백업에서)
+    ## 재실행 시에도 항상 원본 데이터로 시작
+    if backup_path.exists():
+        shutil.copy2(backup_path, target_store_json)
+        print(f"  원본 데이터 사용: {args.target_store}.json")
+
+    ## 시뮬레이션 2에서 같은 시드로 재시작하면 완전히 동일한 에이전트 구성
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+
+    agents_before = generate_agents(args.agents)
+    global_store_before = load_environment_from_dir(store_dir, args.target_store)
+
+    results_before = await run_simulation(
+        agents_before, global_store_before, settings, args.days,
+        max_concurrent_llm_calls=20,
+    )
+
+    # 실행별 구분: 타임스탬프 추가 (여러 시뮬 결과 보존)
     run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
     prefix = args.output_prefix or args.target_store
     before_dir = output_base / f"{prefix}_before"
     after_dir = output_base / f"{prefix}_after"
-    before_checkpoint_dir = before_dir / "checkpoints"
-    after_checkpoint_dir = after_dir / "checkpoints"
 
-    # after 단계 재개 시 before 시뮬레이션 건너뜀
-    if args.resume_phase == "after":
-        print("\n⏭️  --resume-phase after: before 시뮬레이션 건너뜀 (기존 결과 사용)")
-        before_visit_path = before_dir / "visit_log.csv"
-        if before_visit_path.exists():
-            before_visit_df = pd.read_csv(before_visit_path, encoding="utf-8-sig")
-            print(f"  before 방문 로그 로드: {len(before_visit_df)}건")
-        else:
-            print(f"  [경고] before 결과 없음 ({before_visit_path})")
-            before_visit_df = pd.DataFrame()
-    else:
-        print("\n" + "=" * 60)
-        print("▶ 시뮬레이션 1/2: 전략 적용 전 (Baseline)")
-        print("=" * 60)
-
-        # 원본 복원 (백업에서)
-        if backup_path.exists():
-            shutil.copy2(backup_path, target_store_json)
-            print(f"  원본 데이터 사용: {args.target_store}.json")
-
-        random.seed(args.seed)
-        np.random.seed(args.seed)
-
-        agents_before = generate_agents(args.agents)
-        global_store_before = load_environment_from_dir(store_dir, args.target_store)
-
-        before_resume = args.resume_from_day if args.resume_phase == "before" else 0
-        results_before = await run_simulation(
-            agents_before, global_store_before, settings, args.days,
-            max_concurrent_llm_calls=20,
-            checkpoint_dir=before_checkpoint_dir,
-            resume_from_day=before_resume,
-        )
-
-        before_visit_df = save_results_to(
-            results_before, global_store_before, agents_before,
-            before_dir, "전략 전"
-        )
+    before_visit_df = save_results_to(
+        results_before, global_store_before, agents_before,
+        before_dir, "전략 전"
+    )
 
     # ============================================================
     # StrategyBridge 전략 적용
@@ -318,12 +299,9 @@ async def main():
     agents_after = generate_agents(args.agents)
     global_store_after = load_environment_from_dir(store_dir, args.target_store)
 
-    after_resume = args.resume_from_day if args.resume_phase == "after" else 0
     results_after = await run_simulation(
         agents_after, global_store_after, settings, args.days,
         max_concurrent_llm_calls=20,
-        checkpoint_dir=after_checkpoint_dir,
-        resume_from_day=after_resume,
     )
 
     after_visit_df = save_results_to(

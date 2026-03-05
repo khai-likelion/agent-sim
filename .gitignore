@@ -10,7 +10,7 @@ build/
 
 # Data files
 data/output/
-data/raw/
+data/raw/split_by_store_id_ver5/
 
 # Cache files
 cache/

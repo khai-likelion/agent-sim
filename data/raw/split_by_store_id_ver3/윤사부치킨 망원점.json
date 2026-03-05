@@ -1,0 +1,78 @@
+{
+    "id": "망원1동_망원나들목체육관_치킨전문점_20253",
+    "market_analysis": {
+        "phase": "성장",
+        "trend_review": "2024년부터 점포 수가 증가하는 추세를 보이며, 2025년에는 4개로 증가했습니다. 개업률과 폐업률은 0%로 나타나 안정적인 시장 상황을 보입니다.",
+        "competition_intensity": "낮음"
+    },
+    "revenue_analysis": "분석 불가 (데이터 부족)",
+    "customer_analysis": "분석 불가 (데이터 부족)",
+    "review_metrics": {
+        "overall_sentiment": {
+            "score": 0.9,
+            "label": "매우 긍정적",
+            "comparison": "리뷰들은 대부분 매우 긍정적인 평가를 담고 있으며, 특히 맛과 서비스에 대한 칭찬이 두드러집니다."
+        },
+        "feature_scores": {
+            "taste": {
+                "score": 0.95,
+                "label": "매우 좋음",
+                "avg_score": 0.7080597014925373
+            },
+            "price_value": {
+                "score": 0.6,
+                "label": "보통",
+                "avg_score": 0.58
+            },
+            "cleanliness": {
+                "score": 0.8,
+                "label": "좋음",
+                "avg_score": 0.72
+            },
+            "service": {
+                "score": 0.85,
+                "label": "매우 좋음",
+                "avg_score": 0.68
+            },
+            "turnover": {
+                "score": 0.4,
+                "label": "보통 이하",
+                "avg_score": 0.5
+            },
+            "atmosphere": {
+                "score": 0.7,
+                "label": "보통",
+                "avg_score": 0.65
+            }
+        }
+    },
+    "raw_data_context": {
+        "trend_history": "[20244] 점포3개(개업0%/폐업0%)|객단가:정보없음 -> [20251] 점포3개(개업0%/폐업0%)|객단가:정보없음 -> [20252] 점포4개(개업25%/폐업0%)|객단가:정보없음 -> [20253] 점포4개(개업0%/폐업0%)|객단가:정보없음",
+        "metrics": {
+            "store_count": 4,
+            "net_change": 0,
+            "close_rate": 0,
+            "has_sales_data": false
+        }
+    },
+    "metadata": {
+        "area": "망원1동",
+        "section": "망원나들목체육관",
+        "sector": "치킨전문점",
+        "quarter": "20253"
+    },
+    "store_id": "118239889",
+    "store_name": "윤사부치킨 망원점",
+    "analysis_date": "2026-01-29",
+    "top_keywords": [
+        "맛있음",
+        "치킨",
+        "친절",
+        "골뱅이",
+        "닭똥집",
+        "추천"
+    ],
+    "critical_feedback": [],
+    "rag_context": "윤사부치킨 망원점은 맛과 서비스 측면에서 높은 평가를 받고 있는 곳으로, 특히 치킨과 닭똥집 튀김이 고객들로부터 큰 호평을 받고 있습니다. 리뷰어들은 치킨의 옛날 스타일이 매력적이라고 언급하며, 골뱅이와 번데기탕 같은 메뉴도 강력히 추천하고 있습니다. 사장님의 친절함도 여러 리뷰에서 강조되고 있어 고객 만족도가 높은 편입니다. 그러나 회전율과 분위기에 대한 구체적인 언급은 적어, 이 부분은 추가적인 관찰이 필요할 것으로 보입니다.",
+    "review_count": 9
+}
