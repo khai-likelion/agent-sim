@@ -32,7 +32,8 @@
 │       └── 전략 md 파일들/           # 타겟 매장 X-Report (전략 문서)
 ├── scripts/
 │   ├── run_before_after_sim.py       # ★ 메인 실행: 전략 전/후 비교 시뮬레이션
-│   ├── run_generative_simulation.py  # 시뮬레이션 엔진
+│   ├── run_generative_simulation.py  # 단독 시뮬레이션 엔진
+│   ├── demo_simulation_flow.py       # 단일 에이전트 의사결정 및 이동 데모
 │   └── dashboard.py                  # Streamlit 시각화 대시보드
 ├── sim_to_y.py                       # 시뮬레이션 결과 분석 파이프라인
 ├── X_to_Sim.py                       # StrategyBridge: X-Report → 매장 JSON 반영
@@ -110,7 +111,17 @@ python scripts/run_before_after_sim.py \
 
 ---
 
-### 2. 단독 시뮬레이션 실행
+### 2. 데모 시뮬레이션 실행 (단일 프로세스 확인)
+
+```bash
+python scripts/demo_simulation_flow.py
+```
+
+에이전트 생성부터 위치 탐색, LLM 5단계 의사결정, 도로망 이동까지의 전 과정을 터미널에서 상세히 확인할 수 있습니다.
+
+---
+
+### 3. 단독 시뮬레이션 실행
 
 ```bash
 python scripts/run_generative_simulation.py \
@@ -122,7 +133,7 @@ python scripts/run_generative_simulation.py \
 
 ---
 
-### 3. 결과 분석 리포트
+### 4. 결과 분석 리포트
 
 ```bash
 python sim_to_y.py
@@ -132,7 +143,7 @@ python sim_to_y.py
 
 ---
 
-### 4. 대시보드 실행
+### 5. 대시보드 실행
 
 ```bash
 streamlit run scripts/dashboard.py
@@ -172,6 +183,12 @@ Step 5 (LLM)  다음 행동 결정 (카페 / 산책 / 귀가 / 추가 방문 등
 
 - 비동기 병렬 실행 (`asyncio.gather`) — 최대 20개 동시 LLM 호출
 - OSMnx 실제 보행자 도로망 기반 이동 (망원동 반경 2km)
+
+### 에이전트 리뷰 규격 (System)
+
+- **평점 방식**: 1개 종합 별점 (0~5점) 및 강점 태그 (맛/가성비/분위기/서비스 중 1~2개 선택)
+- **리뷰 다양성**: 세대별 페르소나 및 말투 적용, 평가 관점 랜덤화 (특정 요소 집중 평가)
+- **누적 요약**: 개별 매장에 리뷰 코멘트가 10개 누적될 때마다 LLM이 이전 리뷰들을 자동 요약 (토큰 절약 및 장기 기억)
 
 ### StrategyBridge (`X_to_Sim.py`)
 
