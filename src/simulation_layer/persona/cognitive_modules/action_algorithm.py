@@ -27,6 +27,7 @@ from src.simulation_layer.persona.agent import GenerativeAgent
 from src.data_layer.global_store import get_global_store, GlobalStore, StoreRating, match_category
 from src.ai_layer.llm_client import create_llm_client, LLMClient
 from src.ai_layer.prompts import render_prompt, STEP2_CATEGORY, STEP3_STORE, STEP4_EVALUATE, STEP5_NEXT_ACTION
+from config.settings import get_settings
 
 
 # 시간대별 가능한 목적지 유형
@@ -294,6 +295,7 @@ class ActionAlgorithm:
             time_hint=hint,
         )
 
+        response = await self._call_llm_async(prompt, model=self.step_lite_model)
         result = self._parse_json_response(response)
 
         ## 반환 : {"category": "한식", "reason": "..."}
@@ -364,6 +366,7 @@ class ActionAlgorithm:
             stores_text=stores_text,
         )
 
+        response = await self._call_llm_async(prompt, model=self.step_lite_model)
         result = self._parse_json_response(response)
 
         ## 선택한 매장명이 목록에 없으면 부분 매칭 시도 -> 그래도 없으면 예외
@@ -557,6 +560,7 @@ class ActionAlgorithm:
             action_options=action_options,
         )
 
+        response = await self._call_llm_async(prompt, model=self.step_lite_model)
         result = self._parse_json_response(response)
 
         if result and result.get("action"):
