@@ -99,6 +99,7 @@ class StrategyBridge:
             model_name = settings.llm.model_name
 
         if base_url is None:
+            # Gemini OpenAI-compatible endpoint v1beta
             base_url = "https://generativelanguage.googleapis.com/v1beta/openai/"
 
         self.model_name = model_name
